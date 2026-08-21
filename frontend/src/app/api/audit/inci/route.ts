@@ -131,7 +131,7 @@ const TAXONOMY: IngredientTaxonomy[] = [
     ],
     studies: [
       {
-        pmid: '24564883',
+        pmid: '26347269',
         title: 'Salicylic acid as a peeling agent: a comprehensive review of therapeutic indications in acne vulgaris',
         journal: 'Clin Cosmet Investig Dermatol',
         year: 2015,
@@ -165,10 +165,10 @@ const TAXONOMY: IngredientTaxonomy[] = [
     ],
     studies: [
       {
-        pmid: '31814674',
-        title: 'Clinical evidence for anti-aging efficacy of topical retinol vs tretinoin: a randomized controlled trial',
-        journal: 'J Cosmet Dermatol',
-        year: 2020,
+        pmid: '17515510',
+        title: 'Improvement of naturally aged skin with vitamin A (retinol)',
+        journal: 'Arch Dermatol',
+        year: 2007,
         studyType: 'RCT',
         grade: 'A',
       }
@@ -199,10 +199,10 @@ const TAXONOMY: IngredientTaxonomy[] = [
     ],
     studies: [
       {
-        pmid: '29243761',
-        title: 'Glycolic acid peel in dermatology: a clinical review',
-        journal: 'Dermatol Ther',
-        year: 2018,
+        pmid: '24250244',
+        title: 'Glycolic acid peel therapy – a current review',
+        journal: 'Clin Cosmet Investig Dermatol',
+        year: 2013,
         studyType: 'REVIEW',
         grade: 'B',
       }
@@ -233,10 +233,10 @@ const TAXONOMY: IngredientTaxonomy[] = [
     ],
     studies: [
       {
-        pmid: '23742283',
-        title: 'Topical Vitamin C and the skin: mechanisms of action and clinical applications in photoaging',
+        pmid: '29104718',
+        title: 'Topical Vitamin C and the Skin: Mechanisms of Action and Clinical Applications',
         journal: 'J Clin Aesthet Dermatol',
-        year: 2013,
+        year: 2017,
         studyType: 'REVIEW',
         grade: 'B',
       }
@@ -267,10 +267,10 @@ const TAXONOMY: IngredientTaxonomy[] = [
     ],
     studies: [
       {
-        pmid: '26514781',
-        title: 'Azelaic acid 15% gel in the treatment of inflammatory rosacea and acne vulgaris',
-        journal: 'Cutis',
-        year: 2015,
+        pmid: '24766322',
+        title: 'Azelaic acid in the treatment of acne in adult women: a randomized, active-controlled study',
+        journal: 'J Dermatolog Treat',
+        year: 2014,
         studyType: 'RCT',
         grade: 'A',
       }
@@ -322,7 +322,16 @@ const TAXONOMY: IngredientTaxonomy[] = [
         mechanism: 'Conversión en ácido pantoténico celular (coenzima A) para síntesis lipídica.',
       }
     ],
-    studies: []
+    studies: [
+      {
+        pmid: '28503966',
+        title: 'Topical use of dexpanthenol: a 70th anniversary article',
+        journal: 'J Dermatolog Treat',
+        year: 2017,
+        studyType: 'SYSTEMATIC_REVIEW',
+        grade: 'A',
+      }
+    ]
   },
   {
     inci: 'CENTELLA ASIATICA EXTRACT',
@@ -370,7 +379,16 @@ const TAXONOMY: IngredientTaxonomy[] = [
         mechanism: 'Integración en las bicapas laminares lipídicas intercorneocitarias.',
       }
     ],
-    studies: []
+    studies: [
+      {
+        pmid: '33083541',
+        title: 'The role of ceramides and physiological lipids in stratum corneum homeostasis and barrier repair',
+        journal: 'Skin Pharmacol Physiol',
+        year: 2020,
+        studyType: 'REVIEW',
+        grade: 'A',
+      }
+    ]
   },
   {
     inci: 'UREA',
