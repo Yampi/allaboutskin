@@ -67,14 +67,16 @@ class InciParserService
      */
     public function tokenize(string $text): array
     {
-        // 1. Remove introductory prefixes common in cosmetic packaging
-        $text = preg_replace('/^(ingredients|inci|composition|ingredientes|ingr[eé]dients|contains|ingredients\s*[:\-])\s*/i', '', trim($text));
+        // 1. Remove introductory prefixes common in cosmetic packaging and formats
+        $text = preg_replace('/^(formula|f[oó]rmula|ingredients|inci|composition|ingredientes|ingr[eé]dients|contains|contiene|serum\s*facial|s[eé]rum|crema\s*facial|crema|gel\s*facial|gel|t[oó]nico|loci[oó]n|fluido|ampolla|booster)\s*[:\-]?\s*/i', '', trim($text));
 
         // 2. Remove trailing packaging notes (e.g. "Made in France", "Formula #12345", "Batch 99A")
         $text = preg_replace('/\s*(batch\s*no|made\s*in|distr?\b|c\.?o\.?a\b|\d{5,}).*$/i', '', $text);
 
-        // 3. Normalize multiple delimiters (commas, semicolons, bullets, linebreaks)
-        $text = str_replace(["\r\n", "\r", "\n", "•", "·", " - ", " / "], ',', $text);
+        // 3. Normalize multiple delimiters (commas, semicolons, bullets, linebreaks, +, &, ' y ')
+        $text = str_replace(["\r\n", "\r", "\n", "•", "·", " - ", " / ", " + ", "+", " & ", "&"], ',', $text);
+        $text = preg_replace('/\s+y\s+/i', ',', $text);
+        $text = preg_replace('/\s+with\s+|\s+con\s+/i', ',', $text);
 
         // 4. Split by commas while respecting parenthetical details like "Water (Aqua/Eau)"
         $rawTokens = preg_split('/,(?![^\(\[]*[\)\]])/', $text);
@@ -82,8 +84,10 @@ class InciParserService
         $cleanTokens = [];
         foreach ($rawTokens as $raw) {
             $token = trim($raw);
-            // Remove leading/trailing dots or dashes
-            $token = trim($token, " .\t\n\r\0\x0B-•*");
+            // Remove leading/trailing dots, dashes or bullets
+            $token = trim($token, " .\t\n\r\0\x0B-•*+&");
+            // Remove token-level cosmetic format prefixes if attached (e.g. "Serum Facial Niacinamida" -> "Niacinamida")
+            $token = preg_replace('/^(serum\s*facial|s[eé]rum|crema\s*facial|crema|gel\s*facial|gel|t[oó]nico|loci[oó]n|fluido|ampolla|booster)\s+/i', '', $token);
 
             if (strlen($token) >= 2) {
                 $cleanTokens[] = $token;

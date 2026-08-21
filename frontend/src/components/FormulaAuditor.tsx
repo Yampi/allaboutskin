@@ -131,8 +131,12 @@ export default function FormulaAuditor() {
         const parts = query.split(':');
         productNameCandidate = parts[0].trim();
         inciTextCandidate = parts.slice(1).join(':').trim();
-      } else if (!query.includes(',') && query.length < 80) {
+      } else if (!query.includes(',') && !query.includes('+') && !query.includes(';') && !query.includes('\n') && query.length < 60) {
         productNameCandidate = query;
+      } else {
+        // Multi-ingredient formula or combination
+        productNameCandidate = query.length < 90 ? query : 'Fórmula Personalizada';
+        inciTextCandidate = query;
       }
 
       const data = await auditInci(
