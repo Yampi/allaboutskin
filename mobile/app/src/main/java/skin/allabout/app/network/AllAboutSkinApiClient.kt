@@ -1,4 +1,4 @@
-package io.skinaudit.app.network
+package skin.allabout.app.network
 
 import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
@@ -11,7 +11,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
 
-interface SkinEvidenceApiService {
+interface AllAboutSkinApiService {
 
     @POST("audit/ocr")
     suspend fun auditOcr(
@@ -57,9 +57,9 @@ data class LifecycleApiResponse(
 )
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:8000/api/v1/" // 10.0.2.2 is Android Emulator localhost
+    private const val BASE_URL = "https://api.allabout.skin/api/v1/"
 
-    val service: SkinEvidenceApiService by lazy {
+    val service: AllAboutSkinApiService by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -75,6 +75,6 @@ object ApiClient {
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(SkinEvidenceApiService::class.java)
+            .create(AllAboutSkinApiService::class.java)
     }
 }

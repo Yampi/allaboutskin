@@ -479,7 +479,7 @@ class SkincareScientificSeeder extends Seeder
             'product_id' => $prodNiacinamide->id,
             'store_id' => $storeSephora->id,
             'product_url' => 'https://www.sephora.es/p/niacinamide-10-zinc-1-P2970014.html',
-            'affiliate_url' => 'https://www.sephora.es/p/niacinamide-10-zinc-1-P2970014.html?aff=skinaudit_101',
+            'affiliate_url' => 'https://www.sephora.es/p/niacinamide-10-zinc-1-P2970014.html?aff=allaboutskin_101',
             'price' => 6.60,
             'currency' => 'EUR',
             'in_stock' => true,
@@ -489,7 +489,7 @@ class SkincareScientificSeeder extends Seeder
             'product_id' => $prodNiacinamide->id,
             'store_id' => $storeAmazon->id,
             'product_url' => 'https://www.amazon.es/dp/B071D58ZYV',
-            'affiliate_url' => 'https://www.amazon.es/dp/B071D58ZYV?tag=skinaudit-21',
+            'affiliate_url' => 'https://www.amazon.es/dp/B071D58ZYV?tag=allaboutskin-21',
             'price' => 6.90,
             'currency' => 'EUR',
             'in_stock' => true,
@@ -499,7 +499,7 @@ class SkincareScientificSeeder extends Seeder
             'product_id' => $prodBha->id,
             'store_id' => $storePromofarma->id,
             'product_url' => 'https://www.promofarma.com/paulas-choice-bha',
-            'affiliate_url' => 'https://www.promofarma.com/paulas-choice-bha?partner=skinaudit',
+            'affiliate_url' => 'https://www.promofarma.com/paulas-choice-bha?partner=allaboutskin',
             'price' => 38.00,
             'currency' => 'EUR',
             'in_stock' => true,
@@ -508,7 +508,7 @@ class SkincareScientificSeeder extends Seeder
         // 7. Demo User with Skin Profile & Active Routine
         $demoUser = User::create([
             'name' => 'Dra. Sofía Mendoza',
-            'email' => 'sofia@skinaudit.io',
+            'email' => 'sofia@allabout.skin',
             'password' => Hash::make('password123'),
         ]);
 

@@ -526,7 +526,7 @@ export default function AdminDashboardPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-400">
-                        <div className="font-semibold text-slate-300">{log.ip_address || '127.0.0.1'}</div>
+                        <div className="font-semibold text-slate-300">{log.ip_address || '—'}</div>
                         {log.user && <div className="text-[11px] text-teal-400">{log.user.email}</div>}
                       </td>
                       <td className="px-6 py-4 text-right text-xs text-slate-400 whitespace-nowrap">

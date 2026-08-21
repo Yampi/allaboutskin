@@ -1,4 +1,4 @@
-package io.skinaudit.app.workers
+package skin.allabout.app.workers
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,7 +7,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import io.skinaudit.app.network.ApiClient
+import skin.allabout.app.network.ApiClient
 
 class LifecycleAlertWorker(
     private val context: Context,
@@ -28,12 +28,12 @@ class LifecycleAlertWorker(
 
                     if (status == "REORDER_RECOMMENDED" && daysRemaining <= 7) {
                         sendNotification(
-                            title = "🧴 Reposición recomendada",
+                            title = "🧴 Reposición recomendada - allabout.skin",
                             message = "$productName se agotará en aprox. $daysRemaining días. Toca para ver ofertas locales y online."
                         )
                     } else if (status == "PAO_EXPIRED") {
                         sendNotification(
-                            title = "⚠️ Alerta de Expiración PAO",
+                            title = "⚠️ Alerta de Expiración PAO - allabout.skin",
                             message = "$productName ha superado su período de apertura seguro. Se sugiere renovarlo."
                         )
                     }

@@ -1,4 +1,4 @@
-package io.skinaudit.app.ocr
+package skin.allabout.app.ocr
 
 import android.Manifest
 import android.content.Intent
@@ -16,8 +16,8 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import io.skinaudit.app.network.ApiClient
-import io.skinaudit.app.network.OcrAuditRequest
+import skin.allabout.app.network.ApiClient
+import skin.allabout.app.network.OcrAuditRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,13 +73,13 @@ class OcrScannerActivity : AppCompatActivity() {
                     this, cameraSelector, preview, imageCapture, imageAnalyzer
                 )
             } catch (exc: Exception) {
-                Log.e(TAG, "Camera binding failed", exc)
+                Log.e(TAG, "Error binding camera lifecycle", exc)
             }
 
         }, ContextCompat.getMainExecutor(this))
     }
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
     private fun processImageProxy(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null && !isScanning) {
@@ -87,14 +87,14 @@ class OcrScannerActivity : AppCompatActivity() {
 
             textRecognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    val rawText = visionText.text
-                    if (containsCosmeticKeywords(rawText) && !isScanning) {
+                    val detectedText = visionText.text
+                    if (detectedText.isNotBlank() && isLikelyInciList(detectedText)) {
                         isScanning = true
-                        onInciTextDetected(rawText)
+                        analyzeOcrOnServer(detectedText)
                     }
                 }
                 .addOnFailureListener { e ->
-                    Log.e(TAG, "ML Kit OCR recognition error", e)
+                    Log.e(TAG, "ML Kit text recognition failed", e)
                 }
                 .addOnCompleteListener {
                     imageProxy.close()
@@ -105,40 +105,39 @@ class OcrScannerActivity : AppCompatActivity() {
     }
 
     /**
-     * Fast on-device heuristic to detect cosmetic ingredient lists before sending to server.
+     * Heuristic to determine if recognized text looks like an ingredient list.
      */
-    private fun containsCosmeticKeywords(text: String): Boolean {
+    private fun isLikelyInciList(text: String): Boolean {
         val upper = text.uppercase()
-        return upper.contains("INGREDIENTS") ||
-                upper.contains("AQUA") ||
-                upper.contains("WATER") ||
-                upper.contains("NIACINAMIDE") ||
-                upper.contains("ACID") ||
-                upper.contains("GLYCERIN")
+        val keywords = listOf("INGREDIENTS", "INGREDIENTES", "INCI", "AQUA", "WATER", "GLYCERIN", "ALCOHOL", "ACID")
+        val matchCount = keywords.count { upper.contains(it) }
+        return matchCount >= 2 || (upper.contains(",") && upper.length > 30)
     }
 
-    private fun onInciTextDetected(ocrText: String) {
+    private fun analyzeOcrOnServer(rawText: String) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = ApiClient.service.auditOcr(
-                    OcrAuditRequest(ocrText = ocrText)
+                    OcrAuditRequest(ocrText = rawText)
                 )
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful && response.body() != null) {
-                        Toast.makeText(
-                            this@OcrScannerActivity,
-                            "¡Fórmula escaneada y auditada con éxito!",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Toast.makeText(this@OcrScannerActivity, "Fórmula identificada exitosamente", Toast.LENGTH_SHORT).show()
+                        // Pass data to AuditResultActivity or return result
+                        setResult(RESULT_OK, Intent().apply {
+                            putExtra("RAW_OCR", rawText)
+                        })
                         finish()
                     } else {
                         isScanning = false
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send OCR payload to backend", e)
-                isScanning = false
+                Log.e(TAG, "Server OCR audit failed", e)
+                withContext(Dispatchers.Main) {
+                    isScanning = false
+                }
             }
         }
     }
@@ -154,7 +153,7 @@ class OcrScannerActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val TAG = "SkinAuditOCR"
+        private const val TAG = "AllAboutSkinOCR"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }

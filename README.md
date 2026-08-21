@@ -1,4 +1,4 @@
-# SkinEvidence - Plataforma de Auditoría Científica de Skincare
+# Allabout.skin - Plataforma de Auditoría Científica de Skincare
 
 Plataforma integral de análisis y verificación dermatológica compuesta por:
 - **`backend/`**: API REST en **Laravel 12** con motor de auditoría química, conector **PubMed (NCBI)**, catálogo **CosIng UE**, perfiles dermatológicos, calendario de **Skin Cycling**, monitor de agotamiento/PAO y directorio multitienda.

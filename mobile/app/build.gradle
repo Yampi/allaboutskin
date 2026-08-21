@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'io.skinaudit.app'
+    namespace 'skin.allabout.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "io.skinaudit.app"
+        applicationId "skin.allabout.app"
         minSdk 24
         targetSdk 34
         versionCode 1

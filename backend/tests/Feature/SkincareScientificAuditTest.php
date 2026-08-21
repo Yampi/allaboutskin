@@ -69,7 +69,7 @@ class SkincareScientificAuditTest extends TestCase
     /** @test */
     public function it_evaluates_skin_compatibility_for_user_profile()
     {
-        $user = User::where('email', 'sofia@skinaudit.io')->first();
+        $user = User::where('email', 'sofia@allabout.skin')->first();
 
         // Audit The Ordinary Niacinamide against user profile
         $response = $this->actingAs($user)->postJson('/api/v1/audit/compatibility', [
@@ -94,7 +94,7 @@ class SkincareScientificAuditTest extends TestCase
     /** @test */
     public function it_calculates_skin_cycling_daily_routine_and_lifecycle()
     {
-        $user = User::where('email', 'sofia@skinaudit.io')->first();
+        $user = User::where('email', 'sofia@allabout.skin')->first();
 
         // 1. Get today routine
         $responseRoutine = $this->actingAs($user)->getJson('/api/v1/routine/today');
