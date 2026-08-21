@@ -301,6 +301,126 @@ const TAXONOMY: IngredientTaxonomy[] = [
     studies: []
   },
   {
+    inci: 'HOMOSALATE',
+    common: 'Homosalato (Filtro Solar UVB)',
+    cas: '118-56-9',
+    synonyms: ['HOMOSALATO', 'HOMOMENTHYL SALICYLATE', 'HMS'],
+    isActive: true,
+    cosingFunctions: ['UV ABSORBER', 'UV FILTER'],
+    comedogenic: 0,
+    irritation: 0,
+    timing: 'AM',
+    requiresSunscreen: false,
+    timelineWeeksMin: 1,
+    timelineWeeksMax: 2,
+    indications: [
+      {
+        name: 'Fotoprotección UVB y Prevención de Eritema',
+        slug: 'photoprotection-uvb',
+        description: 'Absorción selectiva de radiación UVB de onda corta previniendo quemaduras solares.',
+        evidenceLevel: 'A',
+        mechanism: 'Disipación de fotones UVB mediante fotoisomerización molecular inocua.',
+      }
+    ],
+    studies: []
+  },
+  {
+    inci: 'OCTOCRYLENE',
+    common: 'Octocrileno (Filtro Solar Fotoestabilizador)',
+    cas: '6197-30-4',
+    synonyms: ['OCTOCRILENO', 'OCTOCRYLENE'],
+    isActive: true,
+    cosingFunctions: ['UV ABSORBER', 'UV FILTER', 'LIGHT STABILIZER'],
+    comedogenic: 1,
+    irritation: 0,
+    timing: 'AM',
+    requiresSunscreen: false,
+    timelineWeeksMin: 1,
+    timelineWeeksMax: 2,
+    indications: [
+      {
+        name: 'Fotoprotección UVB/UVA Corta y Fotoestabilidad',
+        slug: 'photoprotection-stability',
+        description: 'Protección frente a radiación solar y estabilización de filtros solares fotosensibles.',
+        evidenceLevel: 'A',
+        mechanism: 'Captura de radiación UV y estabilización de moléculas de avobenzona.',
+      }
+    ],
+    studies: []
+  },
+  {
+    inci: 'ETHYLHEXYL SALICYLATE',
+    common: 'Octisalato / Salicilato de Etilhexilo',
+    cas: '118-60-5',
+    synonyms: ['OCTISALATE', 'OCTISALATO', 'ETHYLHEXYL SALICYLATE', 'OCTYL SALICYLATE'],
+    isActive: true,
+    cosingFunctions: ['UV ABSORBER', 'UV FILTER'],
+    comedogenic: 0,
+    irritation: 0,
+    timing: 'AM',
+    requiresSunscreen: false,
+    timelineWeeksMin: 1,
+    timelineWeeksMax: 2,
+    indications: [
+      {
+        name: 'Fotoprotección UVB y Resistencia al Agua',
+        slug: 'photoprotection-water-resistant',
+        description: 'Filtro solar UVB de perfil emoliente y alta afinidad lipídica.',
+        evidenceLevel: 'A',
+        mechanism: 'Absorción de fotones de 295 a 315 nm.',
+      }
+    ],
+    studies: []
+  },
+  {
+    inci: 'BUTYL METHOXYDIBENZOYLMETHANE',
+    common: 'Avobenzona / Filtro Solar UVA Amplio',
+    cas: '70356-09-1',
+    synonyms: ['AVOBENZONE', 'AVOBENZONA', 'PARSOL 1789', 'BUTYL METHOXYDIBENZOYLMETHANE'],
+    isActive: true,
+    cosingFunctions: ['UV ABSORBER', 'UV FILTER'],
+    comedogenic: 1,
+    irritation: 0,
+    timing: 'AM',
+    requiresSunscreen: false,
+    timelineWeeksMin: 1,
+    timelineWeeksMax: 2,
+    indications: [
+      {
+        name: 'Fotoprotección UVA y Prevención de Fotoenvejecimiento',
+        slug: 'photoprotection-uva-aging',
+        description: 'Escudo químico de amplio espectro contra radiación UVA responsable del envejecimiento prematuro.',
+        evidenceLevel: 'A',
+        mechanism: 'Absorción de longitud de onda larga UVA I y UVA II (310 - 400 nm).',
+      }
+    ],
+    studies: []
+  },
+  {
+    inci: 'BIS-ETHYLHEXYLOXYPHENOL METHOXYPHENYL TRIAZINE',
+    common: 'Tinosorb S (Filtro UVA/UVB Fotoestable)',
+    cas: '187393-00-6',
+    synonyms: ['TINOSORB S', 'BEMT', 'BEMOTRIZINOL', 'BIS-ETHYLHEXYLOXYPHENOL METHOXYPHENYL TRIAZINE'],
+    isActive: true,
+    cosingFunctions: ['UV ABSORBER', 'UV FILTER'],
+    comedogenic: 0,
+    irritation: 0,
+    timing: 'AM',
+    requiresSunscreen: false,
+    timelineWeeksMin: 1,
+    timelineWeeksMax: 2,
+    indications: [
+      {
+        name: 'Fotoprotección UVA/UVB Avanzada y Ultraestable',
+        slug: 'photoprotection-tinosorb',
+        description: 'Filtro orgánico de nueva generación con máxima fotoestabilidad y nula degradación lumínica.',
+        evidenceLevel: 'A',
+        mechanism: 'Absorción de amplio espectro UVA/UVB con distribución homogénea en la película cutánea.',
+      }
+    ],
+    studies: []
+  },
+  {
     inci: 'PANTHENOL',
     common: 'D-Pantenol / Pro-Vitamina B5',
     cas: '81-13-0',
@@ -742,6 +862,8 @@ export async function POST(request: Request) {
     const isPatch = /parche|patch|hydrocolloid|hidrocoloide/i.test(fullText);
     const isSheetMask = /mascarilla|sheet mask|velo/i.test(fullText);
     const isTool = /guasha|roller|cepillo|dermaroller|led mask|herramienta/i.test(fullText);
+    const isSunscreen = /protector solar|bloqueador|sunscreen|sunblock|duo defense|ozono|spf|fps|fotoprotector|homosalate|octocrylene|avobenzone|ethylhexyl salicylate|tinosorb|mexoryl/i.test(fullText);
+    const isCream = /crema|cream|balm|balsamo|lotion|locion|moisturiz/i.test(fullText);
 
     let formatType: any = 'LIQUID_SERUM';
     let isPhysical = false;
@@ -822,6 +944,32 @@ export async function POST(request: Request) {
       howToUse = 'Aplicar abundante aceite facial y deslizar con movimientos ascendentes suaves.';
       superiorAlternatives = [];
       summary = 'Herramienta de masaje facial. Aporta relajación y descongestión temporal siempre que se use con lubricación adecuada.';
+    } else if (isSunscreen) {
+      formatType = 'GEL_OR_LOTION';
+      isPhysical = false;
+      frictionRisk = 'NONE';
+      rinseOff = false;
+      barrierWarning = null;
+      contraindications = [];
+      qualityFactors = ['Fotoprotección de amplio espectro UVA/UVB', 'Prevención de fotoenvejecimiento y eritema solar'];
+      qualityScore = 9.4;
+      whenToUse = 'Mañana (AM) como paso final de la rutina diurna y reaplicar cada 2 a 3 horas en exposición directa.';
+      howToUse = 'Aplicar generosamente 2 líneas de producto en los dedos (regla de los 2 dedos / ~1.25 ml para rostro y cuello) 15-20 min antes de la exposición solar.';
+      superiorAlternatives = [];
+      summary = 'Fórmula de fotoprotección solar diseñada para proteger frente a radiación ultravioleta y estrés oxidativo ambiental.';
+    } else if (isCream) {
+      formatType = 'CREAM_OR_BALM';
+      isPhysical = false;
+      frictionRisk = 'NONE';
+      rinseOff = false;
+      barrierWarning = null;
+      contraindications = [];
+      qualityFactors = ['Emulsión humectante y oclusiva para retención hídrica'];
+      qualityScore = 9.0;
+      whenToUse = 'Mañana y Noche (AM/PM) tras el sérum o tratamiento activo.';
+      howToUse = 'Distribuir una cantidad del tamaño de una avellana en rostro y cuello con masaje suave ascendente.';
+      superiorAlternatives = [];
+      summary = 'Emulsión humectante y emoliente para restauración y acondicionamiento del estrato córneo.';
     } else {
       formatType = 'LIQUID_SERUM';
       isPhysical = false;

@@ -204,6 +204,37 @@ class AiSkincareAdvisorService
             $howToUse = 'Aplicar abundante aceite facial y deslizar con movimientos ascendentes suaves desde el centro hacia afuera.';
             $superiorAlternatives = [];
             $summary = 'Herramienta de masaje facial. Aporta relajación y descongestión temporal siempre que se use con lubricación adecuada.';
+        } elseif (preg_match('/protector solar|bloqueador|sunscreen|sunblock|duo defense|ozono|spf|fps|fotoprotector|homosalate|octocrylene|avobenzone|ethylhexyl salicylate|tinosorb|mexoryl/i', $text)) {
+            $formatType = 'GEL_OR_LOTION';
+            $isPhysical = false;
+            $frictionRisk = 'NONE';
+            $rinseOff = false;
+            $barrierWarning = null;
+            $contraindications = [];
+            $qualityFactors = [
+                'Fotoprotección de amplio espectro UVA/UVB',
+                'Prevención de fotoenvejecimiento prematuro y eritema solar'
+            ];
+            $qualityScore = 9.4;
+            $whenToUse = 'Mañana (AM) como paso final de la rutina diurna y reaplicar cada 2 a 3 horas en exposición directa.';
+            $howToUse = 'Aplicar generosamente 2 líneas completas de producto extendidas en los dedos (regla de los 2 dedos / ~1.25 ml para rostro y cuello) 15 a 20 minutos antes de la exposición solar.';
+            $superiorAlternatives = [];
+            $summary = 'Fórmula de fotoprotección solar diseñada para neutralizar la radiación ultravioleta y el estrés oxidativo ambiental.';
+        } elseif (preg_match('/crema|cream|balm|balsamo|lotion|locion|moisturiz/i', $text)) {
+            $formatType = 'CREAM_OR_BALM';
+            $isPhysical = false;
+            $frictionRisk = 'NONE';
+            $rinseOff = false;
+            $barrierWarning = null;
+            $contraindications = [];
+            $qualityFactors = [
+                'Emulsión humectante y oclusiva para retención hídrica y acondicionamiento dérmico'
+            ];
+            $qualityScore = 9.0;
+            $whenToUse = 'Mañana y Noche (AM/PM) tras el sérum o tratamiento activo.';
+            $howToUse = 'Distribuir una cantidad del tamaño de una avellana sobre rostro y cuello con suave masaje ascendente.';
+            $superiorAlternatives = [];
+            $summary = 'Emulsión humectante y emoliente para restauración y acondicionamiento del estrato córneo.';
         } else {
             $formatType = 'LIQUID_SERUM';
             $isPhysical = false;
