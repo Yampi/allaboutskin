@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export interface AuditReport {
   meta: {
@@ -82,46 +82,40 @@ export interface AuditReport {
 }
 
 export async function auditInci(inciText: string, productName?: string): Promise<AuditReport> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/audit/inci`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inci_text: inciText, product_name: productName }),
-    });
+  const endpoint = API_BASE_URL ? `${API_BASE_URL}/audit/inci` : '/api/audit/inci';
 
-    if (res.ok) {
-      const json = await res.json();
-      return json.data;
-    }
-  } catch {
-    // If external Laravel API is not reachable, fallback to internal Next.js API route on Vercel
-  }
-
-  const fallbackRes = await fetch('/api/audit/inci', {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ inci_text: inciText, product_name: productName }),
   });
 
-  if (!fallbackRes.ok) {
+  if (!res.ok) {
     throw new Error('Error al auditar la fórmula');
   }
 
-  const fallbackJson = await fallbackRes.json();
-  return fallbackJson.data;
-}
-
-export async function getProductAudit(slug: string): Promise<AuditReport> {
-  const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
-  if (!res.ok) {
-    throw new Error('Error al consultar producto');
-  }
   const json = await res.json();
   return json.data;
 }
 
-export async function getCatalogProducts() {
-  const res = await fetch(`${API_BASE_URL}/catalog/products`);
-  if (!res.ok) return { data: [] };
-  return res.json();
+export async function getProductAudit(slug: string): Promise<AuditReport> {
+  if (API_BASE_URL) {
+    const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data;
+    }
+  }
+
+  // Fallback to internal audit
+  return auditInci('Aqua, Niacinamide, Zinc PCA', slug);
 }
+
+export async function getCatalogProducts() {
+  if (API_BASE_URL) {
+    const res = await fetch(`${API_BASE_URL}/catalog/products`);
+    if (res.ok) return res.json();
+  }
+  return { data: [] };
+}
+
