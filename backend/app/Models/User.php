@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domain\Auth\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +18,7 @@ class User extends Authenticatable
 
     /**
      * The attributes that are mass assignable.
+     * Note: 'role' and security attributes are excluded from public mass assignment.
      *
      * @var list<string>
      */
@@ -35,6 +36,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'failed_login_attempts',
+        'locked_until',
     ];
 
     /**
@@ -47,6 +50,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
+            'locked_until' => 'datetime',
         ];
     }
 
@@ -64,5 +71,25 @@ class User extends Authenticatable
     {
         return $this->hasMany(RoutineAdherenceLog::class);
     }
-}
 
+    public function securityLogs(): HasMany
+    {
+        return $this->hasMany(SecurityAuditLog::class);
+    }
+
+    public function hasRole(UserRole|string $role): bool
+    {
+        $roleValue = is_string($role) ? $role : $role->value;
+        return $this->role?->value === $roleValue;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role?->isAdmin() ?? false;
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->locked_until !== null && $this->locked_until->isFuture();
+    }
+}

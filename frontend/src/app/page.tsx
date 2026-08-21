@@ -1,12 +1,13 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FormulaAuditor from '@/components/FormulaAuditor';
-import { Microscope, ShieldCheck, Database, FileText, Bot, Zap, ArrowDown } from 'lucide-react';
+import { Microscope, ShieldCheck, Database, FileText, Layers, Sparkles } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'SkinEvidence - Auditoría Científica de Skincare y Misceláneas',
-  description: 'Audita cualquier cosmético, toallita o miscelánea con rigor científico. Verificado contra CosIng UE, PubMed y Copilot IA con Guardrails Clínicos.',
+  title: 'Allabout.skin - Auditoría Científica de Skincare y Cosméticos',
+  description: 'Audita cualquier cosmético, toallita o miscelánea con rigor científico. Verificado contra CosIng UE y PubMed.',
 };
 
 export default function Home() {
@@ -26,7 +27,7 @@ export default function Home() {
             {/* Top pill badge */}
             <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm text-teal-900 text-xs font-bold px-3.5 py-1.5 rounded-full border border-teal-200/80 shadow-sm">
               <ShieldCheck className="w-4 h-4 text-teal-600" />
-              <span>Plataforma Científica de Skincare & Misceláneas</span>
+              <span>Plataforma Científica de Skincare</span>
             </div>
 
             {/* Direct & Impactful Headline */}
@@ -39,7 +40,7 @@ export default function Home() {
 
             {/* Subheading */}
             <p className="text-xs sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-              Escribe un producto, pega ingredientes o toma una foto para evaluar fricción mecánica, conflictos químicos y estudios clínicos indexados.
+              Escribe un producto, pega sus ingredientes o toma una foto para evaluar compatibilidad química, orden de capas y estudios clínicos.
             </p>
           </div>
 
@@ -48,48 +49,69 @@ export default function Home() {
             <FormulaAuditor />
           </div>
 
-          {/* Trust & Scientific Sources Bar */}
-          <div className="pt-10 max-w-3xl mx-auto">
+          {/* Quick Exploration Cards (With Real Destinations) */}
+          <div className="pt-8 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Explorar Activos y Guías
+              </span>
+              <Link href="/ingrediente" className="text-xs font-semibold text-teal-700 hover:text-teal-800 hover:underline">
+                Ver biblioteca de activos →
+              </Link>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-left">
-              <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 flex-shrink-0">
+              <Link
+                href="/ingrediente/niacinamide"
+                className="bg-white hover:bg-teal-50/50 hover:border-teal-300 transition-all p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 group-hover:bg-teal-100 flex items-center justify-center text-teal-700 shrink-0">
                   <Database className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">CosIng UE</h4>
-                  <p className="text-[10px] text-slate-500">Regulación Oficial</p>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-900">Niacinamida</h4>
+                  <p className="text-[11px] text-slate-500">Poros y Barrera</p>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 flex-shrink-0">
+              <Link
+                href="/ingrediente/retinol"
+                className="bg-white hover:bg-teal-50/50 hover:border-teal-300 transition-all p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200 group-hover:bg-purple-100 flex items-center justify-center text-purple-700 shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">PubMed</h4>
-                  <p className="text-[10px] text-slate-500">Ensayos Clínicos RCT</p>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-900">Retinol</h4>
+                  <p className="text-[11px] text-slate-500">Renovación Celular</p>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0">
-                  <Bot className="w-4 h-4" />
+              <Link
+                href="/ingrediente/salicylic-acid"
+                className="bg-white hover:bg-teal-50/50 hover:border-teal-300 transition-all p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 group-hover:bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                  <Layers className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Copilot Clínico</h4>
-                  <p className="text-[10px] text-slate-500">Guardrails Estrictos</p>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-900">Ácido Salicílico</h4>
+                  <p className="text-[11px] text-slate-500">BHA y Poros</p>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-700 flex-shrink-0">
-                  <Zap className="w-4 h-4" />
+              <Link
+                href="/rutinas/skin-cycling"
+                className="bg-white hover:bg-teal-50/50 hover:border-teal-300 transition-all p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 group-hover:bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Foso de Datos</h4>
-                  <p className="text-[10px] text-slate-500">Caché & Zero Latencia</p>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-900">Skin Cycling</h4>
+                  <p className="text-[11px] text-slate-500">Rutina 4 Noches</p>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </section>

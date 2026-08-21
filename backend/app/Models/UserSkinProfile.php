@@ -10,14 +10,22 @@ class UserSkinProfile extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'user_id',
+        'skin_type',
+        'barrier_status',
+        'fitzpatrick_type',
+        'active_conditions',
+        'known_allergens',
+        'pregnancy_or_nursing',
+    ];
 
     protected function casts(): array
     {
         return [
             'fitzpatrick_type' => 'integer',
-            'active_conditions' => 'array',
-            'known_allergens' => 'array',
+            'active_conditions' => 'encrypted:array',
+            'known_allergens' => 'encrypted:array',
             'pregnancy_or_nursing' => 'boolean',
         ];
     }

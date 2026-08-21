@@ -290,7 +290,7 @@ class AiSkincareAdvisorService
         $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}";
 
         $systemPrompt = <<<PROMPT
-Eres un dermatólogo y químico cosmético experto del motor científico SkinEvidence.
+Eres un dermatólogo y químico cosmético experto del motor científico Allabout.skin.
 Tu objetivo es analizar con rigor científico y objetividad absoluta productos de skincare, formatos físicos y misceláneas (toallitas desmaquillantes, parches, pads, sérums).
 
 REGLAS ESTRICTAS DE GOBERNANZA:

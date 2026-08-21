@@ -235,7 +235,7 @@ export default function FormulaAuditor() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-600"></span>
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Evaluador Científico & Misceláneas
+              Auditoría Científica de Fórmulas
             </span>
           </div>
 
@@ -421,8 +421,8 @@ export default function FormulaAuditor() {
                   <ScanLine className="w-5 h-5 text-teal-200" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg">Escáner Óptico de Cosméticos & Fórmulas</h3>
-                  <p className="text-xs text-teal-200/90">Visión artificial para reconocimiento de empaques e INCI</p>
+                  <h3 className="font-bold text-base sm:text-lg">Escanear Etiqueta de Cosmético</h3>
+                  <p className="text-xs text-teal-200/90">Toma una foto a la lista de ingredientes o al frente del envase</p>
                 </div>
               </div>
               <button
@@ -465,68 +465,100 @@ export default function FormulaAuditor() {
                 <div className="space-y-3">
                   {/* Front vs Back Context Notice */}
                   {ocrResult.labelType === 'FRONT_BRANDING' ? (
-                    <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-2xl">
+                    <div className="p-4 bg-amber-50/95 border-2 border-amber-300/80 rounded-2xl shadow-sm">
                       <div className="flex items-start gap-3">
-                        <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0 mt-0.5">
-                          <Tag className="w-4 h-4" />
+                        <div className="p-2 bg-amber-100 rounded-xl text-amber-800 shrink-0 mt-0.5 shadow-xs">
+                          <Tag className="w-5 h-5" />
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-md">
-                              Frente del Envase Detectado
+                        <div className="space-y-1.5 flex-grow">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 bg-amber-200/90 px-2.5 py-0.5 rounded-lg border border-amber-300">
+                              📸 Frente del Envase Detectado
                             </span>
                             {ocrResult.isSunscreen && (
-                              <span className="text-xs font-bold text-amber-900 bg-orange-200 px-2 py-0.5 rounded-md">
-                                Protector Solar
+                              <span className="text-xs font-bold text-orange-950 bg-orange-200/90 px-2.5 py-0.5 rounded-lg border border-orange-300">
+                                ☀️ Protector Solar
                               </span>
                             )}
                           </div>
-                          <p className="text-xs font-medium text-amber-900 leading-relaxed">
+                          
+                          <p className="text-xs sm:text-sm font-semibold text-amber-950 leading-snug">
                             {ocrResult.detectedProductName ? (
                               <>
-                                Identificamos el producto: <strong>{ocrResult.detectedProductName}</strong>
-                                {ocrResult.detectedBrand && ` de ${ocrResult.detectedBrand}`}.
+                                Producto identificado: <strong className="text-amber-900">{ocrResult.detectedProductName}</strong>
+                                {ocrResult.detectedBrand && <span className="text-amber-800"> ({ocrResult.detectedBrand})</span>}.
                               </>
                             ) : (
-                              <>La foto corresponde a la cara comercial del envase.</>
+                              <>Esta imagen corresponde a la cara comercial (frente) del empaque.</>
                             )}
                           </p>
-                          <p className="text-[11px] text-amber-800/90">
-                            💡 <em>Tip de Dermatología:</em> El frente contiene el nombre y claims. Para auditar el lote específico de fabricación, gira el envase y fotografía la lista <strong>INCI / Ingredientes</strong> al reverso.
+                          
+                          <p className="text-[11px] text-amber-900/90 bg-amber-100/70 p-2.5 rounded-xl border border-amber-200/70 leading-relaxed">
+                            ⚠️ <strong>Aviso Importante:</strong> El frente contiene el nombre comercial y beneficios de marketing, pero <strong>no la lista química de ingredientes (INCI)</strong>.
+                            <br />
+                            💡 <em>Para un análisis químico de lote:</em> Gira el envase y toma foto al reverso donde dice <strong>&quot;Ingredientes / INCI&quot;</strong>.
                           </p>
                         </div>
                       </div>
 
                       {ocrResult.suggestedOfficialInci && (
-                        <div className="mt-3 pt-3 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs text-amber-900 font-semibold">
-                            Fórmula oficial en catálogo cargada automáticamente
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedOcrMode('OFFICIAL_FORMULA');
-                              setEditableOcrText(`${ocrResult.detectedProductName}: ${ocrResult.suggestedOfficialInci}`);
-                            }}
-                            className={`text-xs px-2.5 py-1 rounded-lg font-bold transition ${
-                              selectedOcrMode === 'OFFICIAL_FORMULA'
-                                ? 'bg-amber-800 text-white'
-                                : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
-                            }`}
-                          >
-                            Usar Fórmula Oficial
-                          </button>
+                        <div className="mt-3 pt-3 border-t border-amber-200 flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-xs text-amber-950 font-medium">
+                            ✨ Tenemos la <strong>fórmula oficial registrada</strong> en catálogo para este producto.
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOcrMode('OFFICIAL_FORMULA');
+                                setEditableOcrText(`${ocrResult.detectedProductName}: ${ocrResult.suggestedOfficialInci}`);
+                              }}
+                              className={`text-xs px-3 py-1.5 rounded-xl font-bold transition shadow-xs cursor-pointer ${
+                                selectedOcrMode === 'OFFICIAL_FORMULA'
+                                  ? 'bg-amber-800 text-white shadow-amber-900/20'
+                                  : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
+                              }`}
+                            >
+                              Fórmula Oficial INCI
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOcrMode('RAW_TEXT');
+                                setEditableOcrText(ocrResult.cleanedText || ocrResult.rawText);
+                              }}
+                              className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
+                                selectedOcrMode === 'RAW_TEXT'
+                                  ? 'bg-amber-800 text-white'
+                                  : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
+                              }`}
+                            >
+                              Solo Nombre
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
-                      <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-800 shrink-0">
-                        <CheckCircle2 className="w-4 h-4" />
+                  ) : ocrResult.labelType === 'BACK_INCI' ? (
+                    <div className="p-3.5 bg-emerald-50 border-2 border-emerald-300/80 rounded-2xl flex items-center gap-3 shadow-sm">
+                      <div className="p-2 bg-emerald-100 rounded-xl text-emerald-800 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
                       </div>
-                      <div className="text-xs text-emerald-900">
-                        <span className="font-bold">Reverso / Lista INCI detectada con éxito.</span>
-                        <p className="text-[11px] text-emerald-700 mt-0.5">Se extrajeron los componentes químicos de la fórmula cosmética.</p>
+                      <div className="text-xs text-emerald-950">
+                        <span className="font-bold text-sm text-emerald-900">🧪 Reverso / Lista INCI detectada con éxito.</span>
+                        <p className="text-[11px] text-emerald-800 mt-0.5">Se identificaron los componentes químicos y filtros de la formulación cosmética.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-2xl flex items-center gap-3">
+                      <div className="p-2 bg-slate-200 rounded-xl text-slate-700 shrink-0">
+                        <Info className="w-5 h-5" />
+                      </div>
+                      <div className="text-xs text-slate-800">
+                        <span className="font-bold">Texto extraído de la imagen.</span>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          Si la foto corresponde al frente del producto, gira el envase y captura la lista de ingredientes al reverso para una auditoría química completa.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -535,12 +567,12 @@ export default function FormulaAuditor() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-bold text-slate-700">
-                        Texto Extraído para Auditoría (Puedes editarlo si detectas un error tipográfico):
+                        Texto Extraído para Auditoría (Puedes editarlo o complementarlo):
                       </label>
                       <button
                         type="button"
-                        onClick={() => setEditableOcrText(cleanOcrCosmeticText(ocrResult.rawText))}
-                        className="text-[11px] text-teal-700 hover:underline flex items-center gap-1 font-semibold"
+                        onClick={() => setEditableOcrText(cleanOcrCosmeticText(ocrResult.rawText, ocrResult.labelType === 'FRONT_BRANDING'))}
+                        className="text-[11px] text-teal-700 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
                       >
                         <RefreshCw className="w-3 h-3" />
                         Limpiar ruido OCR

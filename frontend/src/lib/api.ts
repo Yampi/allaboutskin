@@ -1,4 +1,44 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+
+export type UserRoleType = 'super_admin' | 'admin' | 'scientific_editor' | 'premium_user' | 'standard_user';
+
+export interface StoredUser {
+  id?: number;
+  name: string;
+  email: string;
+  role?: UserRoleType;
+  token: string;
+  is_active?: boolean;
+}
+
+export interface SecurityAuditLogItem {
+  id: number;
+  user_id: number | null;
+  event_type: string;
+  severity: 'INFO' | 'WARNING' | 'CRITICAL';
+  ip_address: string | null;
+  user_agent: string | null;
+  resource_target: string | null;
+  description: string;
+  payload: any;
+  created_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface SystemSettingItem {
+  id: number;
+  key: string;
+  group: string;
+  value: string;
+  type: string;
+  description: string | null;
+  is_public: boolean;
+}
 
 export interface AiClinicalCopilot {
   is_physical_applicator: boolean;
@@ -113,7 +153,7 @@ export async function auditInci(
   price?: number | null,
   currency: string = 'USD'
 ): Promise<AuditReport> {
-  const endpoint = API_BASE_URL ? `${API_BASE_URL}/audit/inci` : '/api/audit/inci';
+  const endpoint = `${API_BASE_URL}/audit/inci`;
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -135,22 +175,178 @@ export async function auditInci(
 }
 
 export async function getProductAudit(slug: string): Promise<AuditReport> {
-  if (API_BASE_URL) {
-    const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
-    if (res.ok) {
-      const json = await res.json();
-      return json.data;
-    }
+  const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
+  if (res.ok) {
+    const json = await res.json();
+    return json.data;
   }
 
-  // Fallback to internal audit
   return auditInci('Aqua, Niacinamide, Zinc PCA', slug);
 }
 
 export async function getCatalogProducts() {
-  if (API_BASE_URL) {
-    const res = await fetch(`${API_BASE_URL}/catalog/products`);
-    if (res.ok) return res.json();
-  }
+  const res = await fetch(`${API_BASE_URL}/catalog/products`);
+  if (res.ok) return res.json();
   return { data: [] };
+}
+
+// User & Routine Storage Helpers
+export function getCurrentUser(): StoredUser | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const data = localStorage.getItem('allabout_user');
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setCurrentUser(user: StoredUser | null) {
+  if (typeof window === 'undefined') return;
+  if (user) {
+    localStorage.setItem('allabout_user', JSON.stringify(user));
+  } else {
+    localStorage.removeItem('allabout_user');
+  }
+}
+
+export function isUserAdmin(user: StoredUser | null): boolean {
+  if (!user || !user.role) return false;
+  return user.role === 'admin' || user.role === 'super_admin';
+}
+
+export function getSavedCustomProtocol() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const data = localStorage.getItem('allabout_saved_protocol');
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setSavedCustomProtocol(protocol: any, diagnosisInput: any) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('allabout_saved_protocol', JSON.stringify({ protocol, diagnosisInput, savedAt: new Date().toISOString() }));
+}
+
+export function getStoredRoutineProducts() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem('allabout_routine_products');
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setStoredRoutineProducts(products: any[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('allabout_routine_products', JSON.stringify(products));
+}
+
+// Admin API Methods
+function getAuthHeaders() {
+  const user = getCurrentUser();
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': user?.token ? `Bearer ${user.token}` : '',
+  };
+}
+
+export async function fetchAdminUsers(params: { page?: number; search?: string; role?: string; status?: string } = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.append('page', params.page.toString());
+  if (params.search) query.append('search', params.search);
+  if (params.role) query.append('role', params.role);
+  if (params.status) query.append('status', params.status);
+
+  const res = await fetch(`${API_BASE_URL}/admin/users?${query.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('No se pudieron cargar los usuarios');
+  return res.json();
+}
+
+export async function updateAdminUserRole(userId: number, role: UserRoleType) {
+  const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.message || 'Error al actualizar rol');
+  }
+  return res.json();
+}
+
+export async function toggleAdminUserStatus(userId: number) {
+  const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/toggle-status`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.message || 'Error al modificar estado');
+  }
+  return res.json();
+}
+
+export async function unlockAdminUser(userId: number) {
+  const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/unlock`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al desbloquear cuenta');
+  return res.json();
+}
+
+export async function fetchAdminSecurityLogs(params: { page?: number; severity?: string; event_type?: string; search?: string } = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.append('page', params.page.toString());
+  if (params.severity) query.append('severity', params.severity);
+  if (params.event_type) query.append('event_type', params.event_type);
+  if (params.search) query.append('search', params.search);
+
+  const res = await fetch(`${API_BASE_URL}/admin/security/logs?${query.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al consultar logs de seguridad');
+  return res.json();
+}
+
+export async function fetchAdminSecurityStats() {
+  const res = await fetch(`${API_BASE_URL}/admin/security/stats`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al consultar métricas de seguridad');
+  return res.json();
+}
+
+export async function fetchAdminSystemSettings() {
+  const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al cargar configuraciones');
+  return res.json();
+}
+
+export async function updateAdminSystemSettings(settings: Array<{ key: string; value: any; group?: string; type?: string; description?: string }>) {
+  const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ settings }),
+  });
+  if (!res.ok) throw new Error('Error al guardar configuraciones');
+  return res.json();
+}
+
+export async function fetchAdminSystemHealth() {
+  const res = await fetch(`${API_BASE_URL}/admin/settings/health`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al consultar estado de salud del sistema');
+  return res.json();
 }

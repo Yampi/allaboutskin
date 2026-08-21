@@ -9,7 +9,9 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2 text-white mb-3">
               <Microscope className="w-6 h-6 text-teal-400" />
-              <span className="text-xl font-bold">SkinEvidence</span>
+              <span className="text-xl font-bold">
+                Allabout<span className="text-teal-400">.skin</span>
+              </span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed max-w-md">
               Plataforma tecnológica de auditoría científica y análisis dermatológico de cosméticos. Normalización frente a la base oficial de cosméticos de la UE (CosIng) e indexación directa con la literatura médica de PubMed (NCBI).
@@ -21,9 +23,9 @@ export default function Footer() {
             <ul className="space-y-2 text-xs">
               <li><Link href="/" className="hover:text-teal-400">Auditor INCI y OCR</Link></li>
               <li><Link href="/rutinas/skin-cycling" className="hover:text-teal-400">Guía Skin Cycling</Link></li>
+              <li><Link href="/ingrediente" className="hover:text-teal-400">Biblioteca de Ingredientes</Link></li>
               <li><Link href="/ingrediente/niacinamide" className="hover:text-teal-400">Niacinamida (Vitamina B3)</Link></li>
               <li><Link href="/ingrediente/retinol" className="hover:text-teal-400">Retinol (Vitamina A)</Link></li>
-              <li><Link href="/ingrediente/salicylic-acid" className="hover:text-teal-400">Ácido Salicílico (BHA)</Link></li>
             </ul>
           </div>
 
@@ -42,7 +44,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-slate-800 text-xs flex flex-col sm:flex-row justify-between items-center text-slate-500 gap-4">
-          <p>© {new Date().getFullYear()} SkinEvidence. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} Allabout.skin. Todos los derechos reservados.</p>
           <div className="flex space-x-6">
             <span>CosIng EU Reg. (EC) No 1223/2009</span>
             <span>NCBI PubMed E-Utilities</span>

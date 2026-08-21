@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminSecurityLogsController;
+use App\Http\Controllers\Api\Admin\AdminSystemSettingsController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\CatalogController;
@@ -16,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    // 1. Authentication
+    // 1. Authentication & Security
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
@@ -64,5 +67,29 @@ Route::prefix('v1')->group(function () {
             Route::get('/items', [LifecycleController::class, 'items']);
         });
     });
-});
 
+    // 5. Administration, Roles & Security Logs (Admin / Super Admin Only)
+    Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
+        // Users Management
+        Route::prefix('users')->group(function () {
+            Route::get('/', [AdminUserController::class, 'index']);
+            Route::get('/{id}', [AdminUserController::class, 'show']);
+            Route::patch('/{id}/role', [AdminUserController::class, 'updateRole']);
+            Route::patch('/{id}/toggle-status', [AdminUserController::class, 'toggleStatus']);
+            Route::post('/{id}/unlock', [AdminUserController::class, 'unlock']);
+        });
+
+        // Security Logs & Audit Trail
+        Route::prefix('security')->group(function () {
+            Route::get('/logs', [AdminSecurityLogsController::class, 'index']);
+            Route::get('/stats', [AdminSecurityLogsController::class, 'stats']);
+        });
+
+        // Global System Configuration & Health
+        Route::prefix('settings')->group(function () {
+            Route::get('/', [AdminSystemSettingsController::class, 'index']);
+            Route::post('/', [AdminSystemSettingsController::class, 'update']);
+            Route::get('/health', [AdminSystemSettingsController::class, 'systemHealth']);
+        });
+    });
+});

@@ -13,10 +13,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = slug.replace(/-/g, ' ').toUpperCase();
 
   return {
-    title: `${name} - Evidencia Científica, CosIng y Guía Dermatológica | SkinEvidence`,
+    title: `${name} - Evidencia Científica, CosIng y Guía Dermatológica | Allabout.skin`,
     description: `Análisis científico de ${name}. Indicaciones clínicas, estudios médicos indexados en PubMed, compatibilidad y pH óptimo según base de datos CosIng UE.`,
     alternates: {
-      canonical: `https://skinaudit.io/ingrediente/${slug}`,
+      canonical: `https://allabout.skin/ingrediente/${slug}`,
     },
   };
 }
