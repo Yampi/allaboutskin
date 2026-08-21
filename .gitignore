@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+vendor/
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Databases & Caches
+*.sqlite
+*.sqlite-journal
+.phpunit.result.cache
+
+# Next.js Build
+.next/
+out/
+build/
+dist/
+
+# Android Build
+.gradle/
+mobile/build/
+mobile/app/build/
+*.apk
+*.aab
+.idea/
+*.iml
+local.properties
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS Generated
+.DS_Store
+Thumbs.db
