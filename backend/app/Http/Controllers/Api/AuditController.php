@@ -28,12 +28,16 @@ class AuditController extends Controller
             'inci_text' => 'required|string|min:3',
             'product_name' => 'nullable|string|max:255',
             'brand_name' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:5',
         ]);
 
         $report = $this->auditEngine->auditFromRawInci(
             rawInciText: $validated['inci_text'],
             productName: $validated['product_name'] ?? null,
-            brandName: $validated['brand_name'] ?? null
+            brandName: $validated['brand_name'] ?? null,
+            price: isset($validated['price']) ? (float)$validated['price'] : null,
+            currency: $validated['currency'] ?? 'USD'
         );
 
         return response()->json([
@@ -51,12 +55,16 @@ class AuditController extends Controller
             'ocr_text' => 'required|string|min:3',
             'product_name' => 'nullable|string|max:255',
             'brand_name' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:5',
         ]);
 
         $report = $this->auditEngine->auditFromRawInci(
             rawInciText: $validated['ocr_text'],
             productName: $validated['product_name'] ?? null,
-            brandName: $validated['brand_name'] ?? null
+            brandName: $validated['brand_name'] ?? null,
+            price: isset($validated['price']) ? (float)$validated['price'] : null,
+            currency: $validated['currency'] ?? 'USD'
         );
 
         return response()->json([

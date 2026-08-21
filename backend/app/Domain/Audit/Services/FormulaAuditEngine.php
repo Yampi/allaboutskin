@@ -13,7 +13,8 @@ class FormulaAuditEngine
 {
     public function __construct(
         protected InciParserService $inciParser,
-        protected PubMedApiService $pubMedApi
+        protected PubMedApiService $pubMedApi,
+        protected AiSkincareAdvisorService $aiAdvisor
     ) {}
 
     /**
@@ -22,9 +23,17 @@ class FormulaAuditEngine
      * @param string $rawInciText
      * @param string|null $productName
      * @param string|null $brandName
+     * @param float|null $price
+     * @param string $currency
      * @return array<string, mixed>
      */
-    public function auditFromRawInci(string $rawInciText, ?string $productName = null, ?string $brandName = null): array
+    public function auditFromRawInci(
+        string $rawInciText,
+        ?string $productName = null,
+        ?string $brandName = null,
+        ?float $price = null,
+        string $currency = 'USD'
+    ): array
     {
         $parseResult = $this->inciParser->parseAndMatch($rawInciText);
         $matched = $parseResult['matched_ingredients'];
@@ -34,7 +43,10 @@ class FormulaAuditEngine
             ingredientDetails: $matched,
             productName: $productName,
             brandName: $brandName,
-            unmatchedTokens: $parseResult['unmatched_tokens']
+            unmatchedTokens: $parseResult['unmatched_tokens'],
+            rawInciText: $rawInciText,
+            price: $price,
+            currency: $currency
         );
     }
 
@@ -86,7 +98,10 @@ class FormulaAuditEngine
         ?string $productName = null,
         ?string $brandName = null,
         array $unmatchedTokens = [],
-        ?Product $product = null
+        ?Product $product = null,
+        ?string $rawInciText = null,
+        ?float $price = null,
+        string $currency = 'USD'
     ): array {
         $activeIngredients = $ingredients->filter(fn (Ingredient $ing) => $ing->is_active);
 
@@ -108,6 +123,18 @@ class FormulaAuditEngine
         // 6. Safety & Irritation Index
         $safetyMetrics = $this->calculateSafetyMetrics($ingredients);
 
+        // 7. AI Skincare Copilot & Format Analysis with Self-Feeding Database Cache
+        $textToAnalyze = $rawInciText ?? $ingredients->pluck('inci_name')->implode(', ');
+        $aiInsight = $this->aiAdvisor->generateOrRetrieveInsight(
+            rawInciText: $textToAnalyze,
+            productName: $productName ?? ($product->name ?? null),
+            brandName: $brandName ?? ($product->brand->name ?? null),
+            price: $price,
+            currency: $currency,
+            matchedIngredients: $ingredientDetails->all(),
+            unmatchedTokens: $unmatchedTokens
+        );
+
         return [
             'meta' => [
                 'product_name' => $productName ?? ($product->name ?? 'Fórmula Personalizada'),
@@ -118,6 +145,7 @@ class FormulaAuditEngine
                 'unmatched_tokens' => $unmatchedTokens,
                 'audited_at' => now()->toIso8601String(),
             ],
+            'ai_clinical_copilot' => $aiInsight,
             'clinical_indications' => $indications,
             'scientific_evidence' => $evidenceData,
             'layering_and_usage' => $layeringProtocol,

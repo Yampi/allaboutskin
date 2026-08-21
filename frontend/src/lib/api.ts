@@ -1,5 +1,30 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+export interface AiClinicalCopilot {
+  is_physical_applicator: boolean;
+  format_type: 'LIQUID_SERUM' | 'CREAM_OR_BALM' | 'GEL_OR_LOTION' | 'CLEANSING_WIPES' | 'EXFOLIATING_PADS' | 'SHEET_MASK' | 'HYDROCOLLOID_PATCH' | 'SKINCARE_TOOL' | 'MISCELLANEOUS';
+  friction_risk_level: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH';
+  is_rinse_off_required: boolean;
+  barrier_warning: string | null;
+  plain_language_summary: string;
+  contraindications: string[];
+  quality_factors: string[];
+  format_quality_score: number;
+  when_to_use: string | null;
+  how_to_use: string | null;
+  superior_alternatives: string[];
+  price_context?: {
+    price: number | null;
+    currency: string;
+  };
+  transparency_meta: {
+    source_type: 'AI_GENERATED' | 'EXPERT_VERIFIED' | 'DATABASE_FLYWHEEL' | 'DETERMINISTIC_CACHE';
+    source_label: string;
+    confidence_score: number;
+    total_community_lookups?: number;
+  };
+}
+
 export interface AuditReport {
   meta: {
     product_name: string;
@@ -10,6 +35,7 @@ export interface AuditReport {
     unmatched_tokens: string[];
     audited_at: string;
   };
+  ai_clinical_copilot: AiClinicalCopilot;
   clinical_indications: Array<{
     name: string;
     slug: string;
@@ -81,13 +107,23 @@ export interface AuditReport {
   }>;
 }
 
-export async function auditInci(inciText: string, productName?: string): Promise<AuditReport> {
+export async function auditInci(
+  inciText: string,
+  productName?: string,
+  price?: number | null,
+  currency: string = 'USD'
+): Promise<AuditReport> {
   const endpoint = API_BASE_URL ? `${API_BASE_URL}/audit/inci` : '/api/audit/inci';
 
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ inci_text: inciText, product_name: productName }),
+    body: JSON.stringify({
+      inci_text: inciText,
+      product_name: productName,
+      price: price !== undefined ? price : null,
+      currency: currency || 'USD',
+    }),
   });
 
   if (!res.ok) {
@@ -118,4 +154,3 @@ export async function getCatalogProducts() {
   }
   return { data: [] };
 }
-
