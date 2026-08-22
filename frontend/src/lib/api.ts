@@ -287,6 +287,67 @@ export function clearRecentAudits() {
   localStorage.removeItem('allabout_recent_audits');
 }
 
+export interface AuditFeedbackItem {
+  id: string;
+  productName: string;
+  isHelpful: boolean;
+  skinType?: string;
+  timestamp: string;
+}
+
+export function getAuditFeedbackList(): AuditFeedbackItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem('allabout_audit_feedback');
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveAuditFeedback(productName: string, isHelpful: boolean, skinType?: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getAuditFeedbackList();
+    const newItem: AuditFeedbackItem = {
+      id: 'fb_' + Date.now(),
+      productName,
+      isHelpful,
+      skinType,
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem('allabout_audit_feedback', JSON.stringify([newItem, ...list].slice(0, 50)));
+  } catch {}
+}
+
+export interface UserDailyRoutine {
+  skinType: string;
+  isDailyFixed: boolean;
+  steps: Array<{
+    stepNumber: number;
+    stepName: string;
+    productName: string;
+    brand?: string;
+    timing: 'AM' | 'PM' | 'BOTH';
+  }>;
+  updatedAt: string;
+}
+
+export function getSavedDailyRoutine(): UserDailyRoutine | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const data = localStorage.getItem('allabout_daily_routine');
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDailyRoutine(routine: UserDailyRoutine) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('allabout_daily_routine', JSON.stringify(routine));
+}
+
 // Admin API Methods
 function getAuthHeaders() {
   const user = getCurrentUser();
@@ -392,3 +453,60 @@ export async function fetchAdminSystemHealth() {
   if (!res.ok) throw new Error('Error al consultar estado de salud del sistema');
   return res.json();
 }
+
+// AI Skincare Endpoints
+export async function fetchAiDiagnosis(params: {
+  inci_text: string;
+  skin_type?: string;
+  concerns?: string[];
+  product_name?: string;
+}) {
+  const res = await fetch('/api/ai/advisor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error('Error al obtener diagnóstico de IA');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function sendCopilotMessage(params: {
+  question: string;
+  inci_text: string;
+  product_name?: string;
+  skin_type?: string;
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}) {
+  const res = await fetch('/api/ai/advisor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'chat', ...params }),
+  });
+  if (!res.ok) throw new Error('Error al consultar al copiloto');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg') {
+  const res = await fetch('/api/ai/scan-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64Image, mimeType }),
+  });
+  if (!res.ok) throw new Error('Error al analizar imagen con IA');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function auditFullRoutineAi(products: any[], skinType: string = 'COMBINATION') {
+  const res = await fetch('/api/ai/routine-audit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ products, skin_type: skinType }),
+  });
+  if (!res.ok) throw new Error('Error al auditar rutina completa');
+  const json = await res.json();
+  return json.data;
+}
+

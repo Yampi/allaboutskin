@@ -47,22 +47,13 @@ export default function Navbar() {
               Evaluar Fórmula
             </Link>
             <Link
-              href="/rutinas/skin-cycling"
-              className={`flex items-center gap-1.5 transition-colors duration-200 ${
-                pathname === '/rutinas/skin-cycling' ? 'text-[#7A9A8B] font-bold' : 'hover:text-[#2B2A29]'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              Skin Cycling
-            </Link>
-            <Link
               href="/mi-rutina"
               className={`flex items-center gap-1.5 transition-colors duration-200 ${
-                pathname === '/mi-rutina' ? 'text-[#7A9A8B] font-bold' : 'hover:text-[#2B2A29]'
+                pathname.startsWith('/mi-rutina') || pathname.startsWith('/rutinas') ? 'text-[#7A9A8B] font-bold' : 'hover:text-[#2B2A29]'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              Mi Calendario
+              Mi Rutina & Calendario
             </Link>
             <Link
               href="/ingrediente"
@@ -72,6 +63,15 @@ export default function Navbar() {
             >
               <BookOpen className="w-3.5 h-3.5" />
               Guía de Activos
+            </Link>
+            <Link
+              href="/ofertas"
+              className={`flex items-center gap-1.5 transition-colors duration-200 ${
+                pathname.startsWith('/ofertas') ? 'text-[#7A9A8B] font-bold' : 'hover:text-[#2B2A29]'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Productos & Ofertas
             </Link>
 
             {isAdmin && (
@@ -89,15 +89,14 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Quick Actions / SOS */}
+          {/* Quick Action / CTA */}
           <div className="flex items-center space-x-2.5">
             <Link
               href="/mi-rutina"
-              className="flex items-center gap-1.5 bg-[#F8EFEA] hover:bg-[#F2E4DE] text-[#A46864] text-[11px] sm:text-xs px-3 py-1.5 rounded-full font-bold border border-[#E8D5D0] transition-colors duration-200"
-              title="Activar cuidado calmante para piel sensible"
+              className="hidden sm:flex items-center gap-1.5 bg-[#EFF5F1] hover:bg-[#E2ECE5] text-[#4F6D60] text-xs px-3.5 py-1.5 rounded-full font-bold border border-[#7A9A8B]/30 transition-colors duration-200"
             >
-              <HeartPulse className="w-3.5 h-3.5 text-[#A46864] animate-pulse" />
-              <span>Modo Calma SOS</span>
+              <Calendar className="w-3.5 h-3.5 text-[#7A9A8B]" />
+              <span>Ver Mi Rutina</span>
             </Link>
             {isAdmin && (
               <Link
@@ -126,20 +125,9 @@ export default function Navbar() {
           <span className="text-[10px] tracking-tight mt-0.5 font-medium">Evaluar</span>
         </Link>
         <Link
-          href="/rutinas/skin-cycling"
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 px-2 rounded-2xl transition-all duration-300 ${
-            pathname === '/rutinas/skin-cycling'
-              ? 'text-[#4F6D60] font-bold bg-[#EFF5F1]'
-              : 'text-[#9C9790] hover:text-[#2B2A29]'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span className="text-[10px] tracking-tight mt-0.5 font-medium">Ciclos</span>
-        </Link>
-        <Link
           href="/mi-rutina"
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 px-2 rounded-2xl transition-all duration-300 ${
-            pathname === '/mi-rutina'
+            pathname.startsWith('/mi-rutina') || pathname.startsWith('/rutinas')
               ? 'text-[#4F6D60] font-bold bg-[#EFF5F1]'
               : 'text-[#9C9790] hover:text-[#2B2A29]'
           }`}
@@ -157,6 +145,17 @@ export default function Navbar() {
         >
           <BookOpen className="w-4 h-4" />
           <span className="text-[10px] tracking-tight mt-0.5 font-medium">Activos</span>
+        </Link>
+        <Link
+          href="/ofertas"
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 px-2 rounded-2xl transition-all duration-300 ${
+            pathname.startsWith('/ofertas')
+              ? 'text-[#4F6D60] font-bold bg-[#EFF5F1]'
+              : 'text-[#9C9790] hover:text-[#2B2A29]'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span className="text-[10px] tracking-tight mt-0.5 font-medium">Ofertas</span>
         </Link>
       </nav>
     </>
