@@ -92,44 +92,83 @@ export default function IngredientesIndexPage() {
           </p>
         </div>
 
-        {/* Ingredients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {INGREDIENTS.map((ing) => (
-            <Link
-              key={ing.slug}
-              href={`/ingrediente/${ing.slug}`}
-              className="bg-[#FFFCF9] rounded-2xl p-6 border border-[#E8E0D8] hover:border-[#7BB8D0] hover:shadow-lg transition-all flex flex-col justify-between group"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-[#3A7A96] bg-[#E8F4FA] px-2.5 py-0.5 rounded-md border border-[#A8D4E6]">
-                    {ing.evidence}
-                  </span>
-                  <span className="text-xs text-[#A69D94] font-mono">
-                    pH {ing.ph}
-                  </span>
+        {/* Ingredients Grid - Estilo Editorial con Texturas Visuales */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {INGREDIENTS.map((ing) => {
+            const isRetinol = ing.slug === 'retinol';
+            const isSalicylic = ing.slug === 'salicylic-acid';
+            const isHyaluronic = ing.slug === 'hyaluronic-acid';
+            const isVitaminC = ing.slug === 'ascorbic-acid';
+            const isPanthenol = ing.slug === 'panthenol';
+
+            const cardGradient = isRetinol
+              ? 'from-[#F9F2F0] to-[#FFFCF9]'
+              : isSalicylic
+              ? 'from-amber-50/50 to-[#FFFCF9]'
+              : isHyaluronic
+              ? 'from-[#E8F4FA]/70 to-[#FFFCF9]'
+              : isVitaminC
+              ? 'from-orange-50/50 to-[#FFFCF9]'
+              : isPanthenol
+              ? 'from-emerald-50/50 to-[#FFFCF9]'
+              : 'from-[#E8F4FA]/70 to-[#FFFCF9]';
+
+            const iconBg = isRetinol
+              ? 'bg-[#F9F2F0] text-[#8B4B3D] border-[#E8C4B8]'
+              : isSalicylic
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : isHyaluronic
+              ? 'bg-[#E8F4FA] text-[#2D6680] border-[#A8D4E6]'
+              : isVitaminC
+              ? 'bg-orange-50 text-orange-800 border-orange-200'
+              : isPanthenol
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-[#E8F4FA] text-[#2D6680] border-[#A8D4E6]';
+
+            const symbol = isRetinol ? '✨' : isSalicylic ? '🧪' : isHyaluronic ? '💧' : isVitaminC ? '🍊' : isPanthenol ? '🌿' : '🧴';
+
+            return (
+              <Link
+                key={ing.slug}
+                href={`/ingrediente/${ing.slug}`}
+                className={`bg-gradient-to-b ${cardGradient} rounded-3xl p-6 border border-[#E8E0D8] hover:border-[#7BB8D0] hover:shadow-lg transition-all flex flex-col justify-between group space-y-4`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-lg shadow-xs ${iconBg}`}>
+                      {symbol}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-black text-[#3A7A96] bg-[#E8F4FA] px-2.5 py-0.5 rounded-full border border-[#A8D4E6] block">
+                        {ing.evidence}
+                      </span>
+                      <span className="text-[10px] text-[#8B8178] font-mono mt-0.5 block">
+                        pH {ing.ph}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold font-serif text-[#2D2D2D] group-hover:text-[#3A7A96] transition-colors">
+                      {ing.name}
+                    </h3>
+                    <span className="text-xs font-semibold text-[#8B8178] block mt-0.5">
+                      {ing.category}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#6B6B6B] leading-relaxed line-clamp-3">
+                    {ing.description}
+                  </p>
                 </div>
 
-                <div>
-                  <h3 className="text-base font-bold text-[#2D2D2D] group-hover:text-[#3A7A96] transition-colors">
-                    {ing.name}
-                  </h3>
-                  <span className="text-xs text-[#8B8178] font-medium block mt-0.5">
-                    {ing.category}
-                  </span>
+                <div className="pt-3 border-t border-[#F0E8E0] flex items-center justify-between text-xs font-bold text-[#3A7A96] group-hover:text-[#2D6680]">
+                  <span>Ficha Técnica y Estudios</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
-
-                <p className="text-xs text-[#6B6B6B] leading-relaxed">
-                  {ing.description}
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-[#F0E8E0] flex items-center justify-between text-xs font-bold text-[#3A7A96] group-hover:text-[#2D6680]">
-                <span>Ver Ficha Técnica Completa</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Audit CTA */}

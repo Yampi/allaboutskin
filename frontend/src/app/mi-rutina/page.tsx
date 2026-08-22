@@ -386,66 +386,115 @@ export default function MyRoutineDashboardPage() {
           </div>
         )}
 
-        {/* SECTION: 7-DAY INTERACTIVE CALENDAR */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8] shadow-sm space-y-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-[#4A8BA8]" />
-              <h3 className="text-lg font-black text-[#2D2D2D] tracking-tight">
-                Calendario de Noches (Próximos 7 Días)
+        {/* SECTION: CALENDARIO DE CICLADO INTERACTIVO (ESTILO REFERENCIA) */}
+        <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8] shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F0E8E0] pb-4">
+            <div>
+              <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
+                Seguimiento de Ciclado Cutáneo
+              </span>
+              <h3 className="text-xl font-bold font-serif text-[#2D2D2D] tracking-tight">
+                Calendario de Ciclado
               </h3>
             </div>
-            <span className="text-xs text-[#A69D94] font-medium">Ciclo continuo automático</span>
+            
+            {/* Legend / Guía de Fases */}
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#A8D4E6] border border-[#7BB8D0]" />
+                <span className="text-[#5A5A5A] font-semibold">Exfoliación</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#E8C4B8] border border-[#D4A99A]" />
+                <span className="text-[#5A5A5A] font-semibold">Retinoide</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#F5EDE6] border border-[#E8E0D8]" />
+                <span className="text-[#5A5A5A] font-semibold">Recuperación</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {weekDays.map((wd, i) => {
-              const isToday = i === 0;
-              const isExfoliation = wd.category === 'EXFOLIATION';
-              const isRetinoid = wd.category === 'RETINOID';
-              const isRescue = wd.category === 'SOS_RESCUE';
+          {/* Month Header & Controls */}
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base sm:text-lg font-bold font-serif text-[#2D2D2D]">
+                {today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).replace(/^\w/, (c) => c.toUpperCase())}
+              </span>
+              <span className="text-xs bg-[#E8F4FA] text-[#2D6680] font-bold px-2.5 py-0.5 rounded-full border border-[#A8D4E6]">
+                Ciclo de {cycleLength} noches
+              </span>
+            </div>
+            
+            <div className="text-xs font-bold text-[#3A7A96] bg-[#FAF7F4] px-3 py-1.5 rounded-xl border border-[#E8E0D8]">
+              Hoy es {today.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
+            </div>
+          </div>
 
-              const badgeColor = isRescue
-                ? 'bg-rose-100 text-rose-900 border-rose-200'
-                : isExfoliation
-                ? 'bg-[#C5E3F0] text-[#2D6680] border-[#A8D4E6]'
+          {/* 7-DAY WEEKDAY HEADER */}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] font-bold text-[#8B8178] uppercase pb-1">
+            <span>Lun</span>
+            <span>Mar</span>
+            <span>Mié</span>
+            <span>Jue</span>
+            <span>Vie</span>
+            <span>Sáb</span>
+            <span>Dom</span>
+          </div>
+
+          {/* 14-DAY CALENDAR MATRIX (2 SEMANAS ACTIVAS CON DOTS DE FASE) */}
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-3 text-center">
+            {Array.from({ length: 14 }, (_, i) => {
+              const d = new Date();
+              // Start from Monday of current week or previous days
+              const currentDayOfWeek = (today.getDay() + 6) % 7; // 0 for Monday
+              d.setDate(today.getDate() - currentDayOfWeek + i);
+
+              const isCurrentDay = d.toDateString() === today.toDateString();
+              const calcDayOfYear = Math.floor(
+                (d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24
+              );
+              const dayPhaseIndex = ((calcDayOfYear % cycleLength) + cycleLength) % cycleLength + 1;
+              const phaseObj = protocol?.nights.find((n) => n.nightNumber === dayPhaseIndex);
+
+              const isExfoliation = phaseObj?.category === 'EXFOLIATION';
+              const isRetinoid = phaseObj?.category === 'RETINOID';
+              const phaseDotColor = isExfoliation
+                ? 'bg-[#4A8BA8]'
                 : isRetinoid
-                ? 'bg-[#F2E2DC] text-[#5A372B] border-[#E6C8BC]'
-                : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                ? 'bg-[#D4A99A]'
+                : 'bg-[#C9B896]';
+
+              const phaseBg = isCurrentDay
+                ? 'bg-[#4A8BA8] text-white shadow-md shadow-[#4A8BA8]/30 ring-2 ring-[#7BB8D0]'
+                : 'bg-[#FAF7F4] hover:bg-[#F5EDE6] text-[#2D2D2D] border border-[#E8E0D8]';
 
               return (
                 <div
                   key={i}
-                  className={`p-3.5 rounded-2xl border text-center transition flex flex-col justify-between space-y-2 relative ${
-                    isToday
-                      ? isRescue
-                        ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-200 shadow-sm'
-                        : 'bg-[#E8F4FA]/70 border-[#4A8BA8] ring-2 ring-[#5FA8C2]/20 shadow-sm'
-                      : 'bg-[#FAF7F4]/80 border-[#E8E0D8] hover:bg-[#F5EDE6]'
-                  }`}
+                  className={`p-2.5 sm:p-3.5 rounded-2xl transition flex flex-col items-center justify-between space-y-1.5 cursor-pointer relative ${phaseBg}`}
                 >
-                  {isToday && (
-                    <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                      isRescue ? 'bg-rose-600' : 'bg-[#4A8BA8]'
-                    }`}>
+                  {isCurrentDay && (
+                    <span className="text-[9px] font-black uppercase tracking-wider">
                       Hoy
                     </span>
                   )}
-                  <div>
-                    <span className="text-[11px] font-bold text-[#8B8178] uppercase block">
-                      {wd.dayName}
-                    </span>
-                    <span className="text-base font-black text-[#2D2D2D]">
-                      {wd.dateNum}
-                    </span>
+                  <span className="text-sm sm:text-base font-black">
+                    {d.getDate()}
+                  </span>
+                  
+                  {/* Skin Cycling Phase Dot Indicator */}
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        isCurrentDay ? 'bg-white' : phaseDotColor
+                      }`}
+                      title={phaseObj?.title || `Noche ${dayPhaseIndex}`}
+                    />
                   </div>
 
-                  <div className={`p-1.5 rounded-xl border text-[10px] font-black leading-tight ${badgeColor}`}>
-                    {isRescue ? 'SOS Calma' : `Noche 0${wd.nightNumber}`}
-                  </div>
-
-                  <span className="text-[10px] text-[#6B6B6B] line-clamp-2 leading-tight">
-                    {wd.title}
+                  <span className={`text-[9px] font-bold truncate max-w-full ${isCurrentDay ? 'text-white/90' : 'text-[#8B8178]'}`}>
+                    Noche {dayPhaseIndex}
                   </span>
                 </div>
               );
