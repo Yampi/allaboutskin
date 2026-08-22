@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Microscope, BookOpen, Layers, ShieldCheck, Calendar, ShieldAlert } from 'lucide-react';
+import { Microscope, BookOpen, Layers, ShieldCheck, Calendar, ShieldAlert, HeartPulse, Search } from 'lucide-react';
 import { getCurrentUser, isUserAdmin, StoredUser } from '@/lib/api';
 
 export default function Navbar() {
@@ -30,7 +30,7 @@ export default function Navbar() {
                 Allabout<span className="text-[#4A8BA8]">.skin</span>
               </span>
               <span className="hidden sm:block text-[11px] text-[#8B8178] font-medium -mt-1">
-                Auditoría Científica de Skincare
+                Tu Guía Inteligente de Skincare
               </span>
             </div>
           </Link>
@@ -43,8 +43,8 @@ export default function Navbar() {
                 pathname === '/' ? 'text-[#4A8BA8] font-bold' : 'hover:text-[#4A8BA8]'
               }`}
             >
-              <Microscope className="w-4 h-4 text-[#4A8BA8]" />
-              Auditor INCI
+              <Search className="w-4 h-4 text-[#4A8BA8]" />
+              Evaluar Producto
             </Link>
             <Link
               href="/rutinas/skin-cycling"
@@ -53,7 +53,7 @@ export default function Navbar() {
               }`}
             >
               <Layers className="w-4 h-4 text-[#4A8BA8]" />
-              Skin Cycling
+              Ciclado de Noches
             </Link>
             <Link
               href="/mi-rutina"
@@ -62,7 +62,7 @@ export default function Navbar() {
               }`}
             >
               <Calendar className="w-4 h-4 text-[#4A8BA8]" />
-              Mi Calendario
+              Mi Calendario & SOS
             </Link>
             <Link
               href="/ingrediente"
@@ -89,8 +89,16 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Validation Badge & Admin quick link */}
+          {/* Validation Badge & SOS quick link */}
           <div className="flex items-center space-x-2">
+            <Link
+              href="/mi-rutina"
+              className="flex items-center gap-1.5 bg-[#F9F2F0] hover:bg-rose-100 text-rose-800 text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full font-bold border border-rose-200 transition"
+              title="Ir a activar el modo rescate de piel"
+            >
+              <HeartPulse className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
+              <span>Botón SOS</span>
+            </Link>
             {isAdmin && (
               <Link
                 href="/admin"
@@ -100,10 +108,6 @@ export default function Navbar() {
                 <span>Admin</span>
               </Link>
             )}
-            <div className="flex items-center gap-1 bg-[#E8F4FA] text-[#1A4D63] text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full font-bold border border-[#A8D4E6]">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#4A8BA8]" />
-              <span>PubMed • CosIng</span>
-            </div>
           </div>
         </div>
       </header>
@@ -118,10 +122,9 @@ export default function Navbar() {
               : 'text-[#8B8178] hover:text-[#2D2D2D]'
           }`}
         >
-          <Microscope className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Auditor</span>
+          <Search className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5">Evaluar</span>
         </Link>
-
         <Link
           href="/rutinas/skin-cycling"
           className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition-all ${
@@ -130,10 +133,9 @@ export default function Navbar() {
               : 'text-[#8B8178] hover:text-[#2D2D2D]'
           }`}
         >
-          <Layers className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Skin Cycling</span>
+          <Layers className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5">Ciclado</span>
         </Link>
-
         <Link
           href="/mi-rutina"
           className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition-all ${
@@ -142,10 +144,9 @@ export default function Navbar() {
               : 'text-[#8B8178] hover:text-[#2D2D2D]'
           }`}
         >
-          <Calendar className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Mi Rutina</span>
+          <Calendar className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5">Mi Rutina</span>
         </Link>
-
         <Link
           href="/ingrediente"
           className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition-all ${
@@ -154,23 +155,9 @@ export default function Navbar() {
               : 'text-[#8B8178] hover:text-[#2D2D2D]'
           }`}
         >
-          <BookOpen className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Ingredientes</span>
+          <BookOpen className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5">Activos</span>
         </Link>
-
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition-all ${
-              pathname.startsWith('/admin')
-                ? 'text-[#4A8BA8] font-bold bg-[#E8F4FA]/80 scale-105'
-                : 'text-[#8B8178] hover:text-[#2D2D2D]'
-            }`}
-          >
-            <ShieldAlert className="w-5 h-5 mb-0.5 text-[#4A8BA8]" />
-            <span className="text-[10px] tracking-tight">Admin</span>
-          </Link>
-        )}
       </div>
     </>
   );
