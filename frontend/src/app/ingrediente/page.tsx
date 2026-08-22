@@ -18,7 +18,7 @@ const INGREDIENTS = [
     ph: '5.0 - 7.0',
     layering: 'Serum Acuoso',
     description: 'Potente antiinflamatorio, reduce la apariencia de poros, refuerza la síntesis de ceramidas y unifica el tono.',
-    color: 'teal'
+    color: '[#4A8BA8]'
   },
   {
     slug: 'retinol',
@@ -74,20 +74,20 @@ const INGREDIENTS = [
 
 export default function IngredientesIndexPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#FAF7F4]">
       <Navbar />
 
       <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 bg-teal-50 text-teal-800 text-xs font-bold px-3 py-1 rounded-full border border-teal-200 uppercase tracking-wider">
-            <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+          <div className="inline-flex items-center gap-1.5 bg-[#E8F4FA] text-[#2D6680] text-xs font-bold px-3 py-1 rounded-full border border-[#A8D4E6] uppercase tracking-wider">
+            <BookOpen className="w-3.5 h-3.5 text-[#4A8BA8]" />
             <span>Catálogo Oficial CosIng UE & PubMed</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#2D2D2D] tracking-tight">
             Biblioteca de Activos Cosméticos
           </h1>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-[#6B6B6B] leading-relaxed">
             Fichas técnicas con base científica. Conoce el pH óptimo, orden de aplicación en tu rutina, nivel de evidencia médica e interacciones de cada ingrediente.
           </p>
         </div>
@@ -98,33 +98,33 @@ export default function IngredientesIndexPage() {
             <Link
               key={ing.slug}
               href={`/ingrediente/${ing.slug}`}
-              className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-teal-400 hover:shadow-lg transition-all flex flex-col justify-between group"
+              className="bg-[#FFFCF9] rounded-2xl p-6 border border-[#E8E0D8] hover:border-[#7BB8D0] hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
+                  <span className="text-[11px] font-bold text-[#3A7A96] bg-[#E8F4FA] px-2.5 py-0.5 rounded-md border border-[#A8D4E6]">
                     {ing.evidence}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">
+                  <span className="text-xs text-[#A69D94] font-mono">
                     pH {ing.ph}
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                  <h3 className="text-base font-bold text-[#2D2D2D] group-hover:text-[#3A7A96] transition-colors">
                     {ing.name}
                   </h3>
-                  <span className="text-xs text-slate-500 font-medium block mt-0.5">
+                  <span className="text-xs text-[#8B8178] font-medium block mt-0.5">
                     {ing.category}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-[#6B6B6B] leading-relaxed">
                   {ing.description}
                 </p>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-teal-700 group-hover:text-teal-800">
+              <div className="pt-4 mt-4 border-t border-[#F0E8E0] flex items-center justify-between text-xs font-bold text-[#3A7A96] group-hover:text-[#2D6680]">
                 <span>Ver Ficha Técnica Completa</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -133,16 +133,16 @@ export default function IngredientesIndexPage() {
         </div>
 
         {/* Audit CTA */}
-        <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 text-white rounded-3xl p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="bg-gradient-to-r from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white rounded-3xl p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center sm:text-left">
             <h3 className="text-xl font-bold">¿Quieres auditar una fórmula completa?</h3>
-            <p className="text-xs text-teal-100 max-w-lg">
+            <p className="text-xs text-[#C5E3F0] max-w-lg">
               Introduce el nombre de un cosmético o sube una foto de la etiqueta para analizar compatibilidad química, orden de capas y grado comedogénico.
             </p>
           </div>
           <Link
             href="/"
-            className="bg-white text-teal-900 font-bold text-sm px-6 py-3 rounded-xl hover:bg-teal-50 shadow-md transition flex-shrink-0"
+            className="bg-[#FFFCF9] text-[#1A4D63] font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#E8F4FA] shadow-md transition flex-shrink-0"
           >
             Auditar Fórmula Ahora
           </Link>

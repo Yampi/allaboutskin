@@ -16,6 +16,7 @@ import {
   Info,
   ArrowRight,
   RefreshCw,
+  Zap
 } from 'lucide-react';
 import {
   SkinType,
@@ -31,29 +32,29 @@ import AuthModal from './AuthModal';
 import AdBanner from './AdBanner';
 
 const SKIN_TYPES: { id: SkinType; label: string; desc: string }[] = [
-  { id: 'COMBINATION', label: 'Mixta', desc: 'Zona T grasa y mejillas normales o secas' },
-  { id: 'OILY', label: 'Grasa', desc: 'Brillo generalizado, poros dilatados y propensión a sebo' },
-  { id: 'DRY', label: 'Seca', desc: 'Tirantez, opacidad, falta de lípidos naturales' },
-  { id: 'SENSITIVE', label: 'Sensible', desc: 'Reactividad inmediata, tendencia a rojeces y picor' },
-  { id: 'NORMAL', label: 'Normal', desc: 'Equilibrio hidrolipídico óptimo y textura uniforme' },
+  { id: 'COMBINATION', label: 'Mixta', desc: 'Frente/nariz con brillo y mejillas normales o secas' },
+  { id: 'OILY', label: 'Grasa', desc: 'Brillo en todo el rostro y poros visibles' },
+  { id: 'DRY', label: 'Seca', desc: 'Sensación tirante, opaca o descamada' },
+  { id: 'SENSITIVE', label: 'Sensible', desc: 'Se enrojece o pica con facilidad' },
+  { id: 'NORMAL', label: 'Normal', desc: 'Equilibrada, sin exceso de grasa ni sequedad' },
 ];
 
 const FITZPATRICK_SCALE: { type: FitzpatrickType; label: string; tone: string; desc: string }[] = [
-  { type: 1, label: 'Tipo I', tone: 'bg-[#ffeedd] border-[#ebd1bc]', desc: 'Muy clara, pelirrojo/rubio, siempre se quema' },
-  { type: 2, label: 'Tipo II', tone: 'bg-[#fbe4ce] border-[#e7c7a9]', desc: 'Clara, ojos claros, suele quemarse fácil' },
-  { type: 3, label: 'Tipo III', tone: 'bg-[#eed0b0] border-[#d8b087]', desc: 'Media clara, se quema moderado, broncea gradual' },
-  { type: 4, label: 'Tipo IV', tone: 'bg-[#d8a776] border-[#bd8853]', desc: 'Oliva o morena clara, rara vez se quema' },
-  { type: 5, label: 'Tipo V', tone: 'bg-[#a76e3e] border-[#8a5426]', desc: 'Morena oscura, casi nunca se quema' },
-  { type: 6, label: 'Tipo VI', tone: 'bg-[#5c371d] border-[#44230d]', desc: 'Muy oscura/negra, máxima melanina protectora' },
+  { type: 1, label: 'Muy clara', tone: 'bg-[#ffeedd] border-[#ebd1bc]', desc: 'Siempre se quema con el sol, nunca se broncea' },
+  { type: 2, label: 'Clara', tone: 'bg-[#fbe4ce] border-[#e7c7a9]', desc: 'Suele quemarse fácil, broncea poco' },
+  { type: 3, label: 'Trigueña clara', tone: 'bg-[#eed0b0] border-[#d8b087]', desc: 'Se quema moderado, broncea gradual' },
+  { type: 4, label: 'Trigueña / Oliva', tone: 'bg-[#d8a776] border-[#bd8853]', desc: 'Rara vez se quema, broncea fácil' },
+  { type: 5, label: 'Morena oscura', tone: 'bg-[#a76e3e] border-[#8a5426]', desc: 'Casi nunca se quema, pigmenta rápido' },
+  { type: 6, label: 'Oscura', tone: 'bg-[#5c371d] border-[#44230d]', desc: 'Piel muy pigmentada, alta resistencia al sol' },
 ];
 
 const CONDITIONS_LIST: { id: SkinCondition; label: string }[] = [
-  { id: 'ACNE', label: 'Acné o Puntos Negros' },
-  { id: 'ROSACEA', label: 'Rosácea o Cuperosis' },
-  { id: 'HYPERPIGMENTATION', label: 'Manchas o Melasma' },
-  { id: 'AGING', label: 'Líneas de expresión / Arrugas' },
-  { id: 'CLOGGED_PORES', label: 'Poros Obstruidos / Textura Irregular' },
-  { id: 'REDNESS', label: 'Rojeces Ocasionales' },
+  { id: 'ACNE', label: 'Acné o Granitos' },
+  { id: 'ROSACEA', label: 'Rojeces o Rosácea' },
+  { id: 'HYPERPIGMENTATION', label: 'Manchas del Sol o Melasma' },
+  { id: 'AGING', label: 'Líneas de Expresión y Arrugas' },
+  { id: 'CLOGGED_PORES', label: 'Puntos Negros y Poros Obstruidos' },
+  { id: 'REDNESS', label: 'Piel Reactiva / Sensibilidad' },
 ];
 
 export default function SkinCyclingWizard() {
@@ -70,6 +71,15 @@ export default function SkinCyclingWizard() {
   // UI / Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSavedToast, setIsSavedToast] = useState(false);
+
+  // Quick Beginner Preset
+  const handleApplyBeginnerPreset = () => {
+    setSkinType('COMBINATION');
+    setFitzpatrick(3);
+    setBarrierStatus('HEALTHY');
+    setExperienceLevel('BEGINNER');
+    setConditions(['CLOGGED_PORES']);
+  };
 
   // Generate dynamic protocol based on inputs
   const protocol = useMemo(() => {
@@ -126,11 +136,11 @@ export default function SkinCyclingWizard() {
     <div className="space-y-12">
       {/* Toast Notification */}
       {isSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-teal-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-teal-500 animate-in slide-in-from-bottom duration-300">
-          <CheckCircle2 className="w-5 h-5 text-teal-300" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A4D63] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#5FA8C2] animate-in slide-in-from-bottom duration-300">
+          <CheckCircle2 className="w-5 h-5 text-[#8EC5DB]" />
           <div>
             <p className="text-xs font-bold">¡Rutina Guardada con Éxito!</p>
-            <p className="text-[11px] text-teal-200">Redirigiendo a tu calendario de Skin Cycling...</p>
+            <p className="text-[11px] text-[#A8D4E6]">Redirigiendo a tu calendario de Skin Cycling...</p>
           </div>
         </div>
       )}
@@ -143,25 +153,37 @@ export default function SkinCyclingWizard() {
       />
 
       {/* SECTION 1: INTERACTIVE DIAGNOSTIC CONFIGURATOR */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-8">
-        <div className="border-b border-slate-100 pb-5">
-          <div className="flex items-center gap-2 text-teal-700 font-bold text-xs uppercase tracking-wider mb-1">
-            <Sparkles className="w-4 h-4 text-teal-600" />
-            <span>Configurador Dermatológico Personalizado</span>
+      <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8]/90 shadow-sm space-y-8">
+        <div className="border-b border-[#F0E8E0] pb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-[#3A7A96] font-bold text-xs uppercase tracking-wider mb-1">
+              <Sparkles className="w-4 h-4 text-[#4A8BA8]" />
+              <span>Configurador Personalizado</span>
+            </div>
+            <h2 className="text-2xl font-black text-[#2D2D2D] tracking-tight">
+              Crea tu Calendario de Noches (Skin Cycling)
+            </h2>
+            <p className="text-xs sm:text-sm text-[#8B8178] mt-1">
+              Elige cómo sientes tu piel para organizar qué noches usar exfoliantes, qué noches usar retinoides y qué noches dar descanso a tu piel.
+            </p>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Personaliza tu Protocolo de Skin Cycling
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Ajusta los parámetros de tu piel para que el algoritmo clínico adapte el número de noches, los activos óptimos y las precauciones necesarias.
-          </p>
+
+          {/* Quick Beginner Starter */}
+          <button
+            type="button"
+            onClick={handleApplyBeginnerPreset}
+            className="flex-shrink-0 inline-flex items-center gap-2 bg-[#E8F4FA] hover:bg-[#D3EAF5] text-[#1A4D63] text-xs font-bold px-4 py-2.5 rounded-2xl border border-[#A8D4E6] transition cursor-pointer"
+          >
+            <Zap className="w-4 h-4 text-[#3A7A96]" />
+            <span>Soy Principiante: Rutina Estándar</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* 1. Tipo de Piel */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-              1. Biotipo / Tipo de Piel
+            <label className="block text-xs font-bold uppercase text-[#5A5A5A] tracking-wider">
+              1. ¿Cómo es tu piel habitualmente?
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {SKIN_TYPES.map((st) => (
@@ -169,14 +191,14 @@ export default function SkinCyclingWizard() {
                   key={st.id}
                   type="button"
                   onClick={() => setSkinType(st.id)}
-                  className={`p-3 rounded-2xl text-left border transition text-xs font-semibold ${
+                  className={`p-3 rounded-2xl text-left border transition text-xs font-semibold cursor-pointer ${
                     skinType === st.id
-                      ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-sm ring-1 ring-teal-500/30'
-                      : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-700'
+                      ? 'bg-[#E8F4FA] border-[#4A8BA8] text-[#1A4D63] shadow-sm ring-1 ring-[#5FA8C2]/30'
+                      : 'bg-[#FAF7F4] hover:bg-[#F5EDE6]/80 border-[#E8E0D8] text-[#5A5A5A]'
                   }`}
                 >
                   <span className="block font-bold text-sm mb-0.5">{st.label}</span>
-                  <span className="text-[10px] text-slate-500 line-clamp-2 leading-tight">
+                  <span className="text-[10px] text-[#8B8178] line-clamp-2 leading-tight">
                     {st.desc}
                   </span>
                 </button>
@@ -184,13 +206,13 @@ export default function SkinCyclingWizard() {
             </div>
           </div>
 
-          {/* 2. Fototipo Fitzpatrick */}
+          {/* 2. Tono y Reacción al Sol */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-                2. Fototipo de Piel (Escala Fitzpatrick)
+              <label className="block text-xs font-bold uppercase text-[#5A5A5A] tracking-wider">
+                2. ¿Cómo reacciona tu piel con el sol?
               </label>
-              <span className="text-[11px] text-slate-400 font-medium">Previene manchas post-ácidos</span>
+              <span className="text-[11px] text-[#A69D94] font-medium">Ayuda a prevenir manchas</span>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {FITZPATRICK_SCALE.map((fp) => (
@@ -198,14 +220,15 @@ export default function SkinCyclingWizard() {
                   key={fp.type}
                   type="button"
                   onClick={() => setFitzpatrick(fp.type)}
-                  className={`flex flex-col items-center p-2.5 rounded-2xl border transition text-center ${
+                  className={`flex flex-col items-center p-2.5 rounded-2xl border transition text-center cursor-pointer ${
                     fitzpatrick === fp.type
-                      ? 'border-teal-600 bg-teal-50/60 ring-2 ring-teal-500/20'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                      ? 'border-[#4A8BA8] bg-[#E8F4FA]/60 ring-2 ring-[#5FA8C2]/20'
+                      : 'border-[#E8E0D8] hover:border-[#F0E8E0] bg-[#FFFCF9]'
                   }`}
+                  title={fp.desc}
                 >
                   <span className={`w-7 h-7 rounded-full border shadow-inner mb-1.5 ${fp.tone}`} />
-                  <span className="text-xs font-bold text-slate-800">{fp.label}</span>
+                  <span className="text-[11px] font-bold text-[#3D3D3D] leading-tight">{fp.label}</span>
                 </button>
               ))}
             </div>
@@ -213,53 +236,53 @@ export default function SkinCyclingWizard() {
 
           {/* 3. Estado de la Barrera Cutánea */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-              3. Estado de tu Barrera Cutánea
+            <label className="block text-xs font-bold uppercase text-[#5A5A5A] tracking-wider">
+              3. ¿Cómo sientes tu piel en estos días?
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
                 onClick={() => setBarrierStatus('HEALTHY')}
-                className={`p-3 rounded-2xl text-left border transition ${
+                className={`p-3 rounded-2xl text-left border transition cursor-pointer ${
                   barrierStatus === 'HEALTHY'
                     ? 'bg-emerald-50 border-emerald-600 text-emerald-900 ring-1 ring-emerald-500/30'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-[#FAF7F4] border-[#E8E0D8] text-[#5A5A5A]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-emerald-800">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Saludable
+                  <ShieldCheck className="w-3.5 h-3.5" /> Normal / Cómoda
                 </div>
-                <p className="text-[11px] text-slate-500">Tolerancia normal a cremas y activos sin ardor.</p>
+                <p className="text-[11px] text-[#8B8178]">Tolerancia normal a cremas, sin ardor ni tirantez.</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setBarrierStatus('COMPROMISED')}
-                className={`p-3 rounded-2xl text-left border transition ${
+                className={`p-3 rounded-2xl text-left border transition cursor-pointer ${
                   barrierStatus === 'COMPROMISED'
                     ? 'bg-amber-50 border-amber-600 text-amber-900 ring-1 ring-amber-500/30'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-[#FAF7F4] border-[#E8E0D8] text-[#5A5A5A]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-amber-800">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Comprometida
+                  <AlertTriangle className="w-3.5 h-3.5" /> Sensible o Tirante
                 </div>
-                <p className="text-[11px] text-slate-500">Tirantez o picor leve con ciertos productos.</p>
+                <p className="text-[11px] text-[#8B8178]">Sensación seca o picor leve al usar ciertos productos.</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setBarrierStatus('ACUTELY_DAMAGED')}
-                className={`p-3 rounded-2xl text-left border transition ${
+                className={`p-3 rounded-2xl text-left border transition cursor-pointer ${
                   barrierStatus === 'ACUTELY_DAMAGED'
                     ? 'bg-rose-50 border-rose-600 text-rose-900 ring-1 ring-rose-500/30'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-[#FAF7F4] border-[#E8E0D8] text-[#5A5A5A]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-rose-800">
-                  <Flame className="w-3.5 h-3.5" /> Muy Dañada / Quema
+                  <Flame className="w-3.5 h-3.5" /> Muy Irritada / Quema
                 </div>
-                <p className="text-[11px] text-slate-500">Ardor al poner cualquier crema, rojez severa.</p>
+                <p className="text-[11px] text-[#8B8178]">Ardor al poner cualquier crema, rojez evidente.</p>
               </button>
             </div>
           </div>
@@ -267,8 +290,8 @@ export default function SkinCyclingWizard() {
           {/* 4. Experiencia con Activos y Situación Médica */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 tracking-wider mb-2">
-                4. Nivel de Experiencia con Activos
+              <label className="block text-xs font-bold uppercase text-[#5A5A5A] tracking-wider mb-2">
+                4. ¿Qué tanta experiencia tienes usando ácidos o retinoides?
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'] as ExperienceLevel[]).map((lvl) => (
@@ -276,49 +299,49 @@ export default function SkinCyclingWizard() {
                     key={lvl}
                     type="button"
                     onClick={() => setExperienceLevel(lvl)}
-                    className={`py-2.5 px-3 rounded-xl border text-center text-xs font-bold transition ${
+                    className={`py-2.5 px-3 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
                       experienceLevel === lvl
-                        ? 'bg-teal-600 border-teal-600 text-white shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        ? 'bg-[#4A8BA8] border-[#4A8BA8] text-white shadow-sm'
+                        : 'bg-[#FAF7F4] border-[#E8E0D8] text-[#5A5A5A] hover:bg-[#F5EDE6]'
                     }`}
                   >
-                    {lvl === 'BEGINNER' ? 'Principiante' : lvl === 'INTERMEDIATE' ? 'Intermedio' : 'Avanzado'}
+                    {lvl === 'BEGINNER' ? 'Principiante (Cero)' : lvl === 'INTERMEDIATE' ? 'Intermedio' : 'Avanzado'}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Embarazo o Lactancia Switch */}
-            <div className="flex items-center justify-between p-3.5 bg-purple-50/70 border border-purple-200/80 rounded-2xl">
+            <div className="flex items-center justify-between p-3.5 bg-[#F9F2F0]/70 border border-[#F2E2DC]/80 rounded-2xl">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-xl bg-[#F2E2DC] text-[#6E4435] flex items-center justify-center font-bold">
                   <Baby className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-purple-950 block">
+                  <span className="text-xs font-bold text-[#321E18] block">
                     ¿Estás embarazada o en periodo de lactancia?
                   </span>
-                  <span className="text-[10px] text-purple-700">
-                    Sustituye automáticamente retinoides por alternativas seguras (Bakuchiol/Azelaico).
+                  <span className="text-[10px] text-[#6E4435]">
+                    Sustituye automáticamente retinoides por alternativas seguras recomendadas.
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPregnancyOrNursing(!pregnancyOrNursing)}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-300 ${
-                  pregnancyOrNursing ? 'bg-purple-600 justify-end' : 'bg-slate-300 justify-start'
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-300 cursor-pointer ${
+                  pregnancyOrNursing ? 'bg-[#8A5543] justify-end' : 'bg-[#C5BBB2] justify-start'
                 }`}
               >
-                <div className="bg-white w-4 h-4 rounded-full shadow-md transform transition" />
+                <div className="bg-[#FFFCF9] w-4 h-4 rounded-full shadow-md transform transition" />
               </button>
             </div>
           </div>
 
           {/* 5. Condiciones o Necesidades Específicas */}
           <div className="lg:col-span-2 space-y-3">
-            <label className="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-              5. Condiciones o Necesidades Específicas (Selecciona todas las que apliquen)
+            <label className="block text-xs font-bold uppercase text-[#5A5A5A] tracking-wider">
+              5. ¿Qué te gustaría mejorar en tu piel? (Puedes elegir varias)
             </label>
             <div className="flex flex-wrap gap-2">
               {CONDITIONS_LIST.map((cond) => {
@@ -328,10 +351,10 @@ export default function SkinCyclingWizard() {
                     key={cond.id}
                     type="button"
                     onClick={() => toggleCondition(cond.id)}
-                    className={`py-2 px-3.5 rounded-xl text-xs font-semibold border transition flex items-center gap-1.5 ${
+                    className={`py-2 px-3.5 rounded-xl text-xs font-semibold border transition flex items-center gap-1.5 cursor-pointer ${
                       selected
-                        ? 'bg-teal-600 border-teal-600 text-white shadow-sm'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                        ? 'bg-[#4A8BA8] border-[#4A8BA8] text-white shadow-sm'
+                        : 'bg-[#FAF7F4] hover:bg-[#F5EDE6] border-[#E8E0D8] text-[#5A5A5A]'
                     }`}
                   >
                     {selected ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
@@ -347,11 +370,11 @@ export default function SkinCyclingWizard() {
       {/* SECTION 2: DYNAMIC GENERATED PROTOCOL */}
       <section className="space-y-8 animate-in fade-in duration-300">
         {/* Protocol Banner Header */}
-        <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#1A4D63] via-[#1A2332] to-[#0F3344] text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-teal-400/20 text-teal-300 border border-teal-400/30 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                <span className="bg-[#7BB8D0]/20 text-[#8EC5DB] border border-[#7BB8D0]/30 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                   Ciclo de {protocol.cycleLength} Noches
                 </span>
                 <span className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
@@ -361,7 +384,7 @@ export default function SkinCyclingWizard() {
               <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                 {protocol.protocolName}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#C5BBB2] leading-relaxed">
                 {protocol.summary}
               </p>
             </div>
@@ -371,10 +394,10 @@ export default function SkinCyclingWizard() {
               <button
                 type="button"
                 onClick={handleSaveProtocol}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-2xl shadow-xl shadow-teal-400/20 transition hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#7BB8D0] hover:bg-[#8EC5DB] text-[#0F1721] font-black text-sm px-6 py-3.5 rounded-2xl shadow-xl shadow-[#7BB8D0]/20 transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                <span>Guardar y Activar Calendario</span>
+                <span>Guardar y Ver Mi Calendario</span>
               </button>
             </div>
           </div>
@@ -386,51 +409,51 @@ export default function SkinCyclingWizard() {
             const isExfoliation = night.category === 'EXFOLIATION';
             const isRetinoid = night.category === 'RETINOID';
             const borderColor = isExfoliation
-              ? 'border-teal-500/50 hover:border-teal-500'
+              ? 'border-[#5FA8C2]/50 hover:border-[#5FA8C2]'
               : isRetinoid
-              ? 'border-indigo-500/50 hover:border-indigo-500'
+              ? 'border-[#AC6A53]/50 hover:border-[#AC6A53]'
               : 'border-emerald-500/50 hover:border-emerald-500';
 
             const numBg = isExfoliation
-              ? 'bg-teal-100 text-teal-800'
+              ? 'bg-[#C5E3F0] text-[#2D6680]'
               : isRetinoid
-              ? 'bg-indigo-100 text-indigo-800'
+              ? 'bg-[#F2E2DC] text-[#5A372B]'
               : 'bg-emerald-100 text-emerald-800';
 
             return (
               <div
                 key={night.nightNumber}
-                className={`bg-white rounded-3xl p-6 border-2 ${borderColor} shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 relative`}
+                className={`bg-[#FFFCF9] rounded-3xl p-6 border-2 ${borderColor} shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 relative`}
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className={`w-9 h-9 rounded-xl ${numBg} flex items-center justify-center font-black text-sm`}>
                       0{night.nightNumber}
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#A69D94]">
                       Noche {night.nightNumber} de {protocol.cycleLength}
                     </span>
                   </div>
 
                   <div>
-                    <h4 className="text-base font-black text-slate-900 leading-snug">
+                    <h4 className="text-base font-black text-[#2D2D2D] leading-snug">
                       {night.title}
                     </h4>
-                    <p className="text-[11px] text-teal-700 font-bold mt-0.5">
+                    <p className="text-[11px] text-[#3A7A96] font-bold mt-0.5">
                       {night.subtitle}
                     </p>
                   </div>
 
                   {/* Actives Chips */}
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                      Activos Recomendados:
+                    <span className="text-[10px] font-bold uppercase text-[#A69D94] tracking-wider">
+                      Qué ingredientes usar:
                     </span>
                     <div className="flex flex-wrap gap-1">
                       {night.recommendedActives.map((act, i) => (
                         <span
                           key={i}
-                          className="bg-slate-100 text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-200/80"
+                          className="bg-[#F5EDE6] text-[#3D3D3D] text-[10px] font-bold px-2 py-0.5 rounded-md border border-[#E8E0D8]/80"
                         >
                           {act}
                         </span>
@@ -439,14 +462,14 @@ export default function SkinCyclingWizard() {
                   </div>
 
                   {/* Step By Step Instructions */}
-                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                      Instrucciones de Aplicación:
+                  <div className="pt-2 border-t border-[#F0E8E0] space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase text-[#A69D94] tracking-wider block">
+                      Paso a paso:
                     </span>
-                    <ul className="text-xs text-slate-600 space-y-1">
+                    <ul className="text-xs text-[#6B6B6B] space-y-1">
                       {night.suggestedSteps.map((st, i) => (
                         <li key={i} className="flex items-start gap-1.5 leading-tight">
-                          <span className="text-teal-600 font-black">•</span>
+                          <span className="text-[#4A8BA8] font-black">•</span>
                           <span>{st}</span>
                         </li>
                       ))}
@@ -454,109 +477,14 @@ export default function SkinCyclingWizard() {
                   </div>
                 </div>
 
-                {/* Rationale & Precautions */}
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <p className="text-[11px] text-slate-500 italic leading-relaxed">
-                    {night.clinicalRationale}
+                <div className="pt-3 border-t border-[#F0E8E0]">
+                  <p className="text-[11px] text-[#8B8178] leading-tight italic">
+                    💡 {night.clinicalRationale}
                   </p>
-                  {night.precautions.length > 0 && (
-                    <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2 text-[10px] text-amber-900 flex items-start gap-1.5">
-                      <Info className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <span>{night.precautions[0]}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Suitable Products Category Breakdown */}
-        <div className="bg-slate-100/80 rounded-3xl p-6 sm:p-8 border border-slate-200/90 space-y-6">
-          <div className="flex items-center gap-2 text-teal-800 font-bold text-xs uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4 text-teal-600" />
-            <span>Fórmulas y Productos Compatibles con tu Protocolo</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 space-y-2 shadow-sm">
-              <span className="text-[11px] font-bold uppercase text-teal-700 tracking-wider block">
-                Exfoliantes Aptos:
-              </span>
-              <ul className="text-xs text-slate-600 space-y-1.5">
-                {protocol.suitableExfoliants.map((item, idx) => (
-                  <li key={idx} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 space-y-2 shadow-sm">
-              <span className="text-[11px] font-bold uppercase text-indigo-700 tracking-wider block">
-                Retinoides / Alternativas Aptas:
-              </span>
-              <ul className="text-xs text-slate-600 space-y-1.5">
-                {protocol.suitableRetinoidsOrAlternatives.map((item, idx) => (
-                  <li key={idx} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 space-y-2 shadow-sm">
-              <span className="text-[11px] font-bold uppercase text-emerald-700 tracking-wider block">
-                Hidratantes y Reparadores:
-              </span>
-              <ul className="text-xs text-slate-600 space-y-1.5">
-                {protocol.suitableMoisturizers.map((item, idx) => (
-                  <li key={idx} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* SPONSORED MONETIZATION BANNER */}
-        <AdBanner
-          slotType="SPONSORED_PRODUCT"
-          sponsorName="Farmacias y Distribuidores Autorizados"
-          title="Consigue tus Activos de Skin Cycling con Envío Rápido y Garantía de Autenticidad"
-          description="Explora el catálogo verificado con promociones en limpiadores syndet, retinoides de grado dermatológico y cremas con ceramidas puras."
-          ctaText="Explorar Productos Recomendados"
-          ctaLink="/"
-        />
-
-        {/* Lead Capture Bottom Banner */}
-        <div className="bg-white rounded-3xl p-8 border-2 border-teal-500/30 shadow-xl text-center space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto shadow-inner">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <div className="space-y-2 max-w-lg mx-auto">
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-              ¿Listo para empezar tu ciclo y no olvidar qué noche toca hoy?
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-              Guarda tu protocolo, añade los productos que ya tienes en casa y revisa tu calendario interactivo día por día.
-            </p>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleSaveProtocol}
-              className="inline-flex items-center gap-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm sm:text-base px-8 py-4 rounded-2xl shadow-xl shadow-teal-600/25 transition hover:scale-105 active:scale-95"
-            >
-              <Save className="w-5 h-5" />
-              <span>Guardar Mi Rutina y Ver Calendario</span>
-            </button>
-          </div>
         </div>
       </section>
     </div>

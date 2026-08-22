@@ -10,19 +10,19 @@ export const metadata: Metadata = {
 
 export default function SkinCyclingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#FAF7F4]">
       <Navbar />
 
       <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10">
         {/* Header Introduction */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#3A7A96] bg-[#E8F4FA] px-3.5 py-1 rounded-full border border-[#A8D4E6] uppercase tracking-wider">
             Metodología Dermatológica & Algoritmo Adaptativo
           </span>
-          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-            Protocolo Científico de <span className="text-teal-600">Skin Cycling</span>
+          <h1 className="text-3xl sm:text-5xl font-black text-[#2D2D2D] tracking-tight leading-tight">
+            Protocolo Científico de <span className="text-[#4A8BA8]">Skin Cycling</span>
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-[#6B6B6B] leading-relaxed max-w-2xl mx-auto">
             Estrategia de ciclado nocturno diseñada para maximizar la eficacia de exfoliantes químicos y retinoides minimizando la irritación. Personaliza tu ciclo según tu biotipo y activa tu calendario de seguimiento diario.
           </p>
         </div>

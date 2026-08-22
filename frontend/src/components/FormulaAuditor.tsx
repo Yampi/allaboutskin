@@ -33,7 +33,8 @@ import {
   Image as ImageIcon,
   Check,
   RefreshCw,
-  Info
+  Info,
+  HeartHandshake
 } from 'lucide-react';
 import { AuditReport, auditInci } from '@/lib/api';
 import { 
@@ -89,6 +90,9 @@ export default function FormulaAuditor() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
 
+  // UX View Mode: Simple (for Novices/Tech) vs Scientific (for Skincare Experts/Doctors)
+  const [viewMode, setViewMode] = useState<'SIMPLE' | 'SCIENTIFIC'>('SIMPLE');
+
   // Progressive disclosure: Advanced optional refinements
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [productPrice, setProductPrice] = useState<string>('');
@@ -103,7 +107,6 @@ export default function FormulaAuditor() {
   const [ocrStatusText, setOcrStatusText] = useState('');
   const [ocrResult, setOcrResult] = useState<OcrDetectionResult | null>(null);
   const [editableOcrText, setEditableOcrText] = useState('');
-  const [selectedOcrMode, setSelectedOcrMode] = useState<'AUTO' | 'OFFICIAL_FORMULA' | 'RAW_TEXT'>('AUTO');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -111,7 +114,7 @@ export default function FormulaAuditor() {
   const handleAudit = async (customQuery?: string, customPrice?: number | null) => {
     const query = (customQuery ?? omniInput).trim();
     if (!query) {
-      setError('Por favor escribe el nombre de un producto, pega sus ingredientes o escanea la etiqueta.');
+      setError('Por favor escribe el nombre de tu producto o pega sus ingredientes.');
       return;
     }
 
@@ -134,7 +137,6 @@ export default function FormulaAuditor() {
       } else if (!query.includes(',') && !query.includes('+') && !query.includes(';') && !query.includes('\n') && query.length < 60) {
         productNameCandidate = query;
       } else {
-        // Multi-ingredient formula or combination
         productNameCandidate = query.length < 90 ? query : 'Fórmula Personalizada';
         inciTextCandidate = query;
       }
@@ -153,7 +155,7 @@ export default function FormulaAuditor() {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } catch (err: any) {
-      setError(err.message || 'Error al procesar la auditoría científica.');
+      setError(err.message || 'No pudimos procesar la fórmula. Revisa el texto o escribe el nombre del producto.');
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +180,7 @@ export default function FormulaAuditor() {
     setIsOcrModalOpen(true);
     setIsOcrScanning(true);
     setOcrProgress(0.1);
-    setOcrStatusText('Analizando imagen de etiqueta cosmética...');
+    setOcrStatusText('Leyendo etiqueta del producto...');
     setOcrResult(null);
     setEditableOcrText('');
 
@@ -195,18 +197,16 @@ export default function FormulaAuditor() {
         setEditableOcrText(
           `${analysis.detectedProductName || 'Producto'}: ${analysis.suggestedOfficialInci}`
         );
-        setSelectedOcrMode('OFFICIAL_FORMULA');
       } else {
-        setEditableOcrText(analysis.cleanedText || recognizedText);
-        setSelectedOcrMode('RAW_TEXT');
+        setEditableOcrText(analysis.cleanedText || cleanOcrCosmeticText(recognizedText));
       }
 
       if (analysis.detectedPrice && !productPrice) {
         setProductPrice(analysis.detectedPrice.toString());
       }
     } catch (err: any) {
-      setOcrStatusText('No se pudo completar el reconocimiento óptico.');
-      setError('Error al procesar la foto con OCR: ' + (err.message || 'Intente con mayor iluminación.'));
+      setOcrStatusText('No se pudo leer la imagen.');
+      setError('No pudimos leer la foto con claridad. Intenta con mayor iluminación o escribe el nombre.');
     } finally {
       setIsOcrScanning(false);
     }
@@ -229,17 +229,17 @@ export default function FormulaAuditor() {
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
       {/* App-Style Search & Evaluation Hero Box */}
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-teal-900/10 border border-slate-200/90 p-4 sm:p-7 transition-all">
+      <div className="bg-[#FFFCF9]/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-[#1A4D63]/10 border border-[#E8E0D8]/90 p-4 sm:p-7 transition-all">
         
         {/* Top Tagline / Mode Switch */}
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-600"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7BB8D0] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4A8BA8]"></span>
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Auditoría Científica de Fórmulas
+            <span className="text-xs font-bold uppercase tracking-wider text-[#8B8178]">
+              Evaluador de Cosméticos & Skincare
             </span>
           </div>
 
@@ -248,22 +248,22 @@ export default function FormulaAuditor() {
             onClick={() => setShowAdvanced(!showAdvanced)}
             className={`text-xs font-semibold px-2.5 py-1 rounded-xl border transition flex items-center gap-1.5 ${
               showAdvanced || productPrice
-                ? 'bg-teal-50 text-teal-800 border-teal-300' 
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                ? 'bg-[#E8F4FA] text-[#2D6680] border-[#8EC5DB]' 
+                : 'bg-[#FAF7F4] text-[#6B6B6B] border-[#E8E0D8] hover:bg-[#F5EDE6]'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-teal-600" />
-            <span>{showAdvanced ? 'Ocultar Filtros' : 'Afinar (+ Precio / Piel)'}</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A8BA8]" />
+            <span>{showAdvanced ? 'Ocultar Opciones' : 'Opciones (+ Precio / Tipo de Piel)'}</span>
             {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
 
         {/* UNIFIED 1-INPUT SMART OMNI-SEARCH BAR */}
         <div className="relative">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-50 hover:bg-slate-50/90 focus-within:bg-white rounded-2xl border-2 border-slate-200/90 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-500/15 shadow-inner transition-all p-1.5 sm:p-2 gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[#FAF7F4] hover:bg-[#FAF7F4]/90 focus-within:bg-[#FFFCF9] rounded-2xl border-2 border-[#E8E0D8]/90 focus-within:border-[#4A8BA8] focus-within:ring-4 focus-within:ring-[#5FA8C2]/15 shadow-inner transition-all p-1.5 sm:p-2 gap-2">
             
             {/* Search Icon / Indicator */}
-            <div className="hidden sm:flex items-center pl-3 text-slate-400">
+            <div className="hidden sm:flex items-center pl-3 text-[#A69D94]">
               <Search className="w-5 h-5" />
             </div>
 
@@ -278,8 +278,8 @@ export default function FormulaAuditor() {
                   handleAudit();
                 }
               }}
-              placeholder="Escribe el producto, marca o pega ingredientes (ej: Hawaiian Tropic Ozono 50+, Niacinamida, Retinol)..."
-              className="w-full bg-transparent px-3 py-2 text-slate-900 text-sm sm:text-base placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+              placeholder="Escribe el nombre de tu crema (ej: Nivea, The Ordinary, Protector Solar) o pega sus ingredientes..."
+              className="w-full bg-transparent px-3 py-2 text-[#2D2D2D] text-sm sm:text-base placeholder:text-[#A69D94] focus:outline-none resize-none leading-relaxed"
             />
 
             {/* Clear Button (If has text) */}
@@ -287,7 +287,7 @@ export default function FormulaAuditor() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="hidden sm:flex p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition self-center"
+                className="hidden sm:flex p-1.5 text-[#A69D94] hover:text-[#5A5A5A] rounded-lg transition self-center"
                 title="Limpiar búsqueda"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -295,16 +295,16 @@ export default function FormulaAuditor() {
             )}
 
             {/* Action Group: Camera OCR Button + Audit Submit Button */}
-            <div className="flex items-center gap-1.5 sm:gap-2 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/80">
+            <div className="flex items-center gap-1.5 sm:gap-2 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E8E0D8]/80">
               {/* Camera Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 text-xs font-extrabold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-sm px-3.5 py-2.5 rounded-xl transition active:scale-95 flex-shrink-0 cursor-pointer"
-                title="Escanear etiqueta con visión artificial OCR"
+                className="flex items-center gap-1.5 text-xs font-extrabold bg-[#FFFCF9] hover:bg-[#F5EDE6] text-[#5A5A5A] border border-[#C5BBB2] shadow-sm px-3.5 py-2.5 rounded-xl transition active:scale-95 flex-shrink-0 cursor-pointer"
+                title="Tomar foto al producto o ingredientes"
               >
-                <Camera className="w-4 h-4 text-teal-600" />
-                <span className="inline">Foto / OCR</span>
+                <Camera className="w-4 h-4 text-[#4A8BA8]" />
+                <span className="inline">Foto / Escanear</span>
               </button>
               <input
                 type="file"
@@ -320,17 +320,17 @@ export default function FormulaAuditor() {
                 type="button"
                 onClick={() => handleAudit()}
                 disabled={isLoading || !omniInput.trim()}
-                className="flex-grow sm:flex-grow-0 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-md shadow-teal-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm transition active:scale-95 flex-shrink-0 cursor-pointer"
+                className="flex-grow sm:flex-grow-0 bg-gradient-to-r from-[#4A8BA8] to-[#3A7A96] hover:from-[#3A7A96] hover:to-[#2D6680] disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-md shadow-[#4A8BA8]/30 flex items-center justify-center gap-2 text-xs sm:text-sm transition active:scale-95 flex-shrink-0 cursor-pointer"
               >
                 {isLoading ? (
                   <>
                     <Activity className="w-4 h-4 animate-spin" />
-                    <span>Evaluando...</span>
+                    <span>Analizando...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Evaluar</span>
+                    <span>Evaluar Producto</span>
                   </>
                 )}
               </button>
@@ -340,10 +340,10 @@ export default function FormulaAuditor() {
 
         {/* PROGRESSIVE DISCLOSURE: OPTIONAL FILTERS */}
         {showAdvanced && (
-          <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
+          <div className="mt-4 pt-4 border-t border-[#E8E0D8] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Precio del Producto (Opcional)
+              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+                Precio que pagaste (Opcional)
               </label>
               <div className="relative">
                 <input
@@ -353,19 +353,19 @@ export default function FormulaAuditor() {
                   value={productPrice}
                   onChange={(e) => setProductPrice(e.target.value)}
                   placeholder="ej: 14.99"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:bg-white focus:border-teal-500 focus:outline-none"
+                  className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
                 Moneda
               </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:bg-white focus:border-teal-500 focus:outline-none"
+                className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
               >
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
@@ -376,19 +376,19 @@ export default function FormulaAuditor() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Perfil de Piel
+              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+                ¿Cómo es tu tipo de piel?
               </label>
               <select
                 value={skinType}
                 onChange={(e) => setSkinType(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:bg-white focus:border-teal-500 focus:outline-none"
+                className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
               >
-                <option value="COMBINATION">Mixta a Grasa</option>
-                <option value="DRY">Seca / Deshidratada</option>
-                <option value="SENSITIVE">Sensible / Reactiva</option>
-                <option value="ACNE_PRONE">Tendencia al Acné</option>
-                <option value="NORMAL">Normal</option>
+                <option value="COMBINATION">Mixta (Brillo en frente/nariz)</option>
+                <option value="DRY">Seca (Tirante o áspera)</option>
+                <option value="SENSITIVE">Sensible (Se enrojece fácil)</option>
+                <option value="ACNE_PRONE">Grasa o con granitos</option>
+                <option value="NORMAL">Normal / Equilibrada</option>
               </select>
             </div>
           </div>
@@ -398,40 +398,40 @@ export default function FormulaAuditor() {
         <div className="mt-4 flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1 mr-1">
             <Flame className="w-3.5 h-3.5 text-amber-600" />
-            Populares:
+            Ejemplos populares:
           </span>
           {QUICK_PRESETS.map((preset, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handleSelectPreset(preset)}
-              className="text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300 text-slate-700 font-medium px-2.5 py-1 rounded-lg border border-slate-200/80 transition active:scale-95 flex items-center gap-1 cursor-pointer"
+              className="text-xs bg-[#F5EDE6] hover:bg-[#E8F4FA] hover:text-[#2D6680] hover:border-[#8EC5DB] text-[#5A5A5A] font-medium px-2.5 py-1 rounded-lg border border-[#E8E0D8]/80 transition active:scale-95 flex items-center gap-1 cursor-pointer"
             >
-              <span className="text-[10px] text-teal-700 font-bold">[{preset.badge}]</span>
+              <span className="text-[10px] text-[#3A7A96] font-bold">[{preset.badge}]</span>
               <span>{preset.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* OCR SMART CONFIRMATION & VISION MODAL */}
+      {/* HUMANIZED OCR MODAL */}
       {isOcrModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-auto">
+        <div className="fixed inset-0 z-50 bg-[#0F1721]/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#FFFCF9] rounded-3xl shadow-2xl border border-[#E8E0D8] w-full max-w-xl overflow-hidden my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white p-4 sm:p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-teal-700/60 rounded-xl border border-teal-500/30">
-                  <ScanLine className="w-5 h-5 text-teal-200" />
+                <div className="p-2 bg-[#3A7A96]/60 rounded-xl border border-[#5FA8C2]/30">
+                  <ScanLine className="w-5 h-5 text-[#A8D4E6]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg">Escanear Etiqueta de Cosmético</h3>
-                  <p className="text-xs text-teal-200/90">Toma una foto a la lista de ingredientes o al frente del envase</p>
+                  <h3 className="font-bold text-base sm:text-lg">Foto de tu Cosmético</h3>
+                  <p className="text-xs text-[#A8D4E6]/90">Analizamos el envase o la lista de ingredientes</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsOcrModalOpen(false)}
-                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+                className="text-[#C5BBB2] hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -440,154 +440,68 @@ export default function FormulaAuditor() {
             {/* Modal Body */}
             <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               {/* Image Preview & Scanner Visual */}
-              <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 h-48 sm:h-56 flex items-center justify-center">
+              <div className="relative rounded-2xl overflow-hidden border border-[#E8E0D8] bg-[#1A2332] h-48 flex items-center justify-center">
                 {ocrImagePreview && (
                   <img
                     src={ocrImagePreview}
-                    alt="Etiqueta escaneada"
+                    alt="Foto del producto"
                     className={`h-full w-full object-contain ${isOcrScanning ? 'opacity-70 blur-[0.5px]' : ''}`}
                   />
                 )}
                 
                 {isOcrScanning && (
-                  <div className="absolute inset-0 bg-teal-950/50 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
-                    <Activity className="w-8 h-8 text-teal-300 animate-spin mb-3" />
+                  <div className="absolute inset-0 bg-[#0F3344]/50 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
+                    <Activity className="w-8 h-8 text-[#8EC5DB] animate-spin mb-3" />
                     <span className="text-white font-bold text-sm sm:text-base">{ocrStatusText}</span>
-                    <div className="w-48 sm:w-64 bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+                    <div className="w-48 sm:w-64 bg-[#5A5A5A] rounded-full h-2 mt-3 overflow-hidden">
                       <div 
-                        className="bg-teal-400 h-full transition-all duration-300 rounded-full"
+                        className="bg-[#7BB8D0] h-full transition-all duration-300 rounded-full"
                         style={{ width: `${Math.round(ocrProgress * 100)}%` }}
                       />
                     </div>
-                    <span className="text-teal-200 text-xs mt-1.5 font-mono">{Math.round(ocrProgress * 100)}%</span>
                   </div>
                 )}
               </div>
 
-              {/* Recognition Result Analysis Card */}
+              {/* Recognition Result - Friendly Context */}
               {!isOcrScanning && ocrResult && (
                 <div className="space-y-3">
-                  {/* Front vs Back Context Notice */}
                   {ocrResult.labelType === 'FRONT_BRANDING' ? (
-                    <div className="p-4 bg-amber-50/95 border-2 border-amber-300/80 rounded-2xl shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-amber-100 rounded-xl text-amber-800 shrink-0 mt-0.5 shadow-xs">
-                          <Tag className="w-5 h-5" />
-                        </div>
-                        <div className="space-y-1.5 flex-grow">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 bg-amber-200/90 px-2.5 py-0.5 rounded-lg border border-amber-300">
-                              📸 Frente del Envase Detectado
-                            </span>
-                            {ocrResult.isSunscreen && (
-                              <span className="text-xs font-bold text-orange-950 bg-orange-200/90 px-2.5 py-0.5 rounded-lg border border-orange-300">
-                                ☀️ Protector Solar
-                              </span>
-                            )}
-                          </div>
-                          
-                          <p className="text-xs sm:text-sm font-semibold text-amber-950 leading-snug">
-                            {ocrResult.detectedProductName ? (
-                              <>
-                                Producto identificado: <strong className="text-amber-900">{ocrResult.detectedProductName}</strong>
-                                {ocrResult.detectedBrand && <span className="text-amber-800"> ({ocrResult.detectedBrand})</span>}.
-                              </>
-                            ) : (
-                              <>Esta imagen corresponde a la cara comercial (frente) del empaque.</>
-                            )}
-                          </p>
-                          
-                          <p className="text-[11px] text-amber-900/90 bg-amber-100/70 p-2.5 rounded-xl border border-amber-200/70 leading-relaxed">
-                            ⚠️ <strong>Aviso Importante:</strong> El frente contiene el nombre comercial y beneficios de marketing, pero <strong>no la lista química de ingredientes (INCI)</strong>.
-                            <br />
-                            💡 <em>Para un análisis químico de lote:</em> Gira el envase y toma foto al reverso donde dice <strong>&quot;Ingredientes / INCI&quot;</strong>.
-                          </p>
-                        </div>
+                    <div className="p-4 bg-amber-50/95 border-2 border-amber-300/80 rounded-2xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase text-amber-900 bg-amber-200 px-2.5 py-0.5 rounded-lg">
+                          📸 Frente del Producto Detectado
+                        </span>
                       </div>
-
-                      {ocrResult.suggestedOfficialInci && (
-                        <div className="mt-3 pt-3 border-t border-amber-200 flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-xs text-amber-950 font-medium">
-                            ✨ Tenemos la <strong>fórmula oficial registrada</strong> en catálogo para este producto.
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedOcrMode('OFFICIAL_FORMULA');
-                                setEditableOcrText(`${ocrResult.detectedProductName}: ${ocrResult.suggestedOfficialInci}`);
-                              }}
-                              className={`text-xs px-3 py-1.5 rounded-xl font-bold transition shadow-xs cursor-pointer ${
-                                selectedOcrMode === 'OFFICIAL_FORMULA'
-                                  ? 'bg-amber-800 text-white shadow-amber-900/20'
-                                  : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
-                              }`}
-                            >
-                              Fórmula Oficial INCI
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedOcrMode('RAW_TEXT');
-                                setEditableOcrText(ocrResult.cleanedText || ocrResult.rawText);
-                              }}
-                              className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
-                                selectedOcrMode === 'RAW_TEXT'
-                                  ? 'bg-amber-800 text-white'
-                                  : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
-                              }`}
-                            >
-                              Solo Nombre
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      <p className="text-xs sm:text-sm font-semibold text-amber-950">
+                        Identificamos: <strong>{ocrResult.detectedProductName || 'Producto comercial'}</strong>.
+                      </p>
+                      <p className="text-[11px] text-amber-900/90 bg-white/70 p-2 rounded-xl border border-amber-200 leading-relaxed">
+                        ✨ Cargamos la <strong>fórmula oficial registrada</strong> para este producto. Si deseas auditar un lote en específico, puedes girar el envase y tomar foto a los ingredientes al reverso.
+                      </p>
                     </div>
-                  ) : ocrResult.labelType === 'BACK_INCI' ? (
-                    <div className="p-3.5 bg-emerald-50 border-2 border-emerald-300/80 rounded-2xl flex items-center gap-3 shadow-sm">
+                  ) : (
+                    <div className="p-3.5 bg-emerald-50 border-2 border-emerald-300/80 rounded-2xl flex items-center gap-3">
                       <div className="p-2 bg-emerald-100 rounded-xl text-emerald-800 shrink-0">
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                       <div className="text-xs text-emerald-950">
-                        <span className="font-bold text-sm text-emerald-900">🧪 Reverso / Lista INCI detectada con éxito.</span>
-                        <p className="text-[11px] text-emerald-800 mt-0.5">Se identificaron los componentes químicos y filtros de la formulación cosmética.</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-2xl flex items-center gap-3">
-                      <div className="p-2 bg-slate-200 rounded-xl text-slate-700 shrink-0">
-                        <Info className="w-5 h-5" />
-                      </div>
-                      <div className="text-xs text-slate-800">
-                        <span className="font-bold">Texto extraído de la imagen.</span>
-                        <p className="text-[11px] text-slate-600 mt-0.5">
-                          Si la foto corresponde al frente del producto, gira el envase y captura la lista de ingredientes al reverso para una auditoría química completa.
-                        </p>
+                        <span className="font-bold text-sm text-emerald-900">🧪 Ingredientes detectados con éxito.</span>
+                        <p className="text-[11px] text-emerald-800 mt-0.5">Listo para analizar qué hace cada componente en tu piel.</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Editable OCR Payload */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        Texto Extraído para Auditoría (Puedes editarlo o complementarlo):
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setEditableOcrText(cleanOcrCosmeticText(ocrResult.rawText, ocrResult.labelType === 'FRONT_BRANDING'))}
-                        className="text-[11px] text-teal-700 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Limpiar ruido OCR
-                      </button>
-                    </div>
+                    <label className="text-xs font-bold text-[#5A5A5A] block mb-1">
+                      Nombre o ingredientes identificados:
+                    </label>
                     <textarea
-                      rows={4}
+                      rows={3}
                       value={editableOcrText}
                       onChange={(e) => setEditableOcrText(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs sm:text-sm text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 focus:outline-none leading-relaxed font-mono"
-                      placeholder="Lista INCI o nombre de producto..."
+                      className="w-full bg-[#FAF7F4] border border-[#C5BBB2] rounded-xl p-2.5 text-xs text-[#2D2D2D] focus:bg-[#FFFCF9] focus:border-[#4A8BA8] focus:outline-none"
+                      placeholder="Nombre del producto o lista de ingredientes..."
                     />
                   </div>
                 </div>
@@ -595,13 +509,13 @@ export default function FormulaAuditor() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 p-4 sm:p-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="bg-[#FAF7F4] p-4 sm:p-5 border-t border-[#E8E0D8] flex flex-col sm:flex-row items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full sm:w-auto text-xs font-bold text-slate-700 bg-white border border-slate-300 px-4 py-2.5 rounded-xl hover:bg-slate-100 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto text-xs font-bold text-[#5A5A5A] bg-[#FFFCF9] border border-[#C5BBB2] px-4 py-2.5 rounded-xl hover:bg-[#F5EDE6] transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Camera className="w-3.5 h-3.5 text-slate-600" />
+                <Camera className="w-3.5 h-3.5 text-[#6B6B6B]" />
                 <span>Tomar otra foto</span>
               </button>
 
@@ -609,7 +523,7 @@ export default function FormulaAuditor() {
                 <button
                   type="button"
                   onClick={() => setIsOcrModalOpen(false)}
-                  className="w-1/2 sm:w-auto text-xs font-semibold text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-200 transition cursor-pointer"
+                  className="w-1/2 sm:w-auto text-xs font-semibold text-[#6B6B6B] px-4 py-2.5 rounded-xl hover:bg-[#E8E0D8] transition cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -617,10 +531,10 @@ export default function FormulaAuditor() {
                   type="button"
                   disabled={isOcrScanning || !editableOcrText.trim()}
                   onClick={handleConfirmOcrAudit}
-                  className="w-1/2 sm:w-auto bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-teal-600/30 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                  className="w-1/2 sm:w-auto bg-gradient-to-r from-[#4A8BA8] to-[#3A7A96] hover:from-[#3A7A96] hover:to-[#2D6680] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-[#4A8BA8]/30 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Auditar Fórmula</span>
+                  <span>Evaluar</span>
                 </button>
               </div>
             </div>
@@ -633,7 +547,7 @@ export default function FormulaAuditor() {
         <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in">
           <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm font-medium">
-            <span className="font-bold">Aviso: </span>
+            <span className="font-bold">Nota: </span>
             {error}
           </div>
         </div>
@@ -644,23 +558,19 @@ export default function FormulaAuditor() {
         {report && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* Header / Summary Card */}
-            <div className="bg-gradient-to-br from-teal-900 via-teal-800 to-slate-900 text-white rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-teal-500/30 text-teal-200 border border-teal-400/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Evaluación Completa
-                    </span>
-                    <span className="bg-amber-500/30 text-amber-200 border border-amber-400/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Bot className="w-3 h-3" />
-                      {report.ai_clinical_copilot.transparency_meta.source_label}
+                    <span className="bg-[#5FA8C2]/30 text-[#A8D4E6] border border-[#7BB8D0]/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Resultado de Evaluación
                     </span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     {report.meta.product_name}
                   </h2>
-                  <p className="text-teal-200/80 text-xs sm:text-sm">
-                    {report.meta.active_ingredients_count} activos principales • {report.meta.total_ingredients_count} componentes evaluados
+                  <p className="text-[#A8D4E6]/80 text-xs sm:text-sm">
+                    {report.meta.active_ingredients_count} ingredientes activos principales identificados
                   </p>
                 </div>
 
@@ -676,350 +586,441 @@ export default function FormulaAuditor() {
               </div>
 
               {/* Decorative Blur Orbs */}
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-700/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#5FA8C2]/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#3A7A96]/20 rounded-full blur-3xl pointer-events-none" />
             </div>
 
-            {/* Quick Metrics KPI Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {/* Evidence Grade */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Evidencia Médica
-                </span>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-2xl font-black ${
-                    report.scientific_evidence.overall_evidence_grade === 'A' 
-                      ? 'text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200' 
-                      : 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200'
-                  }`}>
-                    Nivel {report.scientific_evidence.overall_evidence_grade}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  {report.scientific_evidence.total_referenced_studies} estudios en PubMed
-                </p>
-              </div>
+            {/* VIEW MODE TOGGLE SWITCH (Simple vs Scientific) */}
+            <div className="bg-[#FFFCF9] p-2 rounded-2xl border border-[#E8E0D8] shadow-sm flex items-center justify-center gap-2 max-w-md mx-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('SIMPLE')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  viewMode === 'SIMPLE'
+                    ? 'bg-[#4A8BA8] text-white shadow-md'
+                    : 'text-[#6B6B6B] hover:bg-[#F5EDE6]'
+                }`}
+              >
+                <HeartHandshake className="w-4 h-4" />
+                <span>Modo Simple (Fácil)</span>
+              </button>
 
-              {/* Routine Timing */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Uso en Rutina
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {report.layering_and_usage.recommended_timing === 'AM' && <Sun className="w-5 h-5 text-amber-500" />}
-                  {report.layering_and_usage.recommended_timing === 'PM' && <Moon className="w-5 h-5 text-indigo-500" />}
-                  {report.layering_and_usage.recommended_timing === 'BOTH' && (
-                    <div className="flex items-center text-teal-600">
-                      <Sun className="w-4 h-4" />
-                      <Moon className="w-4 h-4 -ml-1" />
+              <button
+                type="button"
+                onClick={() => setViewMode('SCIENTIFIC')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  viewMode === 'SCIENTIFIC'
+                    ? 'bg-[#1A4D63] text-white shadow-md'
+                    : 'text-[#6B6B6B] hover:bg-[#F5EDE6]'
+                }`}
+              >
+                <Microscope className="w-4 h-4" />
+                <span>Modo Científico (INCI & Papers)</span>
+              </button>
+            </div>
+
+            {/* ======================================================== */}
+            {/* VIEW 1: MODO SIMPLE (Para María y Sofía)                 */}
+            {/* ======================================================== */}
+            {viewMode === 'SIMPLE' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                {/* 3 Main Direct Action Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  {/* Card 1: ¿Qué hace en tu piel? */}
+                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-[#E8F4FA] text-[#2D6680] flex items-center justify-center font-bold">
+                        <Sparkles className="w-5 h-5 text-[#4A8BA8]" />
+                      </div>
+                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
+                        1. ¿Para qué sirve?
+                      </h3>
+                      <p className="text-xs text-[#5A5A5A] leading-relaxed">
+                        {report.ai_clinical_copilot.plain_language_summary}
+                      </p>
                     </div>
-                  )}
-                  <span className="text-base sm:text-lg font-bold text-slate-900">
-                    Rutina {report.layering_and_usage.recommended_timing === 'BOTH' ? 'AM/PM' : report.layering_and_usage.recommended_timing}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Paso #{report.layering_and_usage.layering_step_order} del layering
-                </p>
-              </div>
 
-              {/* Sunscreen Requirement */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Protector Solar
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {report.layering_and_usage.requires_sunscreen ? (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                      Obligatorio FPS 50+
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
-                      Recomendado
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Previene fotosensibilización
-                </p>
-              </div>
-
-              {/* Format Quality Score */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Calidad de Formato
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <Zap className="w-4 h-4 text-teal-600 self-center" />
-                  <span className="text-2xl font-black text-slate-900">
-                    {report.ai_clinical_copilot.format_quality_score}
-                  </span>
-                  <span className="text-xs text-slate-400">/ 10</span>
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  {report.ai_clinical_copilot.format_type.replace(/_/g, ' ')}
-                </p>
-              </div>
-            </div>
-
-            {/* AI Clinical Copilot & Format Analysis */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
-                    <Bot className="w-5 h-5" />
+                    <div className="pt-3 border-t border-[#F0E8E0]">
+                      <span className="text-[11px] font-bold text-[#8B8178] block mb-1">Beneficios principales:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {report.clinical_indications.slice(0, 3).map((ind, i) => (
+                          <span key={i} className="text-[11px] bg-[#FAF7F4] border border-[#E8E0D8] text-[#3A7A96] font-semibold px-2 py-0.5 rounded-lg">
+                            ✓ {ind.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                      Evaluación de Formato & Copilot Clínico
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Formato: <span className="font-semibold text-teal-800">{report.ai_clinical_copilot.format_type.replace(/_/g, ' ')}</span>
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-1.5 bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1 rounded-xl text-xs font-semibold">
-                  <Tag className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Confianza: {Math.round(report.ai_clinical_copilot.transparency_meta.confidence_score * 100)}%</span>
-                </div>
-              </div>
-
-              {/* Plain Language Summary */}
-              <div className="p-3.5 bg-slate-50 rounded-2xl text-xs sm:text-sm text-slate-700 leading-relaxed border border-slate-200/70">
-                💡 {report.ai_clinical_copilot.plain_language_summary}
-              </div>
-
-              {/* Physical Applicator / Barrier Friction Warning */}
-              {report.ai_clinical_copilot.barrier_warning && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-0.5">
-                      Advertencia de Fricción Mecánica y Barrera Cutánea
-                    </h4>
-                    <p className="text-xs text-amber-800 leading-relaxed">
-                      {report.ai_clinical_copilot.barrier_warning}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Split Protocol: Contraindications & How To Use */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
-                    Contraindicaciones Clínicas
-                  </span>
-                  {report.ai_clinical_copilot.contraindications.length > 0 ? (
-                    <ul className="space-y-1.5 text-xs text-slate-700">
-                      {report.ai_clinical_copilot.contraindications.map((contra, idx) => (
-                        <li key={idx} className="flex items-start gap-1.5">
-                          <span className="text-rose-500 font-bold">•</span>
-                          <span>{contra}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-slate-500">Sin contraindicaciones físicas severas detectadas.</p>
-                  )}
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
-                    Protocolo de Uso Óptimo
-                  </span>
-                  <div className="space-y-1.5 text-xs text-slate-700">
-                    <p><strong>¿Cuándo?:</strong> {report.ai_clinical_copilot.when_to_use || 'Según indicación de activos'}</p>
-                    <p><strong>¿Cómo?:</strong> {report.ai_clinical_copilot.how_to_use || 'Aplicar uniformemente sobre la piel limpia'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Split: Clinical Indications & PubMed Studies */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Indications */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <Sparkles className="w-5 h-5 text-teal-600" />
-                  <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                    Indicaciones Clínicas de la Fórmula
-                  </h3>
-                </div>
-
-                {report.clinical_indications.length > 0 ? (
-                  <div className="space-y-3">
-                    {report.clinical_indications.map((ind, idx) => (
-                      <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-slate-900">{ind.name}</span>
-                          <span className="text-[10px] font-bold text-teal-700 bg-teal-100/70 px-2 py-0.5 rounded-md">
-                            Nivel {ind.highest_evidence_level}
+                  {/* Card 2: ¿Cuándo y cómo ponértelo? */}
+                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+                        {report.layering_and_usage.recommended_timing === 'PM' ? (
+                          <Moon className="w-5 h-5 text-indigo-500" />
+                        ) : (
+                          <Sun className="w-5 h-5 text-amber-500" />
+                        )}
+                      </div>
+                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
+                        2. ¿Cuándo aplicarlo?
+                      </h3>
+                      <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 font-bold text-sm text-[#2D2D2D] bg-[#FAF7F4] px-2.5 py-1 rounded-xl border border-[#E8E0D8]">
+                          <span>Momento:</span>
+                          <span className="text-[#3A7A96]">
+                            {report.layering_and_usage.recommended_timing === 'AM' && '☀️ Por las Mañanas'}
+                            {report.layering_and_usage.recommended_timing === 'PM' && '🌙 Solo por las Noches'}
+                            {report.layering_and_usage.recommended_timing === 'BOTH' && '☀️/🌙 Mañanas y Noches'}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">{ind.description}</p>
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {ind.supporting_actives.map((act, aIdx) => (
-                            <span key={aIdx} className="text-[10px] bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-semibold">
-                              {act.inci_name}
-                            </span>
+                        <p className="text-xs text-[#5A5A5A] leading-relaxed">
+                          <strong>Orden:</strong> {report.layering_and_usage.layering_rule}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Sunscreen indicator */}
+                    <div className="pt-3 border-t border-[#F0E8E0]">
+                      {report.layering_and_usage.requires_sunscreen ? (
+                        <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-800 font-semibold flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>¡Obligatorio usar protector solar FPS 50+ durante el día!</span>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 font-semibold flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Uso diurno seguro con protector solar habitual.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card 3: ¿Es seguro o hay riesgos? */}
+                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+                        <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
+                        3. Seguridad & Precauciones
+                      </h3>
+                      
+                      {report.chemical_conflicts.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-bold text-rose-700 block">
+                            ⚠️ No mezcles con:
+                          </span>
+                          {report.chemical_conflicts.map((c, idx) => (
+                            <p key={idx} className="text-xs text-rose-800 bg-rose-50 p-2 rounded-xl border border-rose-200">
+                              Evita usarlo junto con <strong>{c.ingredient_b}</strong> en la misma aplicación para no irritar tu piel.
+                            </p>
                           ))}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">No se detectaron activos con indicaciones farmacológicas mayores.</p>
-                )}
-              </div>
+                      ) : (
+                        <p className="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                          ✓ Fórmula compatible y sin incompatibilidades severas conocidas.
+                        </p>
+                      )}
+                    </div>
 
-              {/* PubMed References */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-teal-600" />
-                    <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                      Estudios Médicos en PubMed (NCBI)
+                    <div className="pt-3 border-t border-[#F0E8E0] text-[11px] text-[#8B8178]">
+                      {report.ai_clinical_copilot.barrier_warning ? (
+                        <span className="text-amber-800 font-medium">⚠️ {report.ai_clinical_copilot.barrier_warning}</span>
+                      ) : (
+                        <span>💡 Aplica sobre el rostro limpio y seco.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Helpful Switcher Prompt */}
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('SCIENTIFIC')}
+                    className="text-xs text-[#3A7A96] hover:text-[#1A4D63] hover:underline font-bold inline-flex items-center gap-1"
+                  >
+                    <span>¿Quieres ver la lista química INCI completa y estudios médicos en PubMed?</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* VIEW 2: MODO CIENTÍFICO (Para Elena y Valeria)           */}
+            {/* ======================================================== */}
+            {viewMode === 'SCIENTIFIC' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Quick Metrics KPI Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {/* Evidence Grade */}
+                  <div className="bg-[#FFFCF9] p-4 sm:p-5 rounded-2xl border border-[#E8E0D8] shadow-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider">
+                      Evidencia Médica
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-2xl font-black ${
+                        report.scientific_evidence.overall_evidence_grade === 'A' 
+                          ? 'text-[#3A7A96] bg-[#E8F4FA] px-2 py-0.5 rounded-lg border border-[#A8D4E6]' 
+                          : 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200'
+                      }`}>
+                        Nivel {report.scientific_evidence.overall_evidence_grade}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#8B8178] truncate">
+                      {report.scientific_evidence.total_referenced_studies} estudios en PubMed
+                    </p>
+                  </div>
+
+                  {/* Routine Timing */}
+                  <div className="bg-[#FFFCF9] p-4 sm:p-5 rounded-2xl border border-[#E8E0D8] shadow-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider">
+                      Uso en Rutina
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {report.layering_and_usage.recommended_timing === 'AM' && <Sun className="w-5 h-5 text-amber-500" />}
+                      {report.layering_and_usage.recommended_timing === 'PM' && <Moon className="w-5 h-5 text-indigo-500" />}
+                      {report.layering_and_usage.recommended_timing === 'BOTH' && (
+                        <div className="flex items-center text-[#4A8BA8]">
+                          <Sun className="w-4 h-4" />
+                          <Moon className="w-4 h-4 -ml-1" />
+                        </div>
+                      )}
+                      <span className="text-base sm:text-lg font-bold text-[#2D2D2D]">
+                        Rutina {report.layering_and_usage.recommended_timing === 'BOTH' ? 'AM/PM' : report.layering_and_usage.recommended_timing}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#8B8178] truncate">
+                      Paso #{report.layering_and_usage.layering_step_order} del layering
+                    </p>
+                  </div>
+
+                  {/* Sunscreen Requirement */}
+                  <div className="bg-[#FFFCF9] p-4 sm:p-5 rounded-2xl border border-[#E8E0D8] shadow-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider">
+                      Protector Solar
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {report.layering_and_usage.requires_sunscreen ? (
+                        <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                          Obligatorio FPS 50+
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#3A7A96] bg-[#E8F4FA] border border-[#A8D4E6] px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#4A8BA8]" />
+                          Recomendado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#8B8178] truncate">
+                      Previene fotosensibilización
+                    </p>
+                  </div>
+
+                  {/* Format Quality Score */}
+                  <div className="bg-[#FFFCF9] p-4 sm:p-5 rounded-2xl border border-[#E8E0D8] shadow-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider">
+                      Calidad de Formato
+                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <Zap className="w-4 h-4 text-[#4A8BA8] self-center" />
+                      <span className="text-2xl font-black text-[#2D2D2D]">
+                        {report.ai_clinical_copilot.format_quality_score}
+                      </span>
+                      <span className="text-xs text-[#A69D94]">/ 10</span>
+                    </div>
+                    <p className="text-[11px] text-[#8B8178] truncate">
+                      {report.ai_clinical_copilot.format_type.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* PubMed References & Indications */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Indications */}
+                  <div className="bg-[#FFFCF9] rounded-3xl border border-[#E8E0D8] shadow-sm p-5 sm:p-7 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-[#F0E8E0] pb-3">
+                      <Sparkles className="w-5 h-5 text-[#4A8BA8]" />
+                      <h3 className="font-bold text-[#2D2D2D] text-base sm:text-lg">
+                        Indicaciones Clínicas de la Fórmula
+                      </h3>
+                    </div>
+
+                    {report.clinical_indications.length > 0 ? (
+                      <div className="space-y-3">
+                        {report.clinical_indications.map((ind, idx) => (
+                          <div key={idx} className="p-3.5 bg-[#FAF7F4] rounded-2xl border border-[#E8E0D8]/80 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-[#2D2D2D]">{ind.name}</span>
+                              <span className="text-[10px] font-bold text-[#3A7A96] bg-[#C5E3F0]/70 px-2 py-0.5 rounded-md">
+                                Nivel {ind.highest_evidence_level}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#6B6B6B] leading-relaxed">{ind.description}</p>
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {ind.supporting_actives.map((act, aIdx) => (
+                                <span key={aIdx} className="text-[10px] bg-[#FFFCF9] border border-[#E8E0D8] text-[#5A5A5A] px-2 py-0.5 rounded-md font-semibold">
+                                  {act.inci_name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#8B8178]">No se detectaron activos con indicaciones farmacológicas mayores.</p>
+                    )}
+                  </div>
+
+                  {/* PubMed References */}
+                  <div className="bg-[#FFFCF9] rounded-3xl border border-[#E8E0D8] shadow-sm p-5 sm:p-7 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#F0E8E0] pb-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-[#4A8BA8]" />
+                        <h3 className="font-bold text-[#2D2D2D] text-base sm:text-lg">
+                          Estudios Médicos en PubMed (NCBI)
+                        </h3>
+                      </div>
+                      <span className="text-xs text-[#8B8178] font-medium">Verificación Médica</span>
+                    </div>
+
+                    {report.scientific_evidence.studies.length > 0 ? (
+                      <div className="space-y-3">
+                        {report.scientific_evidence.studies.map((study, idx) => (
+                          <a
+                            key={idx}
+                            href={study.pubmed_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block p-3.5 bg-[#FAF7F4] hover:bg-[#E8F4FA]/60 rounded-2xl border border-[#E8E0D8]/80 hover:border-[#8EC5DB] transition group space-y-1.5"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="text-xs font-bold text-[#2D2D2D] group-hover:text-[#2D6680] leading-snug line-clamp-2">
+                                {study.title}
+                              </h4>
+                              <ExternalLink className="w-3.5 h-3.5 text-[#A69D94] group-hover:text-[#4A8BA8] flex-shrink-0 mt-0.5" />
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-[#8B8178]">
+                              <span>PMID: {study.pmid}</span>
+                              <span>•</span>
+                              <span>{study.journal}</span>
+                              <span>•</span>
+                              <span className="font-bold text-[#3A7A96]">{study.study_type}</span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#8B8178]">Fórmula de acondicionamiento básico o ingredientes no indexados.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Layering & Chemical Conflicts */}
+                <div className="bg-[#FFFCF9] rounded-3xl border border-[#E8E0D8] shadow-sm p-5 sm:p-7 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-[#F0E8E0] pb-3">
+                    <Layers className="w-5 h-5 text-[#4A8BA8]" />
+                    <h3 className="font-bold text-[#2D2D2D] text-base sm:text-lg">
+                      Orden de Aplicación en Rutina (Layering)
                     </h3>
                   </div>
-                  <span className="text-xs text-slate-500 font-medium">Verificación Médica</span>
-                </div>
 
-                {report.scientific_evidence.studies.length > 0 ? (
-                  <div className="space-y-3">
-                    {report.scientific_evidence.studies.map((study, idx) => (
-                      <a
-                        key={idx}
-                        href={study.pubmed_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-3.5 bg-slate-50 hover:bg-teal-50/60 rounded-2xl border border-slate-200/80 hover:border-teal-300 transition group space-y-1.5"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-800 leading-snug line-clamp-2">
-                            {study.title}
-                          </h4>
-                          <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 flex-shrink-0 mt-0.5" />
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                          <span>PMID: {study.pmid}</span>
-                          <span>•</span>
-                          <span>{study.journal}</span>
-                          <span>•</span>
-                          <span className="font-bold text-teal-700">{study.study_type}</span>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">Fórmula de acondicionamiento básico o ingredientes no indexados.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Layering & Chemical Conflicts */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Layers className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                  Orden de Aplicación en Rutina (Layering)
-                </h3>
-              </div>
-
-              <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-teal-900">
-                    Paso en Rutina: <span className="underline">Paso {report.layering_and_usage.layering_step_order} de 5</span>
-                  </span>
-                </div>
-                <p className="text-xs text-teal-800 leading-relaxed">
-                  {report.layering_and_usage.layering_rule}
-                </p>
-              </div>
-
-              {/* Chemical Conflicts if any */}
-              {report.chemical_conflicts.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <span className="text-xs font-bold text-rose-700 uppercase tracking-wider block">
-                    ⚠️ Conflictos e Incompatibilidades Químicas Detectadas
-                  </span>
-                  {report.chemical_conflicts.map((conf, idx) => (
-                    <div key={idx} className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-rose-900">
-                          {conf.ingredient_a} ⚡ {conf.ingredient_b}
-                        </span>
-                        <span className="text-[10px] font-bold text-rose-700 bg-rose-200/80 px-2 py-0.5 rounded-md">
-                          Severidad {conf.severity}
-                        </span>
-                      </div>
-                      <p className="text-xs text-rose-800">{conf.warning_message}</p>
-                      <p className="text-[11px] text-rose-700 italic">Mitigación: {conf.mitigation_strategy}</p>
+                  <div className="p-4 bg-[#E8F4FA]/70 border border-[#A8D4E6] rounded-2xl space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#1A4D63]">
+                        Paso en Rutina: <span className="underline">Paso {report.layering_and_usage.layering_step_order} de 5</span>
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <p className="text-xs text-[#2D6680] leading-relaxed">
+                      {report.layering_and_usage.layering_rule}
+                    </p>
+                  </div>
 
-            {/* Ingredients Breakdown Table */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                  Desglose de Componentes ({report.ingredients_breakdown.length})
-                </h3>
-                <span className="text-[11px] text-slate-500 font-semibold">Norma CosIng UE</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
-                      <th className="py-2.5 px-3">#</th>
-                      <th className="py-2.5 px-3">Nombre INCI Oficial</th>
-                      <th className="py-2.5 px-3">Funciones CosIng UE</th>
-                      <th className="py-2.5 px-3 text-center">Comedogenicidad</th>
-                      <th className="py-2.5 px-3 text-center">Irritación</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {report.ingredients_breakdown.map((item, idx) => (
-                      <tr key={idx} className={item.is_active ? 'bg-teal-50/40 font-medium' : ''}>
-                        <td className="py-2.5 px-3 text-slate-400">{item.position}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900">
-                          {item.inci_name}
-                          {item.common_name && (
-                            <span className="block text-[11px] text-teal-700 font-normal">{item.common_name}</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <div className="flex flex-wrap gap-1">
-                            {item.cosing_functions.map((fn, fIdx) => (
-                              <span key={fIdx} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px]">
-                                {fn}
-                              </span>
-                            ))}
+                  {/* Chemical Conflicts if any */}
+                  {report.chemical_conflicts.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      <span className="text-xs font-bold text-rose-700 uppercase tracking-wider block">
+                        ⚠️ Conflictos e Incompatibilidades Químicas Detectadas
+                      </span>
+                      {report.chemical_conflicts.map((conf, idx) => (
+                        <div key={idx} className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-rose-900">
+                              {conf.ingredient_a} ⚡ {conf.ingredient_b}
+                            </span>
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-200/80 px-2 py-0.5 rounded-md">
+                              Severidad {conf.severity}
+                            </span>
                           </div>
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-bold">
-                          <span className={item.comedogenic_rating >= 3 ? 'text-rose-600' : 'text-slate-600'}>
-                            {item.comedogenic_rating} / 5
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-bold">
-                          <span className={item.irritation_rating >= 2 ? 'text-amber-600' : 'text-slate-600'}>
-                            {item.irritation_rating} / 5
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <p className="text-xs text-rose-800">{conf.warning_message}</p>
+                          <p className="text-[11px] text-rose-700 italic">Mitigación: {conf.mitigation_strategy}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ingredients Breakdown Table */}
+                <div className="bg-[#FFFCF9] rounded-3xl border border-[#E8E0D8] shadow-sm p-5 sm:p-7 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#F0E8E0] pb-3">
+                    <h3 className="font-bold text-[#2D2D2D] text-base sm:text-lg">
+                      Desglose Químico Oficial ({report.ingredients_breakdown.length} componentes)
+                    </h3>
+                    <span className="text-[11px] text-[#8B8178] font-semibold">Norma CosIng UE</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E8E0D8] text-[#8B8178] uppercase tracking-wider font-semibold">
+                          <th className="py-2.5 px-3">#</th>
+                          <th className="py-2.5 px-3">Nombre INCI Oficial</th>
+                          <th className="py-2.5 px-3">Funciones CosIng UE</th>
+                          <th className="py-2.5 px-3 text-center">Comedogénico (Poros)</th>
+                          <th className="py-2.5 px-3 text-center">Irritación</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F5EDE6] text-[#5A5A5A]">
+                        {report.ingredients_breakdown.map((item, idx) => (
+                          <tr key={idx} className={item.is_active ? 'bg-[#E8F4FA]/40 font-medium' : ''}>
+                            <td className="py-2.5 px-3 text-[#A69D94]">{item.position}</td>
+                            <td className="py-2.5 px-3 font-semibold text-[#2D2D2D]">
+                              {item.inci_name}
+                              {item.common_name && (
+                                <span className="block text-[11px] text-[#3A7A96] font-normal">{item.common_name}</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="flex flex-wrap gap-1">
+                                {item.cosing_functions.map((fn, fIdx) => (
+                                  <span key={fIdx} className="bg-[#F5EDE6] text-[#5A5A5A] px-1.5 py-0.5 rounded text-[10px]">
+                                    {fn}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold">
+                              <span className={item.comedogenic_rating >= 3 ? 'text-rose-600' : 'text-[#6B6B6B]'}>
+                                {item.comedogenic_rating} / 5
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold">
+                              <span className={item.irritation_rating >= 2 ? 'text-amber-600' : 'text-[#6B6B6B]'}>
+                                {item.irritation_rating} / 5
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

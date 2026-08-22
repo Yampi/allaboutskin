@@ -73,7 +73,7 @@ class OcrScannerActivity : AppCompatActivity() {
                     this, cameraSelector, preview, imageCapture, imageAnalyzer
                 )
             } catch (exc: Exception) {
-                Log.e(TAG, "Error binding camera lifecycle", exc)
+                Log.e(TAG, "Error al iniciar la cámara", exc)
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -88,13 +88,13 @@ class OcrScannerActivity : AppCompatActivity() {
             textRecognizer.process(image)
                 .addOnSuccessListener { visionText ->
                     val detectedText = visionText.text
-                    if (detectedText.isNotBlank() && isLikelyInciList(detectedText)) {
+                    if (detectedText.isNotBlank() && (isLikelyInciList(detectedText) || isLikelyProductFront(detectedText))) {
                         isScanning = true
                         analyzeOcrOnServer(detectedText)
                     }
                 }
                 .addOnFailureListener { e ->
-                    Log.e(TAG, "ML Kit text recognition failed", e)
+                    Log.e(TAG, "Fallo en reconocimiento ML Kit", e)
                 }
                 .addOnCompleteListener {
                     imageProxy.close()
@@ -105,13 +105,22 @@ class OcrScannerActivity : AppCompatActivity() {
     }
 
     /**
-     * Heuristic to determine if recognized text looks like an ingredient list.
+     * Heurística amigable para identificar si es una lista química INCI (reverso).
      */
     private fun isLikelyInciList(text: String): Boolean {
         val upper = text.uppercase()
-        val keywords = listOf("INGREDIENTS", "INGREDIENTES", "INCI", "AQUA", "WATER", "GLYCERIN", "ALCOHOL", "ACID")
+        val keywords = listOf("INGREDIENTS", "INGREDIENTES", "INCI", "AQUA", "WATER", "GLYCERIN", "ALCOHOL", "ACID", "NIACINAMIDE", "RETINOL")
         val matchCount = keywords.count { upper.contains(it) }
         return matchCount >= 2 || (upper.contains(",") && upper.length > 30)
+    }
+
+    /**
+     * Heurística para detectar si el usuario enfoca el frente de una marca conocida de cosméticos.
+     */
+    private fun isLikelyProductFront(text: String): Boolean {
+        val upper = text.uppercase()
+        val popularBrands = listOf("HAWAIIAN", "FARMATODO", "THE ORDINARY", "CERAVE", "LA ROCHE", "EUCERIN", "ISDIN", "NEUTROGENA", "NIVEA")
+        return popularBrands.any { upper.contains(it) } && text.length in 10..120
     }
 
     private fun analyzeOcrOnServer(rawText: String) {
@@ -123,10 +132,10 @@ class OcrScannerActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful && response.body() != null) {
-                        Toast.makeText(this@OcrScannerActivity, "Fórmula identificada exitosamente", Toast.LENGTH_SHORT).show()
-                        // Pass data to AuditResultActivity or return result
+                        Toast.makeText(this@OcrScannerActivity, "¡Producto identificado!", Toast.LENGTH_SHORT).show()
                         setResult(RESULT_OK, Intent().apply {
                             putExtra("RAW_OCR", rawText)
+                            putExtra("DEFAULT_VIEW_MODE", "SIMPLE")
                         })
                         finish()
                     } else {
@@ -134,7 +143,7 @@ class OcrScannerActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Server OCR audit failed", e)
+                Log.e(TAG, "Error al auditar OCR", e)
                 withContext(Dispatchers.Main) {
                     isScanning = false
                 }
