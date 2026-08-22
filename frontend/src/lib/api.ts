@@ -245,6 +245,48 @@ export function setStoredRoutineProducts(products: any[]) {
   localStorage.setItem('allabout_routine_products', JSON.stringify(products));
 }
 
+export interface RecentAuditItem {
+  id: string;
+  query: string;
+  productName: string;
+  brandName?: string | null;
+  safetyScore: number;
+  safetyRating: string;
+  cleanIngredientsCount: number;
+  totalIngredientsCount: number;
+  formatType?: string;
+  auditedAt: string;
+  price?: number | null;
+  currency?: string;
+}
+
+export function getRecentAudits(): RecentAuditItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem('allabout_recent_audits');
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRecentAudit(item: RecentAuditItem) {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getRecentAudits();
+    const filtered = current.filter(
+      (a) => a.productName.toLowerCase() !== item.productName.toLowerCase() && a.query.toLowerCase() !== item.query.toLowerCase()
+    );
+    const updated = [item, ...filtered].slice(0, 10);
+    localStorage.setItem('allabout_recent_audits', JSON.stringify(updated));
+  } catch {}
+}
+
+export function clearRecentAudits() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('allabout_recent_audits');
+}
+
 // Admin API Methods
 function getAuthHeaders() {
   const user = getCurrentUser();

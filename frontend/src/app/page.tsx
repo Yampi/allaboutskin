@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FormulaAuditor from '@/components/FormulaAuditor';
+import FormulaComparator from '@/components/FormulaComparator';
 import { 
   Sparkles, 
   Database, 
@@ -236,6 +237,11 @@ export default function Home() {
           </div>
 
           <FormulaAuditor />
+        </section>
+
+        {/* SECTION: COMPARADOR DE FÓRMULAS LADO A LADO */}
+        <section className="space-y-3">
+          <FormulaComparator />
         </section>
 
         {/* SECTION: BIBLIOTECA DE ACTIVOS COSMÉTICOS (ESTÉTICA EDITORIAL BEAUTY) */}

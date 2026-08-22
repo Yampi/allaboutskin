@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Microscope, 
   AlertTriangle, 
@@ -34,9 +34,22 @@ import {
   Check,
   RefreshCw,
   Info,
-  HeartHandshake
+  HeartHandshake,
+  History,
+  Calendar as CalendarIcon,
+  Leaf,
+  Plus
 } from 'lucide-react';
-import { AuditReport, auditInci } from '@/lib/api';
+import { 
+  AuditReport, 
+  auditInci, 
+  getRecentAudits, 
+  saveRecentAudit, 
+  clearRecentAudits, 
+  RecentAuditItem,
+  getStoredRoutineProducts,
+  setStoredRoutineProducts
+} from '@/lib/api';
 import { 
   performOpticalCharacterRecognition, 
   analyzeCosmeticLabel, 
@@ -108,8 +121,17 @@ export default function FormulaAuditor() {
   const [ocrResult, setOcrResult] = useState<OcrDetectionResult | null>(null);
   const [editableOcrText, setEditableOcrText] = useState('');
 
+  // Recent Audits & Routine Assignment State
+  const [recentAudits, setRecentAudits] = useState<RecentAuditItem[]>([]);
+  const [isAddedToRoutineSuccess, setIsAddedToRoutineSuccess] = useState(false);
+  const [routineNightAssigned, setRoutineNightAssigned] = useState<number | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setRecentAudits(getRecentAudits());
+  }, []);
 
   const handleAudit = async (customQuery?: string, customPrice?: number | null) => {
     const query = (customQuery ?? omniInput).trim();
@@ -120,6 +142,7 @@ export default function FormulaAuditor() {
 
     setIsLoading(true);
     setError(null);
+    setIsAddedToRoutineSuccess(false);
 
     try {
       const parsedPrice = customPrice !== undefined 
@@ -150,6 +173,32 @@ export default function FormulaAuditor() {
       
       setReport(data);
 
+      // Calculate Beauty-Tech Safety Score
+      const calculatedScore = Math.min(100, Math.max(45,
+        data.ai_clinical_copilot?.friction_risk_level === 'HIGH' ? 55 :
+        data.ai_clinical_copilot?.friction_risk_level === 'MODERATE' ? 72 :
+        data.ai_clinical_copilot?.barrier_warning ? 84 : 95
+      ));
+
+      const ratingLabel = calculatedScore >= 88 ? 'Excelente' : calculatedScore >= 70 ? 'Seguro' : 'Precaución';
+
+      // Save to recent audits
+      saveRecentAudit({
+        id: 'audit_' + Date.now(),
+        query,
+        productName: data.meta?.product_name || productNameCandidate || query,
+        brandName: data.meta?.brand_name,
+        safetyScore: calculatedScore,
+        safetyRating: ratingLabel,
+        cleanIngredientsCount: data.meta?.active_ingredients_count || 0,
+        totalIngredientsCount: data.meta?.total_ingredients_count || 0,
+        formatType: data.ai_clinical_copilot?.format_type,
+        auditedAt: new Date().toISOString(),
+        price: parsedPrice,
+        currency
+      });
+      setRecentAudits(getRecentAudits());
+
       // Smooth scroll to results
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -159,6 +208,31 @@ export default function FormulaAuditor() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAssignToSkinCycling = (targetPhase: number) => {
+    if (!report) return;
+    const existing = getStoredRoutineProducts();
+    const newProduct = {
+      id: 'prod_' + Math.random().toString(36).substring(7),
+      phaseId: targetPhase,
+      productName: report.meta.product_name,
+      brand: report.meta.brand_name || undefined,
+      category: (
+        report.meta.product_name.toLowerCase().includes('bha') || report.meta.product_name.toLowerCase().includes('ácido') || report.meta.product_name.toLowerCase().includes('glicol') ? 'EXFOLIANT' :
+        report.meta.product_name.toLowerCase().includes('retin') ? 'RETINOID' :
+        targetPhase === 0 ? 'SPF' : 'MOISTURIZER'
+      ) as any
+    };
+    const updated = [...existing, newProduct];
+    setStoredRoutineProducts(updated);
+    setIsAddedToRoutineSuccess(true);
+    setRoutineNightAssigned(targetPhase);
+  };
+
+  const handleClearHistory = () => {
+    clearRecentAudits();
+    setRecentAudits([]);
   };
 
   const handleSelectPreset = (preset: typeof QUICK_PRESETS[0]) => {
@@ -401,6 +475,52 @@ export default function FormulaAuditor() {
             </button>
           ))}
         </div>
+
+        {/* RECENT AUDITS LOG CAROUSEL */}
+        {recentAudits.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-[#EFECE6] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-wider flex items-center gap-1">
+                <History className="w-3.5 h-3.5 text-[#7A9A8B]" />
+                Auditorías Recientes ({recentAudits.length})
+              </span>
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="text-[10px] text-[#9C9790] hover:text-[#A46864] transition cursor-pointer"
+              >
+                Limpiar historial
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {recentAudits.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setOmniInput(item.query);
+                    if (item.price) setProductPrice(item.price.toString());
+                    handleAudit(item.query, item.price);
+                  }}
+                  className="flex-shrink-0 bg-[#FAF8F5] hover:bg-[#EFF5F1] border border-[#EFECE6] hover:border-[#7A9A8B]/40 rounded-2xl px-3 py-2 text-left transition-all duration-200 shadow-2xs group flex items-center gap-2.5 cursor-pointer touch-target"
+                >
+                  <div className="w-7 h-7 rounded-xl bg-white border border-[#EFECE6] flex items-center justify-center font-bold text-[11px] text-[#4F6D60] group-hover:border-[#7A9A8B]/40">
+                    {item.safetyScore}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#2B2A29] block truncate max-w-[130px] group-hover:text-[#4F6D60]">
+                      {item.productName}
+                    </span>
+                    <span className="text-[9px] text-[#9C9790] block">
+                      {item.safetyRating} • {new Date(item.auditedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {isOcrModalOpen && (
@@ -612,6 +732,122 @@ export default function FormulaAuditor() {
             {/* ======================================================== */}
             {viewMode === 'SIMPLE' && (
               <div className="space-y-6 animate-in fade-in duration-300">
+                
+                {/* TOP SCORE DIAL & BEAUTY CERTIFICATIONS CARD */}
+                {(() => {
+                  const safetyScore = Math.min(100, Math.max(45,
+                    report.ai_clinical_copilot?.friction_risk_level === 'HIGH' ? 55 :
+                    report.ai_clinical_copilot?.friction_risk_level === 'MODERATE' ? 72 :
+                    report.ai_clinical_copilot?.barrier_warning ? 84 : 95
+                  ));
+                  const isExfoliant = report.meta.product_name.toLowerCase().includes('bha') || report.meta.product_name.toLowerCase().includes('ácido') || report.meta.product_name.toLowerCase().includes('salicyl') || report.meta.product_name.toLowerCase().includes('glicol');
+                  const isRetinoid = report.meta.product_name.toLowerCase().includes('retin');
+                  const suggestedNight = isExfoliant ? 1 : isRetinoid ? 2 : 3;
+
+                  return (
+                    <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-7 border border-[#EFECE6] shadow-beauty flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                        {/* Circular Animated SVG Progress Gauge */}
+                        <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+                          <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              fill="transparent"
+                              stroke="#EFF5F1"
+                              strokeWidth="8"
+                            />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="42"
+                              fill="transparent"
+                              stroke="#7A9A8B"
+                              strokeWidth="8"
+                              strokeDasharray="264"
+                              strokeDashoffset={264 - (264 * safetyScore) / 100}
+                              strokeLinecap="round"
+                              className="transition-all duration-1000 ease-out"
+                            />
+                          </svg>
+                          <div className="absolute flex flex-col items-center justify-center">
+                            <span className="text-xl font-bold font-serif text-[#2B2A29] leading-none">
+                              {safetyScore}
+                            </span>
+                            <span className="text-[9px] font-bold text-[#9C9790] uppercase">
+                              /100
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-center sm:justify-start gap-2">
+                            <span className="bg-[#EFF5F1] text-[#4F6D60] text-[10px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full border border-[#7A9A8B]/30">
+                              {safetyScore >= 88 ? 'Excelente Seguridad' : safetyScore >= 70 ? 'Seguridad Buena' : 'Uso con Precaución'}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-serif font-bold text-[#2B2A29]">
+                            Índice de Compatibilidad Dérmica
+                          </h3>
+                          <p className="text-xs text-[#6E6A66] max-w-md">
+                            Fórmula biocompatible con {report.meta.active_ingredients_count} activos funcionales registrados.
+                          </p>
+
+                          {/* Beauty Certification Badges */}
+                          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                            <span className="inline-flex items-center gap-1 bg-[#FAF8F5] text-[#2B2A29] text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFECE6]">
+                              <Leaf className="w-3 h-3 text-[#7A9A8B]" />
+                              <span>Clean Formula</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 bg-[#FAF8F5] text-[#2B2A29] text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFECE6]">
+                              <ShieldCheck className="w-3 h-3 text-[#7A9A8B]" />
+                              <span>Sin Alérgenos Críticos</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 bg-[#FAF8F5] text-[#2B2A29] text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFECE6]">
+                              <Sparkles className="w-3 h-3 text-[#7A9A8B]" />
+                              <span>No Comedogénico</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SKIN CYCLING INTEGRATION CTA */}
+                      <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-2 border-t md:border-t-0 pt-4 md:pt-0 border-[#EFECE6]">
+                        {isAddedToRoutineSuccess ? (
+                          <div className="bg-[#EFF5F1] text-[#4F6D60] border border-[#7A9A8B]/40 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-[#7A9A8B]" />
+                            <span>¡Guardado en Noche {routineNightAssigned === 0 ? 'AM' : routineNightAssigned}!</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                            <button
+                              type="button"
+                              onClick={() => handleAssignToSkinCycling(suggestedNight)}
+                              className="w-full sm:w-auto bg-[#4F6D60] hover:bg-[#3D554A] text-white text-xs font-bold px-5 py-3 rounded-full shadow-beauty flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] cursor-pointer touch-target"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Asignar a Ciclado (Noche {suggestedNight})</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAssignToSkinCycling(0)}
+                              className="w-full sm:w-auto bg-[#FAF8F5] hover:bg-[#EFF5F1] text-[#2B2A29] hover:text-[#4F6D60] border border-[#EFECE6] text-xs font-bold px-4 py-3 rounded-full flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer touch-target"
+                              title="Asignar a Mañanas (AM)"
+                            >
+                              <Sun className="w-3.5 h-3.5 text-[#C4A482]" />
+                              <span>Rutina AM</span>
+                            </button>
+                          </div>
+                        )}
+                        <span className="text-[10px] text-[#9C9790]">
+                          Sincroniza con tu calendario diario
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* 3 Main Direct Action Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   

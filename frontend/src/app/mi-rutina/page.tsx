@@ -22,7 +22,11 @@ import {
   AlertTriangle,
   HeartPulse,
   Droplets,
-  Tag
+  Tag,
+  Share2,
+  Download,
+  Copy,
+  Check
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -48,6 +52,10 @@ export default function MyRoutineDashboardPage() {
 
   // SOS Barrier Mode State (For days when skin wakes up sensitive or irritated)
   const [isSosActive, setIsSosActive] = useState<boolean>(false);
+
+  // Share Routine Card State
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
 
   // New Product Modal State
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -252,6 +260,17 @@ export default function MyRoutineDashboardPage() {
             >
               <HeartPulse className={`w-4 h-4 ${isSosActive ? 'animate-pulse' : 'text-[#A46864]'}`} />
               <span>{isSosActive ? 'Modo Calma Activo' : 'Botón SOS: Piel Sensible'}</span>
+            </button>
+
+            {/* SHARE ROUTINE CARD BUTTON */}
+            <button
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="inline-flex items-center gap-1.5 bg-[#EFF5F1] hover:bg-[#E2ECE5] text-[#4F6D60] text-xs font-bold px-4 py-2.5 rounded-full border border-[#7A9A8B]/30 transition-all duration-200 cursor-pointer touch-target shadow-2xs"
+              title="Compartir o exportar ficha estética de mi rutina"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#7A9A8B]" />
+              <span>Compartir Tarjeta</span>
             </button>
 
             <Link
@@ -735,6 +754,114 @@ export default function MyRoutineDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE ROUTINE CARD MODAL */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2A29]/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-beauty space-y-5 border border-[#EFECE6] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EFECE6] pb-3">
+              <div>
+                <span className="text-[10px] font-bold text-[#4F6D60] bg-[#EFF5F1] px-3 py-0.5 rounded-full uppercase tracking-widest border border-[#7A9A8B]/30">
+                  Tarjeta Digital de Protocolo
+                </span>
+                <h3 className="text-xl font-serif font-bold text-[#2B2A29] mt-1">
+                  Tu Ficha de Skin Cycling
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="text-[#9C9790] hover:text-[#2B2A29] p-1.5 rounded-full transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* AESTHETIC VISUAL CARD PREVIEW (INSTAGRAM / SOCIAL READY) */}
+            <div id="routine-share-card" className="bg-gradient-to-br from-[#4F6D60] via-[#5A796B] to-[#3D554A] text-[#FDFBF7] p-6 rounded-3xl space-y-4 shadow-beauty relative overflow-hidden border border-white/20">
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-[#E8D5D0] uppercase tracking-widest block">
+                    Allabout.skin • Protocolo Personalizado
+                  </span>
+                  <h4 className="text-xl font-serif font-bold text-white">
+                    {protocol?.protocolName || 'Ritual de Ciclado Cutáneo'}
+                  </h4>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-lg">
+                  ✨
+                </div>
+              </div>
+
+              {/* Nights Summary Grid in Card */}
+              <div className="relative z-10 grid grid-cols-2 gap-2 pt-2 border-t border-white/15 text-xs">
+                {protocol?.nights.map((n) => (
+                  <div key={n.nightNumber} className="bg-white/10 backdrop-blur-xs p-2.5 rounded-2xl border border-white/10">
+                    <span className="text-[10px] text-[#E8D5D0] font-bold block uppercase">
+                      Noche {n.nightNumber} • {n.category}
+                    </span>
+                    <span className="text-white font-serif font-bold text-xs truncate block">
+                      {n.title.replace(/^[^\w]+/, '')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Racha & Footer in Card */}
+              <div className="relative z-10 flex items-center justify-between text-[11px] text-[#FDFBF7]/80 pt-2 border-t border-white/10">
+                <span>🔥 {streakCount} días de constancia</span>
+                <span>allabout.skin</span>
+              </div>
+
+              {/* Background Glows */}
+              <div className="absolute -right-8 -bottom-8 w-36 h-36 bg-[#A3B899]/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -left-8 -top-8 w-36 h-36 bg-[#E8D5D0]/15 rounded-full blur-2xl pointer-events-none" />
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const shareText = `✨ Mi protocolo de Skin Cycling en Allabout.skin: ${protocol?.protocolName} (${cycleLength} noches por ciclo). ¡${streakCount} días de racha!`;
+                  if (typeof navigator !== 'undefined' && navigator.share) {
+                    navigator.share({
+                      title: 'Mi Rutina de Skin Cycling',
+                      text: shareText,
+                      url: window.location.href,
+                    }).catch(() => {});
+                  } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 2500);
+                  }
+                }}
+                className="w-full bg-[#4F6D60] hover:bg-[#3D554A] text-white text-xs font-bold py-3 px-5 rounded-full shadow-beauty flex items-center justify-center gap-2 transition cursor-pointer touch-target"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>{isCopied ? '¡Enlace Copiado al Portapapeles!' : 'Compartir con Amigos / Redes'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `Allabout.skin - ${protocol?.protocolName}\n` +
+                    protocol?.nights.map(n => `• Noche ${n.nightNumber} (${n.category}): ${n.title}`).join('\n') +
+                    `\nSeguimiento en: ${window.location.href}`
+                  );
+                  setIsCopied(true);
+                  setTimeout(() => setIsCopied(false), 2500);
+                }}
+                className="w-full bg-[#FAF8F5] hover:bg-[#EFF5F1] text-[#2B2A29] hover:text-[#4F6D60] border border-[#EFECE6] text-xs font-bold py-2.5 px-5 rounded-full flex items-center justify-center gap-2 transition cursor-pointer touch-target"
+              >
+                {isCopied ? <Check className="w-3.5 h-3.5 text-[#4F6D60]" /> : <Copy className="w-3.5 h-3.5 text-[#7A9A8B]" />}
+                <span>{isCopied ? '¡Resumen Copiado!' : 'Copiar Resumen de Texto'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,12 +1,23 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Microscope, BookOpen, FileText, Sparkles, ShieldCheck, ArrowRight, Layers, Droplets } from 'lucide-react';
+import { 
+  BookOpen, 
+  Sparkles, 
+  ShieldCheck, 
+  ArrowRight, 
+  Layers, 
+  Droplets, 
+  Activity, 
+  Search,
+  CheckCircle2,
+  AlertTriangle
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Biblioteca de Ingredientes Cosméticos | Allabout.skin',
-  description: 'Explora fichas técnicas de ingredientes activos en cosmética y dermatología. Regulado por CosIng UE y respaldado por estudios clínicos en PubMed.',
+  title: 'Biblioteca de Activos Cosméticos & Dermatología | Allabout.skin',
+  description: 'Explora fichas técnicas de activos cosméticos. Regulado por CosIng UE y respaldado por estudios clínicos en PubMed (NCBI).',
 };
 
 const INGREDIENTS = [
@@ -14,177 +25,140 @@ const INGREDIENTS = [
     slug: 'niacinamide',
     name: 'Niacinamida (Vitamina B3)',
     category: 'Regulador de Sebo & Barrera',
-    evidence: 'NIVEL A (RCT)',
+    evidence: 'NIVEL A (RCTs)',
     ph: '5.0 - 7.0',
-    layering: 'Serum Acuoso',
-    description: 'Potente antiinflamatorio, reduce la apariencia de poros, refuerza la síntesis de ceramidas y unifica el tono.',
-    color: '[#4A8BA8]'
+    comedogenic: '0 / 5 (Nulo)',
+    layering: 'Sérum Acuoso (AM/PM)',
+    description: 'Potente antioxidante y antiinflamatorio. Estimula la síntesis de ceramidas, reduce la apariencia de poros dilatados y calma rojeces.',
+    compatibleWith: ['Ácido Hialurónico', 'Pantenol', 'Retinoides', 'Centella'],
+    avoidWith: ['Vitamina C pura en pH extremo si tu piel es hipersensible'],
+    badgeColor: 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/30'
   },
   {
     slug: 'retinol',
-    name: 'Retinol (Vitamina A)',
-    category: 'Renovación Celular & Antiedad',
-    evidence: 'NIVEL A (RCT)',
+    name: 'Retinol & Retinoides (Vitamina A)',
+    category: 'Renovación Celular & Colágeno',
+    evidence: 'NIVEL A (Gold Standard)',
     ph: '5.5 - 6.5',
-    layering: 'Tratamiento Nocturno',
-    description: 'Estimula la producción de colágeno, acelera el recambio epidérmico y combate signos de fotoenvejecimiento.',
-    color: 'purple'
+    comedogenic: '0 / 5 (Nulo)',
+    layering: 'Tratamiento Nocturno (PM)',
+    description: 'El estándar de oro en dermatología antiedad. Acelera el recambio epidérmico, atenúa manchas y promueve la síntesis de nuevo colágeno dérmico.',
+    compatibleWith: ['Ceramidas', 'Pantenol', 'Ácido Hialurónico', 'Escualano'],
+    avoidWith: ['Ácidos AHA/BHA en la misma capa nocturna'],
+    badgeColor: 'bg-[#F8EFEA] text-[#A46864] border-[#E8D5D0]'
   },
   {
     slug: 'salicylic-acid',
-    name: 'Ácido Salicílico (BHA)',
+    name: 'Ácido Salicílico (BHA 2%)',
     category: 'Exfoliante Liposoluble',
-    evidence: 'NIVEL A (RCT)',
+    evidence: 'NIVEL A (RCTs)',
     ph: '3.0 - 4.0',
-    layering: 'Exfoliante Químico',
-    description: 'Penetra profundamente en los folículos pilosebáceos para disolver grasa atrapada y descongestionar puntos negros.',
-    color: 'amber'
+    comedogenic: '0 / 5 (Nulo)',
+    layering: 'Exfoliante Químico (Noche 1)',
+    description: 'Penetra en profundidad a través del sebo para disolver células muertas dentro del poro, reduciendo espinillas y puntos negros.',
+    compatibleWith: ['Niacinamida', 'Ácido Hialurónico', 'Centella Asiática'],
+    avoidWith: ['Retinoides o Vitamina C pura en la misma aplicación'],
+    badgeColor: 'bg-[#F7F2EB] text-[#8F7253] border-[#C4A482]/40'
   },
   {
     slug: 'hyaluronic-acid',
-    name: 'Ácido Hialurónico',
-    category: 'Humectante & Hidratación',
-    evidence: 'NIVEL A (RCT)',
+    name: 'Ácido Hialurónico Multimolecular',
+    category: 'Humectante & Hidratación Profunda',
+    evidence: 'NIVEL A (RCTs)',
     ph: '5.0 - 7.0',
-    layering: 'Serum Hidratante',
-    description: 'Retiene hasta 1000 veces su peso en agua, mejorando la elasticidad y reduciendo la pérdida transepidérmica.',
-    color: 'sky'
-  },
-  {
-    slug: 'ascorbic-acid',
-    name: 'Vitamina C (Ácido L-Ascórbico)',
-    category: 'Antioxidante & Luminosidad',
-    evidence: 'NIVEL A (RCT)',
-    ph: '2.8 - 3.5',
-    layering: 'Serum Matutino (AM)',
-    description: 'Neutraliza radicales libres inducidos por radiación UV, inhibe la tirosinasa y aporta luminosidad.',
-    color: 'orange'
+    comedogenic: '0 / 5 (Nulo)',
+    layering: 'Piel Húmeda (AM/PM)',
+    description: 'Retiene hasta 1000 veces su peso molecular en agua. Repulpa la matriz extracelular y previene la deshidratación transepidérmica.',
+    compatibleWith: ['Todos los activos (Universal)'],
+    avoidWith: ['Ninguna contraindicación conocida'],
+    badgeColor: 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/30'
   },
   {
     slug: 'panthenol',
     name: 'Pantenol (Provitamina B5)',
-    category: 'Regenerador & Calmante',
-    evidence: 'NIVEL A',
+    category: 'Regenerador de Barrera & SOS',
+    evidence: 'NIVEL A (Clínico)',
     ph: '4.5 - 7.0',
-    layering: 'Crema / Emulsión',
-    description: 'Acelera la cicatrización epitelial, calma la irritación y repara la barrera cutánea dañada.',
-    color: 'emerald'
+    comedogenic: '1 / 5 (Bajo)',
+    layering: 'Emulsión / Bálsamo Reparador',
+    description: 'Lípido biomimético calmante que acelera la reepitelización cutánea, alivia la tirantez y fortalece la barrera lipídica.',
+    compatibleWith: ['Todos los activos, ideal en recuperación y modo SOS'],
+    avoidWith: ['Ninguno'],
+    badgeColor: 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/30'
+  },
+  {
+    slug: 'ascorbic-acid',
+    name: 'Vitamina C Pura (Ácido L-Ascórbico)',
+    category: 'Antioxidante & Luminosidad',
+    evidence: 'NIVEL A (RCTs)',
+    ph: '2.8 - 3.5',
+    comedogenic: '0 / 5 (Nulo)',
+    layering: 'Mañanas (AM) antes del Protector Solar',
+    description: 'Inhibe la enzima tirosinasa para unificar el tono cutáneo, previene el daño oxidativo solar y sinergiza con tu protector FPS 50+.',
+    compatibleWith: ['Ácido Ferúlico', 'Vitamina E', 'Ácido Hialurónico'],
+    avoidWith: ['Retinoides o Cobre en la misma aplicación matutina'],
+    badgeColor: 'bg-[#FAF8F5] text-[#8F7253] border-[#EFECE6]'
   }
 ];
 
 export default function IngredientesIndexPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF7F4]">
+    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
       <Navbar />
 
-      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10">
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 bg-[#E8F4FA] text-[#2D6680] text-xs font-bold px-3 py-1 rounded-full border border-[#A8D4E6] uppercase tracking-wider">
-            <BookOpen className="w-3.5 h-3.5 text-[#4A8BA8]" />
-            <span>Catálogo Oficial CosIng UE & PubMed</span>
+      <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full space-y-10">
+        {/* Header Introduction */}
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-1.5 bg-[#EFF5F1] text-[#4F6D60] text-xs font-bold px-4 py-1 rounded-full border border-[#7A9A8B]/30 uppercase tracking-widest">
+            <BookOpen className="w-3.5 h-3.5 text-[#7A9A8B]" />
+            <span>Guía Botánica & Clínica Oficial CosIng UE</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#2D2D2D] tracking-tight">
-            Biblioteca de Activos Cosméticos
+          <h1 className="text-3xl sm:text-5xl font-serif font-bold text-[#2B2A29] tracking-tight">
+            Biblioteca de <span className="text-[#7A9A8B]">Activos Cosméticos</span>
           </h1>
-          <p className="text-sm text-[#6B6B6B] leading-relaxed">
-            Fichas técnicas con base científica. Conoce el pH óptimo, orden de aplicación en tu rutina, nivel de evidencia médica e interacciones de cada ingrediente.
+          <p className="text-xs sm:text-sm text-[#6E6A66] leading-relaxed max-w-2xl mx-auto">
+            Fichas científicas de compatibilidad, pH de formulación y nivel de evidencia médica en ensayos clínicos de PubMed (NCBI).
           </p>
         </div>
 
-        {/* Ingredients Grid - Estilo Editorial con Texturas Visuales */}
+        {/* Ingredients Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {INGREDIENTS.map((ing) => {
-            const isRetinol = ing.slug === 'retinol';
-            const isSalicylic = ing.slug === 'salicylic-acid';
-            const isHyaluronic = ing.slug === 'hyaluronic-acid';
-            const isVitaminC = ing.slug === 'ascorbic-acid';
-            const isPanthenol = ing.slug === 'panthenol';
-
-            const cardGradient = isRetinol
-              ? 'from-[#F9F2F0] to-[#FFFCF9]'
-              : isSalicylic
-              ? 'from-amber-50/50 to-[#FFFCF9]'
-              : isHyaluronic
-              ? 'from-[#E8F4FA]/70 to-[#FFFCF9]'
-              : isVitaminC
-              ? 'from-orange-50/50 to-[#FFFCF9]'
-              : isPanthenol
-              ? 'from-emerald-50/50 to-[#FFFCF9]'
-              : 'from-[#E8F4FA]/70 to-[#FFFCF9]';
-
-            const iconBg = isRetinol
-              ? 'bg-[#F9F2F0] text-[#8B4B3D] border-[#E8C4B8]'
-              : isSalicylic
-              ? 'bg-amber-50 text-amber-800 border-amber-200'
-              : isHyaluronic
-              ? 'bg-[#E8F4FA] text-[#2D6680] border-[#A8D4E6]'
-              : isVitaminC
-              ? 'bg-orange-50 text-orange-800 border-orange-200'
-              : isPanthenol
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-[#E8F4FA] text-[#2D6680] border-[#A8D4E6]';
-
-            const symbol = isRetinol ? '✨' : isSalicylic ? '🧪' : isHyaluronic ? '💧' : isVitaminC ? '🍊' : isPanthenol ? '🌿' : '🧴';
-
-            return (
-              <Link
-                key={ing.slug}
-                href={`/ingrediente/${ing.slug}`}
-                className={`bg-gradient-to-b ${cardGradient} rounded-3xl p-6 border border-[#E8E0D8] hover:border-[#7BB8D0] hover:shadow-lg transition-all flex flex-col justify-between group space-y-4`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-lg shadow-xs ${iconBg}`}>
-                      {symbol}
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-black text-[#3A7A96] bg-[#E8F4FA] px-2.5 py-0.5 rounded-full border border-[#A8D4E6] block">
-                        {ing.evidence}
-                      </span>
-                      <span className="text-[10px] text-[#8B8178] font-mono mt-0.5 block">
-                        pH {ing.ph}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-bold font-serif text-[#2D2D2D] group-hover:text-[#3A7A96] transition-colors">
-                      {ing.name}
-                    </h3>
-                    <span className="text-xs font-semibold text-[#8B8178] block mt-0.5">
-                      {ing.category}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-[#6B6B6B] leading-relaxed line-clamp-3">
-                    {ing.description}
-                  </p>
+          {INGREDIENTS.map((ing) => (
+            <Link
+              key={ing.slug}
+              href={`/ingrediente/${ing.slug}`}
+              className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty hover:border-[#7A9A8B]/50 transition-all duration-300 flex flex-col justify-between space-y-4 group"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] font-bold px-3 py-0.5 rounded-full border uppercase tracking-wider ${ing.badgeColor}`}>
+                    {ing.evidence}
+                  </span>
+                  <span className="text-[10px] text-[#9C9790] font-semibold">
+                    pH: {ing.ph}
+                  </span>
                 </div>
 
-                <div className="pt-3 border-t border-[#F0E8E0] flex items-center justify-between text-xs font-bold text-[#3A7A96] group-hover:text-[#2D6680]">
-                  <span>Ficha Técnica y Estudios</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                <h2 className="text-lg sm:text-xl font-serif font-bold text-[#2B2A29] group-hover:text-[#4F6D60] transition-colors">
+                  {ing.name}
+                </h2>
+                
+                <p className="text-xs text-[#6E6A66] leading-relaxed line-clamp-3">
+                  {ing.description}
+                </p>
+              </div>
 
-        {/* Audit CTA */}
-        <div className="bg-gradient-to-r from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white rounded-3xl p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center sm:text-left">
-            <h3 className="text-xl font-bold">¿Quieres auditar una fórmula completa?</h3>
-            <p className="text-xs text-[#C5E3F0] max-w-lg">
-              Introduce el nombre de un cosmético o sube una foto de la etiqueta para analizar compatibilidad química, orden de capas y grado comedogénico.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="bg-[#FFFCF9] text-[#1A4D63] font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#E8F4FA] shadow-md transition flex-shrink-0"
-          >
-            Auditar Fórmula Ahora
-          </Link>
+              <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-between text-xs">
+                <span className="text-[11px] text-[#9C9790] font-medium">
+                  {ing.layering}
+                </span>
+                <span className="font-bold text-[#7A9A8B] group-hover:text-[#4F6D60] flex items-center gap-1">
+                  <span>Ver Ficha</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
       </main>
 
