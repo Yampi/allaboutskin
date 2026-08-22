@@ -205,37 +205,37 @@ export default function MyRoutineDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF7F4]">
+    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
       <Navbar />
 
       <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
         {/* Top Header Card */}
-        <div className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1.5">
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#3A7A96] bg-[#E8F4FA] px-3 py-1 rounded-full border border-[#A8D4E6] uppercase tracking-wider">
-                Panel de Rutina Diaria
+              <span className="text-[10px] font-bold text-[#4F6D60] bg-[#EFF5F1] px-3.5 py-1 rounded-full border border-[#7A9A8B]/30 uppercase tracking-widest">
+                Seguimiento de Rutina Diaria
               </span>
-              <span className="text-xs text-[#A69D94]">•</span>
-              <span className="text-xs font-semibold text-[#8B8178]">
-                {user ? `Cuenta de ${user.name}` : 'Modo Invitado / Almacenamiento Local'}
+              <span className="text-xs text-[#9C9790]">•</span>
+              <span className="text-xs font-medium text-[#6E6A66]">
+                {user ? `Cuenta de ${user.name}` : 'Almacenamiento Local'}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-[#2D2D2D] tracking-tight">
-              Mi Calendario de <span className="text-[#4A8BA8]">Skin Cycling</span>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2B2A29] tracking-tight">
+              Mi Calendario de <span className="text-[#7A9A8B]">Skin Cycling</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#8B8178]">
-              Protocolo activo: <strong className="text-[#3D3D3D]">{protocol?.protocolName}</strong> ({cycleLength} noches por ciclo)
+            <p className="text-xs sm:text-sm text-[#6E6A66]">
+              Ritual activo: <strong className="text-[#2B2A29] font-serif">{protocol?.protocolName}</strong> ({cycleLength} noches por ciclo)
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             {/* Streak Badge */}
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-2xl text-amber-900 shadow-sm">
-              <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />
+            <div className="flex items-center gap-2.5 bg-[#FAF8F5] border border-[#EFECE6] px-4 py-2.5 rounded-full text-[#2B2A29] shadow-xs">
+              <Flame className="w-4 h-4 text-[#C4A482] fill-[#C4A482]" />
               <div>
-                <span className="text-xs font-black block leading-none">{streakCount} Días en Racha</span>
-                <span className="text-[10px] text-amber-700">Cumplimiento 100%</span>
+                <span className="text-xs font-bold block leading-none">{streakCount} Días en Racha</span>
+                <span className="text-[10px] text-[#6E6A66]">Constancia 100%</span>
               </div>
             </div>
 
@@ -243,46 +243,46 @@ export default function MyRoutineDashboardPage() {
             <button
               type="button"
               onClick={() => setIsSosActive(!isSosActive)}
-              className={`inline-flex items-center gap-2 text-xs font-black px-4 py-2.5 rounded-2xl transition shadow-sm cursor-pointer ${
+              className={`inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-full transition-all duration-200 shadow-xs cursor-pointer touch-target ${
                 isSosActive
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white ring-2 ring-rose-300'
-                  : 'bg-[#F9F2F0] hover:bg-rose-50 text-rose-800 border border-rose-200'
+                  ? 'bg-[#A46864] hover:bg-[#8F5551] text-white ring-2 ring-[#E8D5D0]'
+                  : 'bg-[#F8EFEA] hover:bg-[#F2E4DE] text-[#A46864] border border-[#E8D5D0]'
               }`}
-              title="Activa si tu piel amanece roja, sensible o con ardor para pausar activos fuertes"
+              title="Activar si tu piel amanece sensible o con rojez para pausar exfoliantes y retinoides"
             >
-              <HeartPulse className={`w-4 h-4 ${isSosActive ? 'animate-pulse' : 'text-rose-600'}`} />
-              <span>{isSosActive ? 'SOS Activo: Piel Irritada' : 'Botón SOS: Piel Sensible'}</span>
+              <HeartPulse className={`w-4 h-4 ${isSosActive ? 'animate-pulse' : 'text-[#A46864]'}`} />
+              <span>{isSosActive ? 'Modo Calma Activo' : 'Botón SOS: Piel Sensible'}</span>
             </button>
 
             <Link
               href="/rutinas/skin-cycling"
-              className="inline-flex items-center gap-1.5 bg-[#F5EDE6] hover:bg-[#E8E0D8] text-[#5A5A5A] text-xs font-bold px-4 py-2.5 rounded-2xl transition"
+              className="inline-flex items-center gap-1.5 bg-[#FAF8F5] hover:bg-[#F2EFE9] text-[#6E6A66] text-xs font-bold px-4 py-2.5 rounded-full border border-[#EFECE6] transition-all duration-200 touch-target"
             >
-              <Settings className="w-4 h-4 text-[#8B8178]" />
-              <span>Reajustar Rutina</span>
+              <Settings className="w-3.5 h-3.5 text-[#7A9A8B]" />
+              <span>Reajustar Ciclo</span>
             </Link>
           </div>
         </div>
 
         {/* SOS ACTIVE BANNER ALERT */}
         {isSosActive && (
-          <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-3xl flex items-start gap-3.5 shadow-sm animate-in fade-in">
-            <div className="p-2 bg-rose-100 rounded-2xl text-rose-700 shrink-0">
-              <AlertTriangle className="w-6 h-6" />
+          <div className="p-4 bg-[#F8EFEA] border border-[#E8D5D0] rounded-3xl flex items-start gap-3.5 shadow-beauty animate-in fade-in">
+            <div className="p-2 bg-white rounded-2xl text-[#A46864] shrink-0 border border-[#E8D5D0]">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-black text-rose-950">
-                🛡️ Modo Rescate Activado para esta Noche
+              <h3 className="text-sm font-serif font-bold text-[#A46864]">
+                🛡️ Modo Rescate Calmante Activado para esta Noche
               </h3>
-              <p className="text-xs text-rose-800 leading-relaxed">
-                Pausamos automáticamente tus exfoliantes químicos y retinoides de hoy. Tu piel se enfocará en calmar rojeces con hidratación y ceramidas reparadoras.
+              <p className="text-xs text-[#6E6A66] leading-relaxed">
+                Pausamos automáticamente tus exfoliantes químicos y retinoides de hoy. Tu piel se enfocará en calmar rojeces con hidratación y lípidos biomiméticos.
               </p>
               <button
                 type="button"
                 onClick={() => setIsSosActive(false)}
-                className="text-[11px] font-bold text-rose-900 underline mt-1 cursor-pointer block"
+                className="text-[11px] font-bold text-[#A46864] underline mt-1 cursor-pointer block touch-target"
               >
-                Volver a mi noche normal programada
+                Volver al orden programado habitual
               </button>
             </div>
           </div>
@@ -290,38 +290,38 @@ export default function MyRoutineDashboardPage() {
 
         {/* SECTION: TODAY'S ACTIVE NIGHT HERO */}
         {currentNight && (
-          <div className={`text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-colors duration-300 ${
+          <div className={`text-[#FDFBF7] rounded-3xl p-6 sm:p-8 shadow-beauty relative overflow-hidden transition-all duration-300 ${
             isSosActive
-              ? 'bg-gradient-to-br from-rose-900 via-rose-950 to-[#1A2332]'
-              : 'bg-gradient-to-br from-[#1A4D63] via-[#1A2332] to-[#1A4D63]'
+              ? 'bg-gradient-to-br from-[#A46864] via-[#8F5551] to-[#6E3C38]'
+              : 'bg-gradient-to-br from-[#4F6D60] via-[#5A796B] to-[#3D554A]'
           }`}>
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
               <div className="lg:col-span-2 space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
-                    isSosActive ? 'bg-rose-400 text-rose-950' : 'bg-[#7BB8D0] text-[#0F1721]'
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                    isSosActive ? 'bg-white text-[#A46864]' : 'bg-white/20 text-white backdrop-blur-sm'
                   }`}>
                     {isSosActive ? 'Modo Calma SOS' : `Fase de Hoy: Noche ${currentNight.nightNumber}`}
                   </span>
-                  <span className="bg-white/10 text-[#C5BBB2] text-[11px] px-2.5 py-0.5 rounded-full font-medium">
+                  <span className="bg-white/10 text-white text-[11px] px-3 py-0.5 rounded-full font-medium">
                     {today.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-black text-white">
+                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white">
                   {currentNight.title}
                 </h2>
-                <p className="text-xs sm:text-sm text-[#C5BBB2] leading-relaxed max-w-xl">
+                <p className="text-xs sm:text-sm text-[#FDFBF7]/90 leading-relaxed max-w-xl">
                   {currentNight.clinicalRationale}
                 </p>
 
                 {/* Actives Chips */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-[#8EC5DB] font-bold mr-1">Ingredientes para hoy:</span>
+                  <span className="text-[11px] text-[#E8D5D0] font-semibold mr-1">Activos para hoy:</span>
                   {currentNight.recommendedActives.map((act, i) => (
                     <span
                       key={i}
-                      className="bg-white/15 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-lg backdrop-blur-sm border border-white/10"
+                      className="bg-white/15 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm border border-white/10"
                     >
                       {act}
                     </span>
@@ -331,7 +331,7 @@ export default function MyRoutineDashboardPage() {
 
               {/* Daily Adherence Checklist */}
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/15 space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#8EC5DB] block">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#E8D5D0] block">
                   Checklist del Día:
                 </span>
 
@@ -339,21 +339,21 @@ export default function MyRoutineDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsAmDone(!isAmDone)}
-                  className={`w-full p-3 rounded-xl flex items-center justify-between transition text-left border cursor-pointer ${
+                  className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border cursor-pointer touch-target ${
                     isAmDone
-                      ? 'bg-[#5FA8C2]/30 border-[#7BB8D0]/50 text-white'
-                      : 'bg-white/5 border-white/10 text-[#C5BBB2] hover:bg-white/10'
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Sun className="w-4 h-4 text-amber-400" />
+                    <Sun className="w-4 h-4 text-[#C4A482]" />
                     <div>
                       <span className="text-xs font-bold block">Rutina AM (Mañana)</span>
-                      <span className="text-[10px] text-[#A69D94]">Limpieza suave + Crema + FPS 50+</span>
+                      <span className="text-[10px] text-white/70">Limpieza suave + Hidratante + FPS 50+</span>
                     </div>
                   </div>
                   <CheckCircle2
-                    className={`w-5 h-5 transition ${isAmDone ? 'text-[#8EC5DB]' : 'text-[#6B6B6B]'}`}
+                    className={`w-5 h-5 transition ${isAmDone ? 'text-white' : 'text-white/40'}`}
                   />
                 </button>
 
@@ -364,21 +364,21 @@ export default function MyRoutineDashboardPage() {
                     if (!isPmDone) setStreakCount((prev) => prev + 1);
                     setIsPmDone(!isPmDone);
                   }}
-                  className={`w-full p-3 rounded-xl flex items-center justify-between transition text-left border cursor-pointer ${
+                  className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border cursor-pointer touch-target ${
                     isPmDone
-                      ? 'bg-[#5FA8C2]/30 border-[#7BB8D0]/50 text-white'
-                      : 'bg-white/5 border-white/10 text-[#C5BBB2] hover:bg-white/10'
+                      ? 'bg-white/20 border-white/40 text-white'
+                      : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Moon className="w-4 h-4 text-[#D4A99A]" />
+                    <Moon className="w-4 h-4 text-[#E8D5D0]" />
                     <div>
                       <span className="text-xs font-bold block">Rutina PM (Noche {currentNight.nightNumber})</span>
-                      <span className="text-[10px] text-[#A69D94]">{currentNight.subtitle}</span>
+                      <span className="text-[10px] text-white/70">{currentNight.subtitle}</span>
                     </div>
                   </div>
                   <CheckCircle2
-                    className={`w-5 h-5 transition ${isPmDone ? 'text-[#8EC5DB]' : 'text-[#6B6B6B]'}`}
+                    className={`w-5 h-5 transition ${isPmDone ? 'text-white' : 'text-white/40'}`}
                   />
                 </button>
               </div>
@@ -386,31 +386,31 @@ export default function MyRoutineDashboardPage() {
           </div>
         )}
 
-        {/* SECTION: CALENDARIO DE CICLADO INTERACTIVO (ESTILO REFERENCIA) */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8] shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F0E8E0] pb-4">
+        {/* SECTION: CALENDARIO DE CICLADO INTERACTIVO (ESTILO REFERENCIA BEAUTY) */}
+        <section className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EFECE6] pb-4">
             <div>
-              <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
                 Seguimiento de Ciclado Cutáneo
               </span>
-              <h3 className="text-xl font-bold font-serif text-[#2D2D2D] tracking-tight">
-                Calendario de Ciclado
+              <h3 className="text-xl font-serif font-bold text-[#2B2A29] tracking-tight">
+                Calendario de Noches
               </h3>
             </div>
             
             {/* Legend / Guía de Fases */}
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-[#A8D4E6] border border-[#7BB8D0]" />
-                <span className="text-[#5A5A5A] font-semibold">Exfoliación</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#7A9A8B]" />
+                <span className="text-[#6E6A66] font-medium">Exfoliación</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-[#E8C4B8] border border-[#D4A99A]" />
-                <span className="text-[#5A5A5A] font-semibold">Retinoide</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#A46864]" />
+                <span className="text-[#6E6A66] font-medium">Retinoide</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-[#F5EDE6] border border-[#E8E0D8]" />
-                <span className="text-[#5A5A5A] font-semibold">Recuperación</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#C4A482]" />
+                <span className="text-[#6E6A66] font-medium">Recuperación</span>
               </div>
             </div>
           </div>
@@ -418,21 +418,21 @@ export default function MyRoutineDashboardPage() {
           {/* Month Header & Controls */}
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <span className="text-base sm:text-lg font-bold font-serif text-[#2D2D2D]">
+              <span className="text-base sm:text-lg font-serif font-bold text-[#2B2A29]">
                 {today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).replace(/^\w/, (c) => c.toUpperCase())}
               </span>
-              <span className="text-xs bg-[#E8F4FA] text-[#2D6680] font-bold px-2.5 py-0.5 rounded-full border border-[#A8D4E6]">
+              <span className="text-xs bg-[#EFF5F1] text-[#4F6D60] font-bold px-3 py-0.5 rounded-full border border-[#7A9A8B]/30">
                 Ciclo de {cycleLength} noches
               </span>
             </div>
             
-            <div className="text-xs font-bold text-[#3A7A96] bg-[#FAF7F4] px-3 py-1.5 rounded-xl border border-[#E8E0D8]">
+            <div className="text-xs font-semibold text-[#6E6A66] bg-[#FAF8F5] px-3 py-1 rounded-full border border-[#EFECE6]">
               Hoy es {today.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
             </div>
           </div>
 
           {/* 7-DAY WEEKDAY HEADER */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] font-bold text-[#8B8178] uppercase pb-1">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] font-bold text-[#9C9790] uppercase pb-1 tracking-wider">
             <span>Lun</span>
             <span>Mar</span>
             <span>Mié</span>
@@ -442,11 +442,10 @@ export default function MyRoutineDashboardPage() {
             <span>Dom</span>
           </div>
 
-          {/* 14-DAY CALENDAR MATRIX (2 SEMANAS ACTIVAS CON DOTS DE FASE) */}
+          {/* 14-DAY CALENDAR MATRIX (2 SEMANAS ACTIVAS CON DOTS DE FASE BEAUTY) */}
           <div className="grid grid-cols-7 gap-1.5 sm:gap-3 text-center">
             {Array.from({ length: 14 }, (_, i) => {
               const d = new Date();
-              // Start from Monday of current week or previous days
               const currentDayOfWeek = (today.getDay() + 6) % 7; // 0 for Monday
               d.setDate(today.getDate() - currentDayOfWeek + i);
 
@@ -460,40 +459,40 @@ export default function MyRoutineDashboardPage() {
               const isExfoliation = phaseObj?.category === 'EXFOLIATION';
               const isRetinoid = phaseObj?.category === 'RETINOID';
               const phaseDotColor = isExfoliation
-                ? 'bg-[#4A8BA8]'
+                ? 'bg-[#7A9A8B]'
                 : isRetinoid
-                ? 'bg-[#D4A99A]'
-                : 'bg-[#C9B896]';
+                ? 'bg-[#A46864]'
+                : 'bg-[#C4A482]';
 
               const phaseBg = isCurrentDay
-                ? 'bg-[#4A8BA8] text-white shadow-md shadow-[#4A8BA8]/30 ring-2 ring-[#7BB8D0]'
-                : 'bg-[#FAF7F4] hover:bg-[#F5EDE6] text-[#2D2D2D] border border-[#E8E0D8]';
+                ? 'bg-[#4F6D60] text-white shadow-beauty ring-2 ring-[#7A9A8B]/40'
+                : 'bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2B2A29] border border-[#EFECE6]';
 
               return (
                 <div
                   key={i}
-                  className={`p-2.5 sm:p-3.5 rounded-2xl transition flex flex-col items-center justify-between space-y-1.5 cursor-pointer relative ${phaseBg}`}
+                  className={`p-2.5 sm:p-3.5 rounded-2xl transition-all duration-200 flex flex-col items-center justify-between space-y-1.5 cursor-pointer touch-target relative ${phaseBg}`}
                 >
                   {isCurrentDay && (
-                    <span className="text-[9px] font-black uppercase tracking-wider">
+                    <span className="text-[9px] font-bold uppercase tracking-wider">
                       Hoy
                     </span>
                   )}
-                  <span className="text-sm sm:text-base font-black">
+                  <span className="text-sm sm:text-base font-bold font-serif">
                     {d.getDate()}
                   </span>
                   
                   {/* Skin Cycling Phase Dot Indicator */}
                   <div className="flex items-center gap-1">
                     <span
-                      className={`w-2.5 h-2.5 rounded-full ${
+                      className={`w-2 h-2 rounded-full ${
                         isCurrentDay ? 'bg-white' : phaseDotColor
                       }`}
                       title={phaseObj?.title || `Noche ${dayPhaseIndex}`}
                     />
                   </div>
 
-                  <span className={`text-[9px] font-bold truncate max-w-full ${isCurrentDay ? 'text-white/90' : 'text-[#8B8178]'}`}>
+                  <span className={`text-[9px] font-medium truncate max-w-full ${isCurrentDay ? 'text-white/90' : 'text-[#6E6A66]'}`}>
                     Noche {dayPhaseIndex}
                   </span>
                 </div>
@@ -503,21 +502,24 @@ export default function MyRoutineDashboardPage() {
         </section>
 
         {/* SECTION: MY ASSIGNED PRODUCTS FOR EACH NIGHT */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-8 border border-[#E8E0D8] shadow-sm space-y-6">
+        <section className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-black text-[#2D2D2D] tracking-tight">
-                Tus Productos Asignados por Fase
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
+                Tocador Digital
+              </span>
+              <h3 className="text-xl font-serif font-bold text-[#2B2A29] tracking-tight">
+                Tus Fórmulas Asignadas por Fase
               </h3>
-              <p className="text-xs text-[#8B8178]">
-                Organiza qué producto utilizas en cada momento para no mezclar ingredientes incompatibles.
+              <p className="text-xs text-[#6E6A66] mt-0.5">
+                Organiza qué cosmético utilizas en cada momento para evitar sobrecargar tu barrera cutánea.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setIsAddProductOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-[#4A8BA8] hover:bg-[#3A7A96] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#7A9A8B] hover:bg-[#688577] text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-xs transition-all duration-200 cursor-pointer touch-target"
             >
               <Plus className="w-4 h-4" />
               <span>Agregar Producto a Rutina</span>
@@ -527,12 +529,12 @@ export default function MyRoutineDashboardPage() {
           {/* Grid of Nights + Products */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* Daily AM Routine */}
-            <div className="bg-[#FAF7F4] rounded-2xl p-4 border border-[#E8E0D8] space-y-3">
-              <div className="flex items-center justify-between border-b border-[#E8E0D8] pb-2">
-                <span className="text-xs font-extrabold text-amber-700 uppercase flex items-center gap-1">
-                  <Sun className="w-3.5 h-3.5" /> Mañanas (AM)
+            <div className="bg-[#FAF8F5] rounded-3xl p-4 sm:p-5 border border-[#EFECE6] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#EFECE6] pb-2.5">
+                <span className="text-xs font-bold text-[#C4A482] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5 text-[#C4A482]" /> Mañanas (AM)
                 </span>
-                <span className="text-[10px] text-[#A69D94]">Todos los días</span>
+                <span className="text-[10px] text-[#9C9790]">Todos los días</span>
               </div>
               <div className="space-y-2">
                 {products
@@ -540,20 +542,20 @@ export default function MyRoutineDashboardPage() {
                   .map((prod) => (
                     <div
                       key={prod.id}
-                      className="bg-[#FFFCF9] p-2.5 rounded-xl border border-[#E8E0D8] flex items-center justify-between text-xs shadow-xs"
+                      className="bg-[#FFFFFF] p-3 rounded-2xl border border-[#EFECE6] flex items-center justify-between text-xs shadow-xs hover:border-[#7A9A8B]/30 transition-all"
                     >
                       <div className="space-y-0.5">
-                        <span className="font-bold text-[#2D2D2D] block">{prod.productName}</span>
+                        <span className="font-bold text-[#2B2A29] block">{prod.productName}</span>
                         <div className="flex items-center gap-1.5">
-                          {prod.brand && <span className="text-[10px] text-[#8B8178]">{prod.brand}</span>}
-                          <span className="text-[9px] bg-[#E8F4FA] text-[#2D6680] px-1.5 py-0.2 rounded font-semibold">
+                          {prod.brand && <span className="text-[10px] text-[#6E6A66]">{prod.brand}</span>}
+                          <span className="text-[9px] bg-[#EFF5F1] text-[#4F6D60] px-2 py-0.5 rounded-full font-medium">
                             {getCategoryLabel(prod.category)}
                           </span>
                         </div>
                       </div>
                       <button
                         onClick={() => handleDeleteProduct(prod.id)}
-                        className="text-[#A69D94] hover:text-rose-600 p-1 transition cursor-pointer"
+                        className="text-[#9C9790] hover:text-[#A46864] p-1.5 transition cursor-pointer touch-target"
                         title="Eliminar de rutina"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -566,38 +568,42 @@ export default function MyRoutineDashboardPage() {
             {/* Nights 1 to N */}
             {protocol?.nights.map((n) => {
               const nightProducts = products.filter((p) => p.phaseId === n.nightNumber);
+              const isExfoliation = n.category === 'EXFOLIATION';
+              const isRetinoid = n.category === 'RETINOID';
+              const iconColor = isExfoliation ? 'text-[#7A9A8B]' : isRetinoid ? 'text-[#A46864]' : 'text-[#C4A482]';
+
               return (
-                <div key={n.nightNumber} className="bg-[#FAF7F4] rounded-2xl p-4 border border-[#E8E0D8] space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#E8E0D8] pb-2">
-                    <span className="text-xs font-extrabold text-[#3D3D3D] uppercase flex items-center gap-1">
-                      <Moon className="w-3.5 h-3.5 text-[#4A8BA8]" /> Noche {n.nightNumber}
+                <div key={n.nightNumber} className="bg-[#FAF8F5] rounded-3xl p-4 sm:p-5 border border-[#EFECE6] space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#EFECE6] pb-2.5">
+                    <span className="text-xs font-bold text-[#2B2A29] uppercase tracking-wider flex items-center gap-1.5">
+                      <Moon className={`w-3.5 h-3.5 ${iconColor}`} /> Noche {n.nightNumber}
                     </span>
-                    <span className="text-[10px] text-[#3A7A96] font-bold">{n.category}</span>
+                    <span className={`text-[10px] font-bold ${iconColor}`}>{n.category}</span>
                   </div>
 
                   <div className="space-y-2">
                     {nightProducts.length === 0 ? (
-                      <p className="text-[11px] text-[#A69D94] italic py-2">
-                        Sin productos asignados aún.
+                      <p className="text-[11px] text-[#9C9790] italic py-2">
+                        Sin fórmulas asignadas aún.
                       </p>
                     ) : (
                       nightProducts.map((prod) => (
                         <div
                           key={prod.id}
-                          className="bg-[#FFFCF9] p-2.5 rounded-xl border border-[#E8E0D8] flex items-center justify-between text-xs shadow-xs"
+                          className="bg-[#FFFFFF] p-3 rounded-2xl border border-[#EFECE6] flex items-center justify-between text-xs shadow-xs hover:border-[#7A9A8B]/30 transition-all"
                         >
                           <div className="space-y-0.5">
-                            <span className="font-bold text-[#2D2D2D] block">{prod.productName}</span>
+                            <span className="font-bold text-[#2B2A29] block">{prod.productName}</span>
                             <div className="flex items-center gap-1.5">
-                              {prod.brand && <span className="text-[10px] text-[#8B8178]">{prod.brand}</span>}
-                              <span className="text-[9px] bg-[#F5EDE6] text-[#5A5A5A] px-1.5 py-0.2 rounded font-semibold">
+                              {prod.brand && <span className="text-[10px] text-[#6E6A66]">{prod.brand}</span>}
+                              <span className="text-[9px] bg-[#FAF8F5] text-[#6E6A66] px-2 py-0.5 rounded-full font-medium border border-[#EFECE6]">
                                 {getCategoryLabel(prod.category)}
                               </span>
                             </div>
                           </div>
                           <button
                             onClick={() => handleDeleteProduct(prod.id)}
-                            className="text-[#A69D94] hover:text-rose-600 p-1 transition cursor-pointer"
+                            className="text-[#9C9790] hover:text-[#A46864] p-1.5 transition cursor-pointer touch-target"
                             title="Eliminar de rutina"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -612,40 +618,45 @@ export default function MyRoutineDashboardPage() {
           </div>
         </section>
 
-        {/* INTEGRATED DERMATOLOGICAL RECOMMENDATION BANNER */}
-        <div className="bg-gradient-to-r from-[#1A4D63] to-[#2D6680] text-white rounded-3xl p-6 sm:p-7 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center md:text-left">
-            <span className="text-[11px] font-bold text-[#8EC5DB] uppercase tracking-wider flex items-center justify-center md:justify-start gap-1">
-              <ShieldCheck className="w-4 h-4" /> Recomendación de Cuidado Diario
+        {/* INTEGRATED BEAUTY RECOMMENDATION BANNER */}
+        <div className="bg-gradient-to-r from-[#4F6D60] via-[#5A796B] to-[#3D554A] text-[#FDFBF7] rounded-3xl p-6 sm:p-7 shadow-beauty flex flex-col md:flex-row items-center justify-between gap-5">
+          <div className="space-y-1.5 text-center md:text-left">
+            <span className="text-[10px] font-bold text-[#E8D5D0] uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-[#7A9A8B]" /> Consejo de Belleza & Cuidado
             </span>
-            <h4 className="text-base sm:text-lg font-bold">
-              ¿Vas a incorporar un nuevo ácido o retinoide a tu piel?
+            <h4 className="text-lg font-serif font-bold text-white">
+              ¿Vas a incorporar un nuevo activo a tu ritual de piel?
             </h4>
-            <p className="text-xs text-[#C5BBB2] max-w-xl">
-              Recuerda siempre realizar una prueba de parche en el antebrazo 24 horas antes para descartar alergias.
+            <p className="text-xs text-[#FDFBF7]/90 max-w-xl">
+              Realiza siempre una prueba de parche en el antebrazo 24 horas antes para comprobar la armonía con tu piel.
             </p>
           </div>
           <Link
             href="/"
-            className="bg-white text-[#1A4D63] hover:bg-[#E8F4FA] text-xs font-black px-5 py-3 rounded-xl transition shadow-sm flex-shrink-0"
+            className="bg-[#FDFBF7] text-[#4F6D60] hover:bg-white text-xs font-bold px-6 py-3 rounded-full transition-all duration-200 shadow-xs flex-shrink-0 touch-target"
           >
-            Auditar un producto nuevo →
+            Evaluar fórmula nueva →
           </Link>
         </div>
       </main>
 
       {/* Add Product Modal */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F1721]/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#FFFCF9] rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-lg font-black text-[#2D2D2D]">
-              Agregar Producto a tu Rutina
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2A29]/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-beauty space-y-5 border border-[#EFECE6]">
+            <div>
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
+                Nuevo Cosmético
+              </span>
+              <h3 className="text-xl font-serif font-bold text-[#2B2A29]">
+                Agregar Producto a tu Rutina
+              </h3>
+            </div>
 
-            <form onSubmit={handleAddProduct} className="space-y-3">
+            <form onSubmit={handleAddProduct} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
-                  Nombre del Producto / Crema
+                <label className="block text-xs font-bold text-[#6E6A66] mb-1.5">
+                  Nombre del Producto / Cosmético
                 </label>
                 <input
                   type="text"
@@ -653,53 +664,53 @@ export default function MyRoutineDashboardPage() {
                   placeholder="Ej: Sérum de Niacinamida 10%"
                   value={newProductName}
                   onChange={(e) => setNewProductName(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl focus:outline-none focus:border-[#5FA8C2]"
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#EFECE6] rounded-2xl focus:outline-none focus:border-[#7A9A8B] text-[#2B2A29]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+                <label className="block text-xs font-bold text-[#6E6A66] mb-1.5">
                   Marca (Opcional)
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: The Ordinary / La Roche-Posay"
+                  placeholder="Ej: The Ordinary / Glossier / Paula's Choice"
                   value={newProductBrand}
                   onChange={(e) => setNewProductBrand(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl focus:outline-none focus:border-[#5FA8C2]"
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#EFECE6] rounded-2xl focus:outline-none focus:border-[#7A9A8B] text-[#2B2A29]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+                <label className="block text-xs font-bold text-[#6E6A66] mb-1.5">
                   Categoría del Producto
                 </label>
                 <select
                   value={newProductCategory}
                   onChange={(e) => setNewProductCategory(e.target.value as UserRoutineProduct['category'])}
-                  className="w-full px-3.5 py-2 text-sm bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl focus:outline-none focus:border-[#5FA8C2] font-semibold"
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#EFECE6] rounded-2xl focus:outline-none focus:border-[#7A9A8B] text-[#2B2A29] font-medium"
                 >
-                  <option value="CLEANSER">🧴 Limpiador Facial</option>
-                  <option value="TONER">💧 Tónico / Bruma Hidratante</option>
-                  <option value="SERUM">✨ Suero Concentrado</option>
-                  <option value="EXFOLIANT">🧪 Exfoliante Químico (AHA / BHA)</option>
-                  <option value="RETINOID">🌙 Retinoide / Retinol</option>
-                  <option value="MOISTURIZER">🌿 Crema Hidratante</option>
-                  <option value="SPF">☀️ Protector Solar FPS 50+</option>
-                  <option value="SOS_TREATMENT">🛡️ Bálsamo Calmante / Cica</option>
+                  <option value="CLEANSER">Limpiador Facial</option>
+                  <option value="TONER">Tónico / Esencia</option>
+                  <option value="SERUM">Sérum Concentrado</option>
+                  <option value="EXFOLIANT">Exfoliante Químico (AHA / BHA / PHA)</option>
+                  <option value="RETINOID">Retinoide / Retinol / Retinal</option>
+                  <option value="MOISTURIZER">Crema Hidratante / Reparadora</option>
+                  <option value="SPF">Protector Solar (FPS 50+)</option>
+                  <option value="SOS_TREATMENT">Bálsamo Calmante / Cica</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+                <label className="block text-xs font-bold text-[#6E6A66] mb-1.5">
                   ¿Cuándo lo vas a aplicar?
                 </label>
                 <select
                   value={selectedPhase}
                   onChange={(e) => setSelectedPhase(Number(e.target.value))}
-                  className="w-full px-3.5 py-2 text-sm bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl focus:outline-none focus:border-[#5FA8C2] font-semibold"
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#EFECE6] rounded-2xl focus:outline-none focus:border-[#7A9A8B] text-[#2B2A29] font-medium"
                 >
-                  <option value={0}>☀️ Mañana (Rutina AM diaria)</option>
+                  <option value={0}>☀️ Todas las Mañanas (AM)</option>
                   {protocol?.nights.map((n) => (
                     <option key={n.nightNumber} value={n.nightNumber}>
                       🌙 Noche {n.nightNumber}: {n.title}
@@ -708,19 +719,19 @@ export default function MyRoutineDashboardPage() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EFECE6]">
                 <button
                   type="button"
                   onClick={() => setIsAddProductOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-[#8B8178] hover:bg-[#F5EDE6] rounded-xl cursor-pointer"
+                  className="px-5 py-2.5 rounded-full text-xs font-bold text-[#6E6A66] hover:bg-[#FAF8F5] transition cursor-pointer touch-target"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-black bg-[#4A8BA8] hover:bg-[#3A7A96] text-white rounded-xl shadow-md shadow-[#4A8BA8]/20 cursor-pointer"
+                  className="px-6 py-2.5 rounded-full text-xs font-bold bg-[#7A9A8B] hover:bg-[#688577] text-white transition shadow-xs cursor-pointer touch-target"
                 >
-                  Guardar en Mi Rutina
+                  Guardar Ficha
                 </button>
               </div>
             </form>

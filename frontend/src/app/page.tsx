@@ -12,45 +12,44 @@ import {
   Calendar as CalendarIcon, 
   ArrowRight,
   Droplets,
-  Microscope,
-  ShieldCheck
+  HeartPulse
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Allabout.skin — Auditoría Científica y Ciclado Cutáneo',
-  description: 'Audita cosméticos con rigor científico CosIng/PubMed y sigue tu protocolo personalizado de Skin Cycling.',
+  title: 'Allabout.skin — Asesoría & Fórmulas de Skincare Inteligente',
+  description: 'Guía de formulación cosmética, compatibilidad de ingredientes y seguimiento de Skin Cycling.',
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF7F4] text-[#2D2D2D] selection:bg-[#7BB8D0] selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29] selection:bg-[#E8D5D0] selection:text-[#2B2A29]">
       <Navbar />
 
       <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-7">
         
         {/* TOP MOBILE-FIRST CARD: MI PERFIL DE CICLADO CUTÁNEO */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-5 sm:p-6 border border-[#E8E0D8] shadow-xs relative overflow-hidden">
+        <section className="bg-[#FFFFFF] rounded-3xl p-5 sm:p-7 border border-[#EFECE6] shadow-beauty relative overflow-hidden transition-all duration-300">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#C5E3F0] via-[#E8F4FA] to-[#E8C4B8]/40 border border-[#A8D4E6] flex items-center justify-center text-[#2D6680] shadow-inner font-serif font-black text-lg">
+              <div className="w-12 h-12 rounded-2xl bg-[#EFF5F1] border border-[#7A9A8B]/30 flex items-center justify-center text-[#4F6D60] shadow-xs text-xl font-serif">
                 ✨
               </div>
               <div>
-                <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
-                  Dashboard de Skincare
+                <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
+                  Perfil de Cuidado Diario
                 </span>
-                <h1 className="text-lg sm:text-xl font-bold font-serif text-[#2D2D2D] leading-snug">
-                  Mi Perfil de Ciclado Cutáneo
+                <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#2B2A29] leading-snug">
+                  Mi Ritual de Ciclado Cutáneo
                 </h1>
-                <p className="text-xs text-[#6B6B6B]">
-                  Protocolo adaptativo guiado por evidencia médica
+                <p className="text-xs text-[#6E6A66] mt-0.5">
+                  Armonía de activos y renovación celular progresiva
                 </p>
               </div>
             </div>
 
             <Link
               href="/rutinas/skin-cycling"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#3A7A96] hover:text-[#1A4D63] bg-[#E8F4FA] hover:bg-[#C5E3F0] px-3.5 py-2 rounded-xl transition"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#4F6D60] hover:text-[#2B2A29] bg-[#EFF5F1] hover:bg-[#E2ECE5] px-4 py-2 rounded-full border border-[#7A9A8B]/20 transition-all duration-200"
             >
               <span>Personalizar Protocolo</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -58,25 +57,25 @@ export default function Home() {
           </div>
 
           {/* TWO QUICK STAT CAPSULES: TU BIOTIPO & ESTADO DE BARRERA */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#F0E8E0]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-5 pt-4 border-t border-[#EFECE6]">
             {/* TU BIOTIPO */}
-            <div className="bg-[#FAF7F4] rounded-2xl p-3.5 border border-[#E8E0D8] flex items-center justify-between">
+            <div className="bg-[#FAF8F5] rounded-2xl p-3.5 border border-[#EFECE6] flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#8B8178] block">
-                  Tu Biotipo
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C9790] block">
+                  Biotipo Cutáneo
                 </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="bg-[#E8F4FA] text-[#2D6680] text-xs font-bold px-2.5 py-0.5 rounded-lg border border-[#A8D4E6]">
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="bg-[#EFF5F1] text-[#4F6D60] text-xs font-semibold px-3 py-0.5 rounded-full border border-[#7A9A8B]/30">
                     Piel Mixta
                   </span>
-                  <span className="bg-[#F9F2F0] text-[#8B4B3D] text-xs font-bold px-2.5 py-0.5 rounded-lg border border-[#E8C4B8]">
+                  <span className="bg-[#F8EFEA] text-[#A46864] text-xs font-semibold px-3 py-0.5 rounded-full border border-[#E8D5D0]">
                     Sensible
                   </span>
                 </div>
               </div>
               <Link
                 href="/rutinas/skin-cycling"
-                className="text-[11px] font-bold text-[#3A7A96] hover:underline flex items-center gap-0.5"
+                className="text-[11px] font-bold text-[#7A9A8B] hover:text-[#4F6D60] hover:underline flex items-center gap-0.5 touch-target"
               >
                 <span>Ajustar</span>
                 <ChevronRight className="w-3 h-3" />
@@ -84,51 +83,51 @@ export default function Home() {
             </div>
 
             {/* ESTADO DE BARRERA */}
-            <div className="bg-[#FAF7F4] rounded-2xl p-3.5 border border-[#E8E0D8] flex items-center justify-between">
+            <div className="bg-[#FAF8F5] rounded-2xl p-3.5 border border-[#EFECE6] flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#8B8178] block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9C9790] block">
                   Estado de Barrera
                 </span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-black text-emerald-800">
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#7A9A8B] animate-pulse" />
+                  <span className="text-xs font-bold text-[#4F6D60]">
                     Saludable y Óptima
                   </span>
                 </div>
               </div>
-              <div className="text-[10px] text-[#8B8178] bg-white px-2.5 py-1 rounded-lg border border-[#E8E0D8] font-bold">
+              <div className="text-[10px] text-[#6E6A66] bg-[#FFFFFF] px-2.5 py-1 rounded-full border border-[#EFECE6] font-semibold">
                 Tolerancia Alta
               </div>
             </div>
           </div>
         </section>
 
-        {/* HERO CARD: PRÓXIMA NOCHE (SKIN CYCLING TONIGHT'S PHASE) */}
-        <section className="bg-gradient-to-br from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden space-y-4">
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 max-w-xl">
+        {/* HERO CARD: PRÓXIMA NOCHE (SKIN CYCLING TONIGHT'S PHASE - BEAUTY SAGE PALETTE) */}
+        <section className="bg-gradient-to-br from-[#4F6D60] via-[#5A796B] to-[#3D554A] text-[#FDFBF7] rounded-3xl p-6 sm:p-8 shadow-beauty relative overflow-hidden space-y-4">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="space-y-2 max-w-xl">
               <div className="flex items-center gap-2">
-                <span className="bg-[#A8D4E6]/25 text-[#C5E3F0] text-[10px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full border border-[#A8D4E6]/30">
+                <span className="bg-[#FFFFFF]/20 text-[#FDFBF7] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm border border-white/20">
                   Próxima Noche • Fase 3
                 </span>
-                <span className="text-xs text-[#C5E3F0]/80">
+                <span className="text-xs text-[#E8D5D0]">
                   Hoy en tu ciclo
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-serif font-black tracking-tight text-white">
-                Noche 3: Recuperación de Barrera Cutánea
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-white">
+                Noche 3: Reparación & Nutrición de Barrera
               </h2>
-              <p className="text-xs text-[#E8F4FA]/90 leading-relaxed">
-                Noche de hidratación profunda y lípidos biomiméticos para sellar la humedad sin exfoliantes ni retinoides.
+              <p className="text-xs text-[#FDFBF7]/90 leading-relaxed">
+                Hidratación calmante y lípidos biomiméticos para sellar la humedad, dando descanso a la piel sin exfoliantes ni retinoides.
               </p>
             </div>
 
             <div className="flex-shrink-0">
               <Link
                 href="/mi-rutina"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#E8F4FA] hover:bg-white text-[#1A4D63] font-black text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#FDFBF7] hover:bg-white text-[#4F6D60] font-bold text-xs sm:text-sm px-6 py-3 rounded-full shadow-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] touch-target"
               >
-                <CalendarIcon className="w-4 h-4 text-[#4A8BA8]" />
+                <CalendarIcon className="w-4 h-4 text-[#7A9A8B]" />
                 <span>Ver Mi Calendario</span>
               </Link>
             </div>
@@ -136,83 +135,83 @@ export default function Home() {
 
           {/* ACTIVE INGREDIENTS FOR TONIGHT */}
           <div className="relative z-10 pt-3 border-t border-white/15 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-[#A8D4E6] mr-1">
-              Activos Clave Asignados:
+            <span className="text-[11px] font-semibold text-[#E8D5D0] mr-1">
+              Activos Clave Recomendados:
             </span>
-            <span className="bg-white/10 text-white text-[11px] font-semibold px-2.5 py-1 rounded-xl backdrop-blur-sm border border-white/15">
+            <span className="bg-white/15 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
               🧴 Ceramidas NP/AP/EOP
             </span>
-            <span className="bg-white/10 text-white text-[11px] font-semibold px-2.5 py-1 rounded-xl backdrop-blur-sm border border-white/15">
-              🌿 Centella Asiática
+            <span className="bg-white/15 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+              🌿 Centella Asiática (Cica)
             </span>
-            <span className="bg-white/10 text-white text-[11px] font-semibold px-2.5 py-1 rounded-xl backdrop-blur-sm border border-white/15">
+            <span className="bg-white/15 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
               💧 Ácido Hialurónico
             </span>
           </div>
 
           {/* Decorative Glow Elements */}
-          <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-[#5FA8C2]/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-12 -top-12 w-48 h-48 bg-[#A8D4E6]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-[#A3B899]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-12 -top-12 w-48 h-48 bg-[#E8D5D0]/10 rounded-full blur-3xl pointer-events-none" />
         </section>
 
         {/* SECTION: TUS ACTIVOS Y PRODUCTOS ASIGNADOS */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-5 sm:p-6 border border-[#E8E0D8] shadow-xs space-y-4">
+        <section className="bg-[#FFFFFF] rounded-3xl p-5 sm:p-7 border border-[#EFECE6] shadow-beauty space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
                 Fórmulas Verificadas
               </span>
-              <h3 className="text-base sm:text-lg font-bold font-serif text-[#2D2D2D]">
+              <h3 className="text-lg sm:text-xl font-serif font-bold text-[#2B2A29]">
                 Tus Productos Asignados para Esta Fase
               </h3>
             </div>
             <Link
               href="/mi-rutina"
-              className="text-xs font-semibold text-[#3A7A96] hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-[#7A9A8B] hover:text-[#4F6D60] hover:underline flex items-center gap-1 touch-target"
             >
               <span>Editar rutina</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-[#FAF7F4] p-3.5 rounded-2xl border border-[#E8E0D8] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-[#E8E0D8] flex items-center justify-center text-lg shrink-0 shadow-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EFECE6] flex items-center gap-3.5 hover:border-[#7A9A8B]/30 transition-all duration-200">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-[#EFECE6] flex items-center justify-center text-xl shrink-0 shadow-xs">
                 🧴
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold text-[#2D2D2D] block truncate">
+                <span className="text-xs font-bold text-[#2B2A29] block truncate">
                   Cicaplast B5+ Baume
                 </span>
-                <span className="text-[10px] text-[#8B8178] block">
+                <span className="text-[11px] text-[#6E6A66] block">
                   La Roche-Posay • Reparador
                 </span>
               </div>
             </div>
 
-            <div className="bg-[#FAF7F4] p-3.5 rounded-2xl border border-[#E8E0D8] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-[#E8E0D8] flex items-center justify-center text-lg shrink-0 shadow-xs">
+            <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EFECE6] flex items-center gap-3.5 hover:border-[#7A9A8B]/30 transition-all duration-200">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-[#EFECE6] flex items-center justify-center text-xl shrink-0 shadow-xs">
                 💧
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold text-[#2D2D2D] block truncate">
                   100% Plant-Derived Squalane
                 </span>
-                <span className="text-[10px] text-[#8B8178] block">
+                <span className="text-[11px] text-[#6E6A66] block">
                   The Ordinary • Hidratante
                 </span>
               </div>
             </div>
 
-            <div className="bg-[#FAF7F4] p-3.5 rounded-2xl border border-[#E8E0D8] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-[#E8E0D8] flex items-center justify-center text-lg shrink-0 shadow-xs">
+            <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EFECE6] flex items-center gap-3.5 hover:border-[#7A9A8B]/30 transition-all duration-200">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-[#EFECE6] flex items-center justify-center text-xl shrink-0 shadow-xs">
                 ✨
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold text-[#2D2D2D] block truncate">
-                  Ceramide Enriched Moisturizer
+                  Ceramide Moisturizer
                 </span>
-                <span className="text-[10px] text-[#8B8178] block">
+                <span className="text-[11px] text-[#6E6A66] block">
                   Paula&apos;s Choice • Barrera
                 </span>
               </div>
@@ -224,114 +223,114 @@ export default function Home() {
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div>
-              <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
-                Auditoría INCI & Escáner
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
+                Evaluador de Fórmulas
               </span>
-              <h3 className="text-lg sm:text-xl font-bold font-serif text-[#2D2D2D]">
+              <h3 className="text-xl font-serif font-bold text-[#2B2A29]">
                 Audita Cualquier Cosmético al Instante
               </h3>
             </div>
-            <span className="text-xs text-[#8B8178] hidden sm:block">
-              Base oficial CosIng UE y PubMed
+            <span className="text-xs text-[#9C9790] hidden sm:block">
+              Respaldo botánico & CosIng UE
             </span>
           </div>
 
           <FormulaAuditor />
         </section>
 
-        {/* SECTION: BIBLIOTECA DE ACTIVOS COSMÉTICOS (ESTÉTICA EDITORIAL) */}
-        <section className="bg-[#FFFCF9] rounded-3xl p-6 sm:p-7 border border-[#E8E0D8] shadow-xs space-y-5">
-          <div className="flex items-center justify-between border-b border-[#F0E8E0] pb-4">
+        {/* SECTION: BIBLIOTECA DE ACTIVOS COSMÉTICOS (ESTÉTICA EDITORIAL BEAUTY) */}
+        <section className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-6">
+          <div className="flex items-center justify-between border-b border-[#EFECE6] pb-4">
             <div>
-              <span className="text-[11px] font-bold text-[#8B8178] uppercase tracking-wider block">
-                Fichas Técnicas Oficiales
+              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
+                Guía Botánica & Clínica
               </span>
-              <h3 className="text-xl font-bold font-serif text-[#2D2D2D]">
+              <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#2B2A29]">
                 Biblioteca de Activos Cosméticos
               </h3>
-              <p className="text-xs text-[#6B6B6B] mt-0.5">
-                Fichas de farmacología tópica, pH óptimo y compatibilidad química.
+              <p className="text-xs text-[#6E6A66] mt-0.5">
+                Fichas de acción tópica, pH de formulación y compatibilidad.
               </p>
             </div>
             <Link
               href="/ingrediente"
-              className="text-xs font-bold text-[#3A7A96] hover:text-[#1A4D63] hover:underline flex items-center gap-1"
+              className="text-xs font-bold text-[#7A9A8B] hover:text-[#4F6D60] hover:underline flex items-center gap-1 touch-target"
             >
               <span>Ver catálogo</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-left">
             <Link
               href="/ingrediente/niacinamide"
-              className="bg-[#FAF7F4] hover:bg-[#E8F4FA]/60 p-4 rounded-2xl border border-[#E8E0D8] hover:border-[#A8D4E6] transition-all flex flex-col justify-between space-y-3 group"
+              className="bg-gradient-to-b from-[#EFF5F1]/80 to-[#FAF8F5] hover:to-[#EFF5F1] p-4 rounded-3xl border border-[#EFECE6] hover:border-[#7A9A8B]/40 transition-all duration-300 flex flex-col justify-between space-y-3 group shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#E8F4FA] border border-[#A8D4E6] flex items-center justify-center text-[#2D6680] group-hover:scale-105 transition-transform">
-                <Database className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-white border border-[#7A9A8B]/30 flex items-center justify-center text-[#4F6D60] group-hover:scale-105 transition-transform">
+                <Database className="w-4 h-4 text-[#7A9A8B]" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-[#3A7A96] uppercase block">
+                <span className="text-[10px] font-bold text-[#7A9A8B] uppercase tracking-wider block">
                   Regulador
                 </span>
-                <h4 className="text-sm font-bold font-serif text-[#2D2D2D] group-hover:text-[#1A4D63]">
+                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#4F6D60]">
                   Niacinamida
                 </h4>
-                <p className="text-[11px] text-[#8B8178] mt-0.5">Poros y Barrera</p>
+                <p className="text-[11px] text-[#6E6A66] mt-0.5">Poros y Barrera</p>
               </div>
             </Link>
 
             <Link
               href="/ingrediente/retinol"
-              className="bg-[#FAF7F4] hover:bg-[#F9F2F0] p-4 rounded-2xl border border-[#E8E0D8] hover:border-[#E8C4B8] transition-all flex flex-col justify-between space-y-3 group"
+              className="bg-gradient-to-b from-[#F8EFEA]/80 to-[#FAF8F5] hover:to-[#F8EFEA] p-4 rounded-3xl border border-[#EFECE6] hover:border-[#E8D5D0] transition-all duration-300 flex flex-col justify-between space-y-3 group shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#F9F2F0] border border-[#E8C4B8] flex items-center justify-center text-[#8B4B3D] group-hover:scale-105 transition-transform">
-                <FileText className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-white border border-[#E8D5D0] flex items-center justify-center text-[#A46864] group-hover:scale-105 transition-transform">
+                <FileText className="w-4 h-4 text-[#A46864]" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-[#8B4B3D] uppercase block">
-                  Antiedad
+                <span className="text-[10px] font-bold text-[#A46864] uppercase tracking-wider block">
+                  Renovación
                 </span>
-                <h4 className="text-sm font-bold font-serif text-[#2D2D2D] group-hover:text-[#1A4D63]">
+                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#A46864]">
                   Retinol
                 </h4>
-                <p className="text-[11px] text-[#8B8178] mt-0.5">Renovación Celular</p>
+                <p className="text-[11px] text-[#6E6A66] mt-0.5">Antiedad & Colágeno</p>
               </div>
             </Link>
 
             <Link
               href="/ingrediente/salicylic-acid"
-              className="bg-[#FAF7F4] hover:bg-amber-50/60 p-4 rounded-2xl border border-[#E8E0D8] hover:border-amber-200 transition-all flex flex-col justify-between space-y-3 group"
+              className="bg-gradient-to-b from-[#FAF8F5] to-[#F7F2EB] hover:to-[#F2ECE0] p-4 rounded-3xl border border-[#EFECE6] hover:border-[#C4A482]/40 transition-all duration-300 flex flex-col justify-between space-y-3 group shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-800 group-hover:scale-105 transition-transform">
-                <Layers className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-white border border-[#C4A482]/30 flex items-center justify-center text-[#8F7253] group-hover:scale-105 transition-transform">
+                <Layers className="w-4 h-4 text-[#C4A482]" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-amber-800 uppercase block">
+                <span className="text-[10px] font-bold text-[#8F7253] uppercase tracking-wider block">
                   Exfoliante
                 </span>
-                <h4 className="text-sm font-bold font-serif text-[#2D2D2D] group-hover:text-[#1A4D63]">
+                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#8F7253]">
                   Ácido Salicílico
                 </h4>
-                <p className="text-[11px] text-[#8B8178] mt-0.5">BHA y Puntos Negros</p>
+                <p className="text-[11px] text-[#6E6A66] mt-0.5">BHA & Puntos Negros</p>
               </div>
             </Link>
 
             <Link
               href="/ingrediente/hyaluronic-acid"
-              className="bg-[#FAF7F4] hover:bg-[#E8F4FA]/60 p-4 rounded-2xl border border-[#E8E0D8] hover:border-[#A8D4E6] transition-all flex flex-col justify-between space-y-3 group"
+              className="bg-gradient-to-b from-[#EFF5F1]/80 to-[#FAF8F5] hover:to-[#EFF5F1] p-4 rounded-3xl border border-[#EFECE6] hover:border-[#7A9A8B]/40 transition-all duration-300 flex flex-col justify-between space-y-3 group shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#E8F4FA] border border-[#A8D4E6] flex items-center justify-center text-[#2D6680] group-hover:scale-105 transition-transform">
-                <Droplets className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-white border border-[#7A9A8B]/30 flex items-center justify-center text-[#4F6D60] group-hover:scale-105 transition-transform">
+                <Droplets className="w-4 h-4 text-[#7A9A8B]" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-[#3A7A96] uppercase block">
+                <span className="text-[10px] font-bold text-[#7A9A8B] uppercase tracking-wider block">
                   Humectante
                 </span>
-                <h4 className="text-sm font-bold font-serif text-[#2D2D2D] group-hover:text-[#1A4D63]">
+                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#4F6D60]">
                   Ácido Hialurónico
                 </h4>
-                <p className="text-[11px] text-[#8B8178] mt-0.5">Hidratación Celular</p>
+                <p className="text-[11px] text-[#6E6A66] mt-0.5">Hidratación Profunda</p>
               </div>
             </Link>
           </div>
@@ -343,3 +342,4 @@ export default function Home() {
     </div>
   );
 }
+

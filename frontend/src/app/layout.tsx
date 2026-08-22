@@ -1,39 +1,39 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Allabout.skin — Auditoría Científica de Skincare",
-  description: "Plataforma de auditoría científica de cosméticos. Análisis INCI, Skin Cycling personalizado y biblioteca de activos verificados por PubMed y CosIng UE.",
+  title: "Allabout.skin — Asesoría & Fórmulas de Skincare Inteligente",
+  description: "Plataforma de bienestar y formulación cosmética. Guía de ingredientes, análisis de fórmulas y seguimiento personalizado de Skin Cycling.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
         {children}
         <Analytics />
       </body>
     </html>
   );
 }
+
 

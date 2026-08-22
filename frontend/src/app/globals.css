@@ -1,40 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF7F4;
-  --foreground: #2D2D2D;
-  --celeste-50: #E8F4FA;
-  --celeste-100: #C5E3F0;
-  --celeste-200: #A8D4E6;
-  --celeste-300: #8EC5DB;
-  --celeste-400: #7BB8D0;
-  --celeste-500: #5FA8C2;
-  --celeste-600: #4A8BA8;
-  --celeste-700: #3A7A96;
-  --celeste-800: #2D6680;
-  --celeste-900: #1A4D63;
+  --bg-linen: #FDFBF7;
+  --bg-linen-soft: #F7F4EF;
+  --surface: #FFFFFF;
+  --surface-card: #FAF8F5;
+  --border-ivory: #EFECE6;
+  --border-soft: #E6E1D8;
+  
+  --accent-sage: #7A9A8B;
+  --accent-sage-light: #EFF5F1;
+  --accent-sage-dark: #4F6D60;
+  
+  --accent-blush: #E8D5D0;
+  --accent-blush-soft: #F8EFEA;
+  --accent-blush-dark: #A46864;
+  
+  --accent-taupe: #C4A482;
+  --accent-taupe-light: #F7F2EB;
+  --accent-taupe-dark: #8F7253;
+  
+  --text-charcoal: #2B2A29;
+  --text-muted: #6E6A66;
+  --text-light: #9C9790;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-playfair);
+  --color-background: var(--bg-linen);
+  --color-foreground: var(--text-charcoal);
+  --font-sans: var(--font-plus-jakarta), var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-playfair), "Cormorant Garamond", Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-linen);
+  color: var(--text-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Soft Diffuse Shadow for Beauty-Tech cards */
+.shadow-beauty {
+  box-shadow: 0 4px 20px -2px rgba(43, 42, 41, 0.04), 0 2px 6px -1px rgba(43, 42, 41, 0.02);
+}
+
+.shadow-beauty-hover {
+  box-shadow: 0 10px 30px -4px rgba(43, 42, 41, 0.07), 0 4px 10px -2px rgba(43, 42, 41, 0.03);
 }
 
 /* Safe area for mobile bottom nav */
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+/* Touch target standard minimum 44px */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Smooth transitions globally */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar for clean horizontal swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -228,46 +228,41 @@ export default function FormulaAuditor() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
-      {/* App-Style Search & Evaluation Hero Box */}
-      <div className="bg-[#FFFCF9]/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-[#1A4D63]/10 border border-[#E8E0D8]/90 p-4 sm:p-7 transition-all">
+      <div className="bg-[#FFFFFF] rounded-3xl shadow-beauty border border-[#EFECE6] p-5 sm:p-7 transition-all duration-300">
         
-        {/* Top Tagline / Mode Switch */}
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7BB8D0] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4A8BA8]"></span>
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7A9A8B] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7A9A8B]"></span>
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#8B8178]">
-              Evaluador de Cosméticos & Skincare
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#9C9790]">
+              Asesoría de Fórmulas & Skincare
             </span>
           </div>
 
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`text-xs font-semibold px-2.5 py-1 rounded-xl border transition flex items-center gap-1.5 ${
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-200 flex items-center gap-1.5 touch-target ${
               showAdvanced || productPrice
-                ? 'bg-[#E8F4FA] text-[#2D6680] border-[#8EC5DB]' 
-                : 'bg-[#FAF7F4] text-[#6B6B6B] border-[#E8E0D8] hover:bg-[#F5EDE6]'
+                ? 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/40' 
+                : 'bg-[#FAF8F5] text-[#6E6A66] border-[#EFECE6] hover:bg-[#F2EFE9]'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A8BA8]" />
-            <span>{showAdvanced ? 'Ocultar Opciones' : 'Opciones (+ Precio / Tipo de Piel)'}</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#7A9A8B]" />
+            <span>{showAdvanced ? 'Ocultar Opciones' : 'Ajustar (+ Precio / Biotipo)'}</span>
             {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
 
-        {/* UNIFIED 1-INPUT SMART OMNI-SEARCH BAR */}
         <div className="relative">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[#FAF7F4] hover:bg-[#FAF7F4]/90 focus-within:bg-[#FFFCF9] rounded-2xl border-2 border-[#E8E0D8]/90 focus-within:border-[#4A8BA8] focus-within:ring-4 focus-within:ring-[#5FA8C2]/15 shadow-inner transition-all p-1.5 sm:p-2 gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[#FAF8F5] hover:bg-[#F5F2EC] focus-within:bg-[#FFFFFF] rounded-2xl sm:rounded-full border border-[#EFECE6] focus-within:border-[#7A9A8B] focus-within:ring-4 focus-within:ring-[#7A9A8B]/10 shadow-xs transition-all duration-300 p-2 sm:p-2.5 gap-2.5">
             
-            {/* Search Icon / Indicator */}
-            <div className="hidden sm:flex items-center pl-3 text-[#A69D94]">
-              <Search className="w-5 h-5" />
+            <div className="hidden sm:flex items-center pl-3 text-[#9C9790]">
+              <Search className="w-4 h-4 text-[#7A9A8B]" />
             </div>
 
-            {/* Main Omni Input */}
             <textarea
               rows={omniInput.length > 80 ? 3 : 1}
               value={omniInput}
@@ -278,33 +273,30 @@ export default function FormulaAuditor() {
                   handleAudit();
                 }
               }}
-              placeholder="Escribe el nombre de tu crema (ej: Nivea, The Ordinary, Protector Solar) o pega sus ingredientes..."
-              className="w-full bg-transparent px-3 py-2 text-[#2D2D2D] text-sm sm:text-base placeholder:text-[#A69D94] focus:outline-none resize-none leading-relaxed"
+              placeholder="Escribe un producto (ej: The Ordinary Niacinamida, Cerave, Protector Solar) o pega ingredientes..."
+              className="w-full bg-transparent px-3 py-2 text-[#2B2A29] text-sm sm:text-base placeholder:text-[#9C9790] focus:outline-none resize-none leading-relaxed font-sans"
             />
 
-            {/* Clear Button (If has text) */}
             {omniInput && (
               <button
                 type="button"
                 onClick={handleClear}
-                className="hidden sm:flex p-1.5 text-[#A69D94] hover:text-[#5A5A5A] rounded-lg transition self-center"
+                className="hidden sm:flex p-2 text-[#9C9790] hover:text-[#2B2A29] rounded-full transition-colors self-center"
                 title="Limpiar búsqueda"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
             )}
 
-            {/* Action Group: Camera OCR Button + Audit Submit Button */}
-            <div className="flex items-center gap-1.5 sm:gap-2 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E8E0D8]/80">
-              {/* Camera Button */}
+            <div className="flex items-center gap-2 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-[#EFECE6]">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 text-xs font-extrabold bg-[#FFFCF9] hover:bg-[#F5EDE6] text-[#5A5A5A] border border-[#C5BBB2] shadow-sm px-3.5 py-2.5 rounded-xl transition active:scale-95 flex-shrink-0 cursor-pointer"
-                title="Tomar foto al producto o ingredientes"
+                className="flex items-center justify-center gap-1.5 text-xs font-semibold bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#2B2A29] border border-[#EFECE6] shadow-xs px-3.5 py-2.5 rounded-full transition-all duration-200 active:scale-95 flex-shrink-0 touch-target cursor-pointer"
+                title="Tomar foto a la etiqueta cosmética"
               >
-                <Camera className="w-4 h-4 text-[#4A8BA8]" />
-                <span className="inline">Foto / Escanear</span>
+                <Camera className="w-4 h-4 text-[#7A9A8B]" />
+                <span className="inline">Foto</span>
               </button>
               <input
                 type="file"
@@ -315,22 +307,21 @@ export default function FormulaAuditor() {
                 className="hidden"
               />
 
-              {/* Main Submit Button */}
               <button
                 type="button"
                 onClick={() => handleAudit()}
                 disabled={isLoading || !omniInput.trim()}
-                className="flex-grow sm:flex-grow-0 bg-gradient-to-r from-[#4A8BA8] to-[#3A7A96] hover:from-[#3A7A96] hover:to-[#2D6680] disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-md shadow-[#4A8BA8]/30 flex items-center justify-center gap-2 text-xs sm:text-sm transition active:scale-95 flex-shrink-0 cursor-pointer"
+                className="flex-grow sm:flex-grow-0 bg-[#7A9A8B] hover:bg-[#688879] disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-full shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-all duration-200 active:scale-95 flex-shrink-0 touch-target cursor-pointer"
               >
                 {isLoading ? (
                   <>
                     <Activity className="w-4 h-4 animate-spin" />
-                    <span>Analizando...</span>
+                    <span>Evaluando...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Evaluar Producto</span>
+                    <span>Evaluar Fórmula</span>
                   </>
                 )}
               </button>
@@ -338,12 +329,11 @@ export default function FormulaAuditor() {
           </div>
         </div>
 
-        {/* PROGRESSIVE DISCLOSURE: OPTIONAL FILTERS */}
         {showAdvanced && (
-          <div className="mt-4 pt-4 border-t border-[#E8E0D8] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
+          <div className="mt-4 pt-4 border-t border-[#EFECE6] grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
             <div>
-              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
-                Precio que pagaste (Opcional)
+              <label className="block text-xs font-bold text-[#6E6A66] mb-1">
+                Precio Aproximado (Opcional)
               </label>
               <div className="relative">
                 <input
@@ -353,19 +343,19 @@ export default function FormulaAuditor() {
                   value={productPrice}
                   onChange={(e) => setProductPrice(e.target.value)}
                   placeholder="ej: 14.99"
-                  className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
+                  className="w-full bg-[#FAF8F5] border border-[#EFECE6] rounded-xl px-3.5 py-2.5 text-sm focus:bg-[#FFFFFF] focus:border-[#7A9A8B] focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
+              <label className="block text-xs font-bold text-[#6E6A66] mb-1">
                 Moneda
               </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
+                className="w-full bg-[#FAF8F5] border border-[#EFECE6] rounded-xl px-3.5 py-2.5 text-sm focus:bg-[#FFFFFF] focus:border-[#7A9A8B] focus:outline-none"
               >
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
@@ -376,45 +366,43 @@ export default function FormulaAuditor() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#5A5A5A] mb-1">
-                ¿Cómo es tu tipo de piel?
+              <label className="block text-xs font-bold text-[#6E6A66] mb-1">
+                Tipo de Piel / Biotipo
               </label>
               <select
                 value={skinType}
                 onChange={(e) => setSkinType(e.target.value)}
-                className="w-full bg-[#FAF7F4] border border-[#E8E0D8] rounded-xl px-3 py-2 text-sm focus:bg-[#FFFCF9] focus:border-[#5FA8C2] focus:outline-none"
+                className="w-full bg-[#FAF8F5] border border-[#EFECE6] rounded-xl px-3.5 py-2.5 text-sm focus:bg-[#FFFFFF] focus:border-[#7A9A8B] focus:outline-none"
               >
-                <option value="COMBINATION">Mixta (Brillo en frente/nariz)</option>
-                <option value="DRY">Seca (Tirante o áspera)</option>
-                <option value="SENSITIVE">Sensible (Se enrojece fácil)</option>
-                <option value="ACNE_PRONE">Grasa o con granitos</option>
-                <option value="NORMAL">Normal / Equilibrada</option>
+                <option value="COMBINATION">Piel Mixta</option>
+                <option value="DRY">Piel Seca / Deshidratada</option>
+                <option value="SENSITIVE">Piel Sensible / Reactiva</option>
+                <option value="ACNE_PRONE">Tendencia a Imperfecciones</option>
+                <option value="NORMAL">Piel Normal</option>
               </select>
             </div>
           </div>
         )}
 
-        {/* QUICK PRESET CHIPS */}
         <div className="mt-4 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Flame className="w-3.5 h-3.5 text-amber-600" />
-            Ejemplos populares:
+          <span className="text-[11px] font-bold text-[#9C9790] uppercase tracking-wider flex items-center gap-1 mr-1">
+            <Flame className="w-3.5 h-3.5 text-[#C4A482]" />
+            Fórmulas de Ejemplo:
           </span>
           {QUICK_PRESETS.map((preset, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handleSelectPreset(preset)}
-              className="text-xs bg-[#F5EDE6] hover:bg-[#E8F4FA] hover:text-[#2D6680] hover:border-[#8EC5DB] text-[#5A5A5A] font-medium px-2.5 py-1 rounded-lg border border-[#E8E0D8]/80 transition active:scale-95 flex items-center gap-1 cursor-pointer"
+              className="text-xs bg-[#FAF8F5] hover:bg-[#EFF5F1] hover:text-[#4F6D60] hover:border-[#7A9A8B]/40 text-[#6E6A66] font-medium px-3 py-1.5 rounded-full border border-[#EFECE6] transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer touch-target"
             >
-              <span className="text-[10px] text-[#3A7A96] font-bold">[{preset.badge}]</span>
+              <span className="text-[10px] text-[#7A9A8B] font-bold">[{preset.badge}]</span>
               <span>{preset.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* HUMANIZED OCR MODAL */}
       {isOcrModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#0F1721]/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-[#FFFCF9] rounded-3xl shadow-2xl border border-[#E8E0D8] w-full max-w-xl overflow-hidden my-auto">
@@ -557,27 +545,27 @@ export default function FormulaAuditor() {
       <div ref={resultsRef}>
         {report && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            {/* Header / Summary Card */}
-            <div className="bg-gradient-to-br from-[#1A4D63] via-[#2D6680] to-[#1A2332] text-white rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden">
+            {/* Header / Summary Card - Beauty Editorial Design */}
+            <div className="bg-[#2B2A29] text-[#FDFBF7] rounded-3xl p-6 sm:p-8 shadow-beauty relative overflow-hidden">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-[#5FA8C2]/30 text-[#A8D4E6] border border-[#7BB8D0]/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Resultado de Evaluación
+                    <span className="bg-[#7A9A8B]/20 text-[#A3B899] border border-[#7A9A8B]/30 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                      Ficha de Formulación Cosmética
                     </span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#FFFFFF]">
                     {report.meta.product_name}
                   </h2>
-                  <p className="text-[#A8D4E6]/80 text-xs sm:text-sm">
-                    {report.meta.active_ingredients_count} ingredientes activos principales identificados
+                  <p className="text-[#C4A482] text-xs sm:text-sm">
+                    {report.meta.active_ingredients_count} ingredientes botánicos y activos clave analizados
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleClear}
-                    className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-2 rounded-xl backdrop-blur-sm transition flex items-center gap-1.5 border border-white/10"
+                    className="bg-white/10 hover:bg-white/20 text-[#FDFBF7] text-xs font-semibold px-4 py-2.5 rounded-full backdrop-blur-sm transition-all flex items-center gap-1.5 border border-white/10 touch-target"
                   >
                     <X className="w-4 h-4" />
                     <span>Nueva Búsqueda</span>
@@ -586,66 +574,66 @@ export default function FormulaAuditor() {
               </div>
 
               {/* Decorative Blur Orbs */}
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#5FA8C2]/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#3A7A96]/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#7A9A8B]/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#E8D5D0]/10 rounded-full blur-3xl pointer-events-none" />
             </div>
 
-            {/* VIEW MODE TOGGLE SWITCH (Simple vs Scientific) */}
-            <div className="bg-[#FFFCF9] p-2 rounded-2xl border border-[#E8E0D8] shadow-sm flex items-center justify-center gap-2 max-w-md mx-auto">
+            {/* VIEW MODE TOGGLE SWITCH (Guía Sencilla vs Ficha Técnica) */}
+            <div className="bg-[#FFFFFF] p-1.5 rounded-full border border-[#EFECE6] shadow-beauty flex items-center justify-center gap-2 max-w-md mx-auto">
               <button
                 type="button"
                 onClick={() => setViewMode('SIMPLE')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 px-4 rounded-full text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer touch-target ${
                   viewMode === 'SIMPLE'
-                    ? 'bg-[#4A8BA8] text-white shadow-md'
-                    : 'text-[#6B6B6B] hover:bg-[#F5EDE6]'
+                    ? 'bg-[#7A9A8B] text-white shadow-xs'
+                    : 'text-[#6E6A66] hover:bg-[#FAF8F5]'
                 }`}
               >
-                <HeartHandshake className="w-4 h-4" />
-                <span>Modo Simple (Fácil)</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Guía Esencial</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setViewMode('SCIENTIFIC')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 px-4 rounded-full text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer touch-target ${
                   viewMode === 'SCIENTIFIC'
-                    ? 'bg-[#1A4D63] text-white shadow-md'
-                    : 'text-[#6B6B6B] hover:bg-[#F5EDE6]'
+                    ? 'bg-[#7A9A8B] text-white shadow-xs'
+                    : 'text-[#6E6A66] hover:bg-[#FAF8F5]'
                 }`}
               >
-                <Microscope className="w-4 h-4" />
-                <span>Modo Científico (INCI & Papers)</span>
+                <Layers className="w-3.5 h-3.5" />
+                <span>Ficha Técnica INCI</span>
               </button>
             </div>
 
             {/* ======================================================== */}
-            {/* VIEW 1: MODO SIMPLE (Para María y Sofía)                 */}
+            {/* VIEW 1: MODO SIMPLE (Guía Esencial de Belleza & Cuidado) */}
             {/* ======================================================== */}
             {viewMode === 'SIMPLE' && (
-              <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="space-y-6 animate-in fade-in duration-300">
                 {/* 3 Main Direct Action Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   
                   {/* Card 1: ¿Qué hace en tu piel? */}
-                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="w-9 h-9 rounded-xl bg-[#E8F4FA] text-[#2D6680] flex items-center justify-center font-bold">
-                        <Sparkles className="w-5 h-5 text-[#4A8BA8]" />
+                  <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty space-y-4 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#EFF5F1] text-[#4F6D60] border border-[#7A9A8B]/30 flex items-center justify-center font-bold">
+                        <Sparkles className="w-5 h-5 text-[#7A9A8B]" />
                       </div>
-                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
-                        1. ¿Para qué sirve?
+                      <h3 className="font-serif font-bold text-lg text-[#2B2A29]">
+                        1. Propósito & Beneficios
                       </h3>
-                      <p className="text-xs text-[#5A5A5A] leading-relaxed">
+                      <p className="text-xs text-[#6E6A66] leading-relaxed">
                         {report.ai_clinical_copilot.plain_language_summary}
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-[#F0E8E0]">
-                      <span className="text-[11px] font-bold text-[#8B8178] block mb-1">Beneficios principales:</span>
-                      <div className="flex flex-wrap gap-1">
+                    <div className="pt-3 border-t border-[#EFECE6]">
+                      <span className="text-[11px] font-bold text-[#9C9790] block mb-1.5 uppercase tracking-wider">Acción cosmética:</span>
+                      <div className="flex flex-wrap gap-1.5">
                         {report.clinical_indications.slice(0, 3).map((ind, i) => (
-                          <span key={i} className="text-[11px] bg-[#FAF7F4] border border-[#E8E0D8] text-[#3A7A96] font-semibold px-2 py-0.5 rounded-lg">
+                          <span key={i} className="text-[11px] bg-[#FAF8F5] border border-[#EFECE6] text-[#4F6D60] font-semibold px-2.5 py-1 rounded-full">
                             ✓ {ind.name}
                           </span>
                         ))}
@@ -654,82 +642,82 @@ export default function FormulaAuditor() {
                   </div>
 
                   {/* Card 2: ¿Cuándo y cómo ponértelo? */}
-                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+                  <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty space-y-4 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#F8EFEA] text-[#A46864] border border-[#E8D5D0] flex items-center justify-center font-bold">
                         {report.layering_and_usage.recommended_timing === 'PM' ? (
-                          <Moon className="w-5 h-5 text-indigo-500" />
+                          <Moon className="w-5 h-5 text-[#A46864]" />
                         ) : (
-                          <Sun className="w-5 h-5 text-amber-500" />
+                          <Sun className="w-5 h-5 text-[#C4A482]" />
                         )}
                       </div>
-                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
-                        2. ¿Cuándo aplicarlo?
+                      <h3 className="font-serif font-bold text-lg text-[#2B2A29]">
+                        2. Ritual de Aplicación
                       </h3>
-                      <div className="space-y-1.5">
-                        <div className="inline-flex items-center gap-1.5 font-bold text-sm text-[#2D2D2D] bg-[#FAF7F4] px-2.5 py-1 rounded-xl border border-[#E8E0D8]">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-1.5 font-bold text-xs text-[#2B2A29] bg-[#FAF8F5] px-3 py-1 rounded-full border border-[#EFECE6]">
                           <span>Momento:</span>
-                          <span className="text-[#3A7A96]">
+                          <span className="text-[#7A9A8B]">
                             {report.layering_and_usage.recommended_timing === 'AM' && '☀️ Por las Mañanas'}
                             {report.layering_and_usage.recommended_timing === 'PM' && '🌙 Solo por las Noches'}
                             {report.layering_and_usage.recommended_timing === 'BOTH' && '☀️/🌙 Mañanas y Noches'}
                           </span>
                         </div>
-                        <p className="text-xs text-[#5A5A5A] leading-relaxed">
-                          <strong>Orden:</strong> {report.layering_and_usage.layering_rule}
+                        <p className="text-xs text-[#6E6A66] leading-relaxed">
+                          <strong>Orden recomendado:</strong> {report.layering_and_usage.layering_rule}
                         </p>
                       </div>
                     </div>
 
                     {/* Sunscreen indicator */}
-                    <div className="pt-3 border-t border-[#F0E8E0]">
+                    <div className="pt-3 border-t border-[#EFECE6]">
                       {report.layering_and_usage.requires_sunscreen ? (
-                        <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-800 font-semibold flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span>¡Obligatorio usar protector solar FPS 50+ durante el día!</span>
+                        <div className="p-2.5 bg-[#F8EFEA] border border-[#E8D5D0] rounded-2xl text-[11px] text-[#A46864] font-semibold flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-[#A46864] shrink-0" />
+                          <span>Uso imprescindible de protector solar FPS 50+ de día.</span>
                         </div>
                       ) : (
-                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 font-semibold flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Uso diurno seguro con protector solar habitual.</span>
+                        <div className="p-2.5 bg-[#EFF5F1] border border-[#7A9A8B]/30 rounded-2xl text-[11px] text-[#4F6D60] font-semibold flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-[#7A9A8B] shrink-0" />
+                          <span>Uso diurno seguro con tu protector solar habitual.</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Card 3: ¿Es seguro o hay riesgos? */}
-                  <div className="bg-[#FFFCF9] rounded-3xl p-5 border border-[#E8E0D8] shadow-sm space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
-                        <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty space-y-4 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#FAF8F5] text-[#7A9A8B] border border-[#EFECE6] flex items-center justify-center font-bold">
+                        <ShieldCheck className="w-5 h-5 text-[#7A9A8B]" />
                       </div>
-                      <h3 className="font-extrabold text-base text-[#2D2D2D]">
-                        3. Seguridad & Precauciones
+                      <h3 className="font-serif font-bold text-lg text-[#2B2A29]">
+                        3. Armonía & Precauciones
                       </h3>
                       
                       {report.chemical_conflicts.length > 0 ? (
                         <div className="space-y-1.5">
-                          <span className="text-[11px] font-bold text-rose-700 block">
-                            ⚠️ No mezcles con:
+                          <span className="text-[11px] font-bold text-[#A46864] block">
+                            ⚠️ Incompatibilidades de capa:
                           </span>
                           {report.chemical_conflicts.map((c, idx) => (
-                            <p key={idx} className="text-xs text-rose-800 bg-rose-50 p-2 rounded-xl border border-rose-200">
-                              Evita usarlo junto con <strong>{c.ingredient_b}</strong> en la misma aplicación para no irritar tu piel.
+                            <p key={idx} className="text-xs text-[#A46864] bg-[#F8EFEA] p-2.5 rounded-xl border border-[#E8D5D0]">
+                              No combinar con <strong>{c.ingredient_b}</strong> en la misma rutina para evitar irritaciones.
                             </p>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                          ✓ Fórmula compatible y sin incompatibilidades severas conocidas.
+                        <p className="text-xs text-[#4F6D60] bg-[#EFF5F1] p-2.5 rounded-2xl border border-[#7A9A8B]/20">
+                          ✓ Fórmula equilibrada y compatible sin conflictos conocidos.
                         </p>
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-[#F0E8E0] text-[11px] text-[#8B8178]">
+                    <div className="pt-3 border-t border-[#EFECE6] text-[11px] text-[#9C9790]">
                       {report.ai_clinical_copilot.barrier_warning ? (
-                        <span className="text-amber-800 font-medium">⚠️ {report.ai_clinical_copilot.barrier_warning}</span>
+                        <span className="text-[#C4A482] font-semibold">⚠️ {report.ai_clinical_copilot.barrier_warning}</span>
                       ) : (
-                        <span>💡 Aplica sobre el rostro limpio y seco.</span>
+                        <span>💡 Aplica sobre el rostro limpio y ligeramente húmedo o seco.</span>
                       )}
                     </div>
                   </div>
@@ -740,9 +728,9 @@ export default function FormulaAuditor() {
                   <button
                     type="button"
                     onClick={() => setViewMode('SCIENTIFIC')}
-                    className="text-xs text-[#3A7A96] hover:text-[#1A4D63] hover:underline font-bold inline-flex items-center gap-1"
+                    className="text-xs text-[#7A9A8B] hover:text-[#4F6D60] font-bold inline-flex items-center gap-1.5 touch-target hover:underline"
                   >
-                    <span>¿Quieres ver la lista química INCI completa y estudios médicos en PubMed?</span>
+                    <span>Consultar desglose técnico INCI y respaldo de literatura científica</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
