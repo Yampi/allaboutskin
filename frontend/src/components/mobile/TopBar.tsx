@@ -84,7 +84,7 @@ export default function TopBar({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FA89B] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4A6B5B]"></span>
               </span>
-              <span>TEWL {userProfile?.tewlScore || '8.2 g/h/m²'}</span>
+              <span>{userProfile?.tewlScore && userProfile.tewlScore !== '--' ? `TEWL ${userProfile.tewlScore}` : 'Diagnóstico Cutáneo'}</span>
             </button>
 
             {/* CTA Píldora "Evaluar Producto" (#8FA89B) */}
@@ -104,17 +104,23 @@ export default function TopBar({
             >
               <div className="text-right hidden xl:block">
                 <span className="text-[12px] font-semibold text-[#2D2825] block leading-tight">
-                  {userProfile?.name || 'Lucía G.'}
+                  {userProfile?.name || 'Mi Perfil'}
                 </span>
                 <span className="text-[10px] text-[#4A6B5B] font-medium block">
-                  {userProfile?.skinType || 'Piel Mixta'}
+                  {userProfile?.skinType || 'Sin calibrar'}
                 </span>
               </div>
-              <img
-                src={userProfile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                alt={userProfile?.name || 'Usuario'}
-                className="w-8 h-8 rounded-full object-cover border border-white shadow-xs group-hover:scale-105 transition"
-              />
+              {userProfile?.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl}
+                  alt={userProfile?.name || 'Usuario'}
+                  className="w-8 h-8 rounded-full object-cover border border-white shadow-xs group-hover:scale-105 transition"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#EBF1EE] border border-white shadow-xs flex items-center justify-center text-[#4A6B5B] group-hover:scale-105 transition">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
             </button>
           </div>
         </div>
@@ -144,7 +150,7 @@ export default function TopBar({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FA89B] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4A6B5B]"></span>
               </span>
-              <span>Barrera Óptima</span>
+              <span>{userProfile?.barrierStatus && userProfile.barrierStatus !== 'Sin evaluar' ? userProfile.barrierStatus : 'Diagnóstico'}</span>
             </button>
 
             <button
@@ -152,11 +158,15 @@ export default function TopBar({
               className="w-9 h-9 rounded-full bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-center text-[#4A6B5B] hover:bg-[#EBF1EE] transition cursor-pointer"
               aria-label="Perfil"
             >
-              <img
-                src={userProfile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                alt={userProfile?.name || 'Usuario'}
-                className="w-7 h-7 rounded-full object-cover"
-              />
+              {userProfile?.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl}
+                  alt={userProfile?.name || 'Usuario'}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-4 h-4 text-[#4A6B5B]" />
+              )}
             </button>
           </div>
         </div>

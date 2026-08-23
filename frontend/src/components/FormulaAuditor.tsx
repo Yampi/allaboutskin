@@ -54,6 +54,7 @@ import {
   sendCopilotMessage,
   scanImageWithGeminiVision
 } from '@/lib/api';
+import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import type { FaceSkinAnalysis } from '@/lib/gemini';
 import { UserRoutineProduct } from '@/types/skinCycling';
 import { 
@@ -372,48 +373,48 @@ export default function FormulaAuditor({ hideSearchUI = false }: { hideSearchUI?
 
     try {
       if (ocrEngine === 'GEMINI_VISION') {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            const base64Data = reader.result as string;
-            setOcrStatusText('Analizando cosmético o rostro...');
-            const scanData = await scanImageWithGeminiVision(base64Data, file.type || 'image/jpeg');
+        try {
+          setOcrProgress(0.25);
+          setOcrStatusText('Optimizando resolución de imagen...');
+          const optimized = await optimizeImageForUpload(file, { maxDimension: 1400, quality: 0.82 });
+          
+          setOcrProgress(0.5);
+          setOcrStatusText('Analizando cosmético o rostro...');
+          const scanData = await scanImageWithGeminiVision(optimized.base64, optimized.mimeType);
 
-            if (scanData.classification === 'SKINCARE_PRODUCT') {
-              const detectedName = scanData.productName ? `${scanData.brand ? `${scanData.brand} ` : ''}${scanData.productName}` : '';
-              const detectedInci = scanData.inciText || scanData.rawDetectedText || '';
-              const combined = detectedName ? `${detectedName}: ${detectedInci}` : detectedInci;
-              
-              setEditableOcrText(combined);
-              setOcrResult({
-                cleanedText: combined,
-                detectedProductName: detectedName || undefined,
-                confidence: scanData.confidence || 0.95,
-                rawText: scanData.rawDetectedText || '',
-                labelType: 'INCI_BACK_PANEL',
-                isCosmeticValid: true,
-              } as any);
-            } else if (scanData.classification === 'HUMAN_FACE') {
-              setIsOcrModalOpen(false);
-              setFaceSkinResult(scanData.faceAnalysis);
-              setIsFaceAnalysisModalOpen(true);
-            } else {
-              // INVALID
-              setIsScanRejected(true);
-              setScanRejectionMessage(
-                scanData.userFriendlyMessage || 
-                'No hemos detectado un producto de skincare ni el rostro de una persona en la foto. Asegúrate de enfocar la etiqueta de tu cosmético o tomar una selfie con buena luz.'
-              );
-            }
-          } catch (err: any) {
-            console.warn('Error en visión IA:', err);
+          if (scanData.classification === 'SKINCARE_PRODUCT') {
+            const detectedName = scanData.productName ? `${scanData.brand ? `${scanData.brand} ` : ''}${scanData.productName}` : '';
+            const detectedInci = scanData.inciText || scanData.rawDetectedText || '';
+            const combined = detectedName ? `${detectedName}: ${detectedInci}` : detectedInci;
+            
+            setEditableOcrText(combined);
+            setOcrResult({
+              cleanedText: combined,
+              detectedProductName: detectedName || undefined,
+              confidence: scanData.confidence || 0.95,
+              rawText: scanData.rawDetectedText || '',
+              labelType: 'INCI_BACK_PANEL',
+              isCosmeticValid: true,
+            } as any);
+          } else if (scanData.classification === 'HUMAN_FACE') {
+            setIsOcrModalOpen(false);
+            setFaceSkinResult(scanData.faceAnalysis);
+            setIsFaceAnalysisModalOpen(true);
+          } else {
+            // INVALID
             setIsScanRejected(true);
-            setScanRejectionMessage(err?.message || 'No pudimos procesar la imagen con la IA. Verifica tu conexión o intenta con otra foto.');
-          } finally {
-            setIsOcrScanning(false);
+            setScanRejectionMessage(
+              scanData.userFriendlyMessage || 
+              'No hemos detectado un producto de skincare ni el rostro de una persona en la foto. Asegúrate de enfocar la etiqueta de tu cosmético o tomar una selfie con buena luz.'
+            );
           }
-        };
-        reader.readAsDataURL(file);
+        } catch (err: any) {
+          console.warn('Error en visión IA:', err);
+          setIsScanRejected(true);
+          setScanRejectionMessage(err?.message || 'No pudimos procesar la imagen con la IA. Verifica tu conexión o intenta con otra foto.');
+        } finally {
+          setIsOcrScanning(false);
+        }
       } else {
         await runLocalOcr(file);
       }

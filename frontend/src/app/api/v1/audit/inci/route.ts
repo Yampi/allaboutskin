@@ -807,34 +807,35 @@ const TAXONOMY: IngredientTaxonomy[] = [
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { inci_text, product_name, price, currency } = body;
+    const { inci_text, formula, product_name, price, currency } = body;
+    const rawInci = (inci_text || formula || '').toString().trim();
 
-    if (!inci_text || typeof inci_text !== 'string') {
-      return NextResponse.json({ error: 'inci_text es requerido' }, { status: 400 });
+    if (!rawInci) {
+      return NextResponse.json({ error: 'inci_text o formula es requerido' }, { status: 400 });
     }
 
     // 1. Universal Multilingual Tokenizer
     // Handles commas, semicolons, bullets, plus (+), ampersand (&), " y ", and newlines
-    let normalizedInput = inci_text
+    let normalizedInput = rawInci
       .replace(/^(formula|f[oó]rmula|ingredientes|ingr[eé]dients|inci|composici[oó]n|contiene|contains|serum\s*facial|s[eé]rum|crema\s*facial|crema|gel\s*facial|gel|t[oó]nico|loci[oó]n|fluido|ampolla|booster)[\s:\-]*/i, '')
-      .replace(/\(.*?\)/g, match => match.replace(/[,;+&]/g, ' ')); // normalize separators inside parenthesis
+      .replace(/\(.*?\)/g, (match: string) => match.replace(/[,;+&]/g, ' ')); // normalize separators inside parenthesis
 
     const rawTokens = normalizedInput
       .split(/[,;\n\r•·|+\/&]+|\s+y\s+|\s+with\s+|\s+con\s+/i)
-      .map(t => {
+      .map((t: string) => {
         let token = t.trim().replace(/^[-*•\s]+|[-*•\s]+$/g, '');
         // Clean individual token formatting prefixes if present (e.g. "Serum Facial Niacinamida" -> "Niacinamida")
         token = token.replace(/^(serum\s*facial|s[eé]rum|crema\s*facial|crema|gel\s*facial|gel|t[oó]nico|loci[oó]n|fluido|ampolla|booster)\s+/i, '').trim();
         return token;
       })
-      .filter(t => t.length >= 2);
+      .filter((t: string) => t.length >= 2);
 
     const matchedTaxonomies: IngredientTaxonomy[] = [];
     const breakdown: any[] = [];
     const unmatchedTokens: string[] = [];
 
     // 2. Deep Matching Algorithm with Synonym & Fuzzy Fallbacks
-    rawTokens.forEach((token, idx) => {
+    rawTokens.forEach((token: string, idx: number) => {
       // Normalize token
       const cleanToken = token
         .toUpperCase()
@@ -1036,7 +1037,7 @@ export async function POST(request: Request) {
     const maxIrritation = Math.max(...breakdown.map(b => b.irritation_rating), 0);
 
     // 7. AI Skincare Copilot & Physical Format Engine
-    const fullText = `${product_name || ''} ${inci_text}`.toLowerCase();
+    const fullText = `${product_name || ''} ${rawInci}`.toLowerCase();
     const isWipe = /toalla|toallita|wipe|towel|desmaquillante/i.test(fullText);
     const isPad = /pad|disco|peeling pad|exfoliating pad/i.test(fullText);
     const isPatch = /parche|patch|hydrocolloid|hidrocoloide/i.test(fullText);

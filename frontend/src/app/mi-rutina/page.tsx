@@ -49,7 +49,7 @@ export default function MyRoutineDashboardPage() {
   const [products, setProducts] = useState<UserRoutineProduct[]>([]);
   const [dailyRoutine, setDailyRoutine] = useState<UserDailyRoutine | null>(null);
   const [activeTab, setActiveTab] = useState<'WEEKLY' | 'DAILY'>('WEEKLY');
-  const [streakCount, setStreakCount] = useState<number>(5);
+  const [streakCount, setStreakCount] = useState<number>(0);
   const [isAmDone, setIsAmDone] = useState<boolean>(false);
   const [isPmDone, setIsPmDone] = useState<boolean>(false);
 
@@ -89,41 +89,10 @@ export default function MyRoutineDashboardPage() {
     }
 
     const storedProducts = getStoredRoutineProducts();
-    if (storedProducts.length > 0) {
+    if (storedProducts && storedProducts.length > 0) {
       setProducts(storedProducts);
     } else {
-      const starterProducts: UserRoutineProduct[] = [
-        {
-          id: '1',
-          phaseId: 1,
-          productName: '2% BHA Liquid Exfoliant',
-          brand: 'Paula’s Choice',
-          category: 'EXFOLIANT',
-        },
-        {
-          id: '2',
-          phaseId: 2,
-          productName: 'A-Game 5 (Retinal 0.05%)',
-          brand: 'Geek & Gorgeous',
-          category: 'RETINOID',
-        },
-        {
-          id: '3',
-          phaseId: 3,
-          productName: 'Cicaplast B5+ Baume',
-          brand: 'La Roche-Posay',
-          category: 'MOISTURIZER',
-        },
-        {
-          id: '4',
-          phaseId: 0,
-          productName: 'Anthelios UVMune 400 FPS 50+',
-          brand: 'La Roche-Posay',
-          category: 'SPF',
-        },
-      ];
-      setProducts(starterProducts);
-      setStoredRoutineProducts(starterProducts);
+      setProducts([]);
     }
 
     const savedDaily = getSavedDailyRoutine();

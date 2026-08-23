@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, inci_text, skin_type, concerns, product_name, question, history } = body;
+    const { action, inci_text, formula, skin_type, concerns, product_name, question, history } = body;
+    const inputInci = inci_text || formula || '';
 
     // Action 1: Q&A Chat with Copilot
     if (action === 'chat') {
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'La pregunta es obligatoria o inválida.' }, { status: 400 });
       }
 
-      const sanitizedInci = sanitizeInci(inci_text || '');
+      const sanitizedInci = sanitizeInci(inputInci);
       const sanitizedProductName = sanitizeText(product_name || 'Producto Cosmético', 120);
       const sanitizedSkinType = sanitizeText(skin_type || 'COMBINATION', 30);
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Action 2: Generate Comprehensive Clinical AI Diagnosis
-    const sanitizedInci = sanitizeInci(inci_text || '');
+    const sanitizedInci = sanitizeInci(inputInci);
     if (!sanitizedInci) {
       return NextResponse.json({ error: 'La lista de ingredientes (inci_text) es requerida.' }, { status: 400 });
     }

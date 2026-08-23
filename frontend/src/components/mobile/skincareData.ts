@@ -1,18 +1,18 @@
 import { ActiveIngredient, ProductShelfItem, CyclePhaseData, UserProfile, InciScanResult } from './types';
 
 export const initialUserProfile: UserProfile = {
-  name: 'Lucía G.',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-  skinType: 'Piel Mixta',
-  secondaryBiotype: 'Sensible',
-  conditions: ['Zona T Reactiva', 'Deshidratación Leve', 'Sensibilidad a Fragancias'],
-  barrierStatus: 'Saludable y Óptima',
-  barrierScore: 94,
-  tewlScore: '8.2 g/h/m²',
-  hydrationLevel: '89%',
-  cycleStreakDays: 18,
-  activeNight: 3,
-  totalCyclesCompleted: 4
+  name: '',
+  avatarUrl: '',
+  skinType: 'Sin calibrar',
+  secondaryBiotype: 'No definido',
+  conditions: [],
+  barrierStatus: 'Sin evaluar',
+  barrierScore: 0,
+  tewlScore: '--',
+  hydrationLevel: '--',
+  cycleStreakDays: 0,
+  activeNight: 1,
+  totalCyclesCompleted: 0
 };
 
 export const activeIngredientsList: ActiveIngredient[] = [
@@ -366,7 +366,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Limpieza',
         timing: '1 min masaje',
         instruction: 'Aplica sobre piel húmeda con movimientos circulares suaves. Seca a toques suaves con toalla limpia.',
-        completed: true
+        completed: false
       },
       {
         id: 'step-1-2',
@@ -376,7 +376,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Exfoliante',
         timing: 'Esperar 15 minutos',
         instruction: 'Aplica 4 gotas con los dedos o pad de algodón sobre piel 100% seca. Evita el contorno de ojos directo.',
-        completed: true,
+        completed: false,
         warningNote: 'Sensación leve de cosquilleo normal. No enjuagar.'
       },
       {
@@ -410,7 +410,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Limpieza',
         timing: '2 min',
         instruction: 'Remueve impurezas y protector solar del día sin alterar el manto ácido epidérmico.',
-        completed: true
+        completed: false
       },
       {
         id: 'step-2-2',
@@ -420,7 +420,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Retinoide',
         timing: 'Aplicar sobre piel seca',
         instruction: 'Distribuye una cantidad del tamaño de un guisante en frente, mejillas y mentón evitando labios y comisuras.',
-        completed: true,
+        completed: false,
         warningNote: 'Método Sándwich opcional si sientes la piel reactiva.'
       },
       {
@@ -454,7 +454,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Limpieza',
         timing: '1 min',
         instruction: 'Limpia delicadamente con agua tibia. Evita frotar agresivamente.',
-        completed: true
+        completed: false
       },
       {
         id: 'step-3-2',
@@ -464,7 +464,7 @@ export const cyclePhasesMatrix: CyclePhaseData[] = [
         category: 'Tratamiento',
         timing: 'Sobre piel ligeramente húmeda',
         instruction: 'Aplica 4 gotas presionando con las palmas de las manos para saturar la capa hidrofílica.',
-        completed: true
+        completed: false
       },
       {
         id: 'step-3-3',

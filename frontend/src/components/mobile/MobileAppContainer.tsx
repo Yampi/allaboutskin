@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NavTab, UserProfile, ActiveIngredient, ProductShelfItem } from './types';
-import { initialUserProfile, activeIngredientsList, productShelfList } from './skincareData';
+import { initialUserProfile, activeIngredientsList } from './skincareData';
 import TopBar from './TopBar';
 import BottomNavBar from './BottomNavBar';
 import HomeScreen from './HomeScreen';
@@ -12,7 +12,8 @@ import LibraryScreen from './LibraryScreen';
 import IngredientDetailModal from './IngredientDetailModal';
 import MicroscopyModal from './MicroscopyModal';
 import ProfileModal from './ProfileModal';
-import { Sparkles, ShieldCheck, SlidersHorizontal, CheckCircle2, Award } from 'lucide-react';
+import { Sparkles, ShieldCheck, SlidersHorizontal, CheckCircle2, Award, User } from 'lucide-react';
+import { getCurrentUser } from '@/lib/api';
 
 const STORAGE_KEY_PROFILE = 'allabout_skin_user_profile_v2';
 const STORAGE_KEY_SHELF = 'allabout_skin_shelf_items_v2';
@@ -20,7 +21,7 @@ const STORAGE_KEY_SHELF = 'allabout_skin_shelf_items_v2';
 export default function MobileAppContainer() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
-  const [shelfItems, setShelfItems] = useState<ProductShelfItem[]>(productShelfList);
+  const [shelfItems, setShelfItems] = useState<ProductShelfItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Modals
@@ -32,14 +33,29 @@ export default function MobileAppContainer() {
   // Load real user state from localStorage on client mount
   useEffect(() => {
     try {
+      const authUser = getCurrentUser();
       const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
+      
       if (savedProfile) {
-        setUserProfile(JSON.parse(savedProfile));
+        const parsed = JSON.parse(savedProfile);
+        if (authUser && !parsed.name) {
+          parsed.name = authUser.name || authUser.email.split('@')[0];
+        }
+        setUserProfile(parsed);
+      } else if (authUser) {
+        setUserProfile({
+          ...initialUserProfile,
+          name: authUser.name || authUser.email.split('@')[0],
+        });
+      } else {
+        setUserProfile(initialUserProfile);
       }
 
       const savedShelf = localStorage.getItem(STORAGE_KEY_SHELF);
       if (savedShelf) {
         setShelfItems(JSON.parse(savedShelf));
+      } else {
+        setShelfItems([]);
       }
     } catch (e) {
       console.warn('Could not read from localStorage:', e);
@@ -153,17 +169,25 @@ export default function MobileAppContainer() {
             <div className="card-sand p-6 border border-[#E2D9CD] rounded-[24px] shadow-diffuse flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <img
-                    src={userProfile.avatarUrl}
-                    alt={userProfile.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white shadow-xs"
-                  />
-                  <div
-                    className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#4A6B5B] rounded-full border-2 border-[#FAF8F5] flex items-center justify-center text-white text-[10px]"
-                    title="Validación Activa"
-                  >
-                    <CheckCircle2 className="w-3 h-3" />
-                  </div>
+                  {userProfile.avatarUrl ? (
+                    <img
+                      src={userProfile.avatarUrl}
+                      alt={userProfile.name || 'Usuario'}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#EBF1EE] border-2 border-white shadow-xs flex items-center justify-center text-[#4A6B5B]">
+                      <User className="w-8 h-8 sm:w-10 sm:h-10" />
+                    </div>
+                  )}
+                  {userProfile.name && (
+                    <div
+                      className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#4A6B5B] rounded-full border-2 border-[#FAF8F5] flex items-center justify-center text-white text-[10px]"
+                      title="Validación Activa"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -171,10 +195,10 @@ export default function MobileAppContainer() {
                     Expediente Dermatológico
                   </span>
                   <h2 className="font-serif text-[24px] sm:text-[28px] font-semibold text-[#2D2825] leading-tight">
-                    {userProfile.name}
+                    {userProfile.name || 'Sin registrar'}
                   </h2>
                   <p className="text-[13px] text-[#7E756F] mt-0.5">
-                    Biotipo: <strong className="text-[#2D2825]">{userProfile.skinType}</strong> • {userProfile.secondaryBiotype}
+                    Biotipo: <strong className="text-[#2D2825]">{userProfile.skinType || 'Sin calibrar'}</strong> • {userProfile.secondaryBiotype || 'No definido'}
                   </p>
                 </div>
               </div>
@@ -185,7 +209,7 @@ export default function MobileAppContainer() {
                     Racha de Ciclado
                   </span>
                   <span className="font-serif text-[18px] font-bold text-[#4A6B5B]">
-                    {userProfile.cycleStreakDays} Días
+                    {userProfile.cycleStreakDays || 0} Días
                   </span>
                 </div>
                 <div className="px-4 py-2 rounded-[16px] bg-white border border-[#E2D9CD] text-center">
@@ -193,7 +217,7 @@ export default function MobileAppContainer() {
                     TEWL Cutáneo
                   </span>
                   <span className="font-serif text-[18px] font-bold text-[#4A6B5B]">
-                    {userProfile.tewlScore}
+                    {userProfile.tewlScore || '--'}
                   </span>
                 </div>
               </div>

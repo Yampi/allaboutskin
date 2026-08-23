@@ -21,10 +21,11 @@ import {
   Flame,
   Feather,
   Sun,
-  Activity
+  Activity,
+  User
 } from 'lucide-react';
 import { UserProfile, ProductShelfItem, ActiveIngredient, NavTab } from './types';
-import { productShelfList, activeIngredientsList } from './skincareData';
+import { activeIngredientsList, cyclePhasesMatrix } from './skincareData';
 
 interface HomeScreenProps {
   userProfile: UserProfile;
@@ -43,16 +44,13 @@ export default function HomeScreen({
   onOpenMicroscopyModal,
   onSelectIngredient,
 }: HomeScreenProps) {
-  const currentShelf = shelfItems && shelfItems.length > 0 ? shelfItems : productShelfList;
+  const currentShelf = shelfItems || [];
   const [quickSearchInci, setQuickSearchInci] = useState('');
 
-  // Key active chips for Night 3
-  const activeChips = [
-    { name: 'Ceramidas NP/AP/EOP', id: 'ceramidas' },
-    { name: 'Centella Asiática', id: 'centella-asiatica' },
-    { name: 'Ácido Hialurónico', id: 'acido-hialuronico' },
-    { name: 'Pantenol B5', id: 'pantenol' },
-  ];
+  const activeNightNumber = userProfile.activeNight || 1;
+  const currentPhaseData = cyclePhasesMatrix[activeNightNumber - 1] || cyclePhasesMatrix[0];
+
+  const hasConfiguredSkinType = userProfile.skinType && userProfile.skinType !== 'Sin calibrar';
 
   // 4 Facial Biotypes for the desktop 4-column grid
   const facialBiotypes = [
@@ -63,7 +61,7 @@ export default function HomeScreen({
       heroActives: ['Niacinamida 10%', 'Zinc PCA 1%', 'Ácido Salicílico 2%'],
       icon: Droplets,
       accentColor: '#8FA89B',
-      isCurrent: userProfile.skinType.includes('Mixta') || userProfile.skinType.includes('Grasa'),
+      isCurrent: hasConfiguredSkinType && (userProfile.skinType.includes('Mixta') || userProfile.skinType.includes('Grasa')),
     },
     {
       id: 'seca-deshidratada',
@@ -72,7 +70,7 @@ export default function HomeScreen({
       heroActives: ['Ceramidas NP/AP/EOP', 'Ácido Hialurónico', 'Escualano'],
       icon: Feather,
       accentColor: '#4A6B5B',
-      isCurrent: userProfile.skinType.includes('Seca'),
+      isCurrent: hasConfiguredSkinType && userProfile.skinType.includes('Seca'),
     },
     {
       id: 'sensible-reactiva',
@@ -81,7 +79,7 @@ export default function HomeScreen({
       heroActives: ['Centella Asiática (Cica)', 'Pantenol B5', 'Alantoína'],
       icon: Activity,
       accentColor: '#D8A899',
-      isCurrent: userProfile.skinType.includes('Sensible') || userProfile.conditions.includes('Sensible'),
+      isCurrent: hasConfiguredSkinType && (userProfile.skinType.includes('Sensible') || (userProfile.conditions && userProfile.conditions.includes('Sensible'))),
     },
     {
       id: 'madura-fotoenvejecida',
@@ -90,7 +88,7 @@ export default function HomeScreen({
       heroActives: ['Retinol 0.3%', 'Vitamina C Pura', 'Ácido Glicólico'],
       icon: Sun,
       accentColor: '#DFCAAC',
-      isCurrent: userProfile.conditions.includes('Foto-Envejecimiento'),
+      isCurrent: userProfile.conditions && userProfile.conditions.includes('Foto-Envejecimiento'),
     },
   ];
 
@@ -261,17 +259,25 @@ export default function HomeScreen({
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className="relative">
-                <img
-                  src={userProfile.avatarUrl}
-                  alt={userProfile.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs"
-                />
-                <div
-                  className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#4A6B5B] rounded-full border-2 border-[#FAF8F5] flex items-center justify-center text-white text-[8px]"
-                  title="Validación Dermatológica Activa"
-                >
-                  <CheckCircle2 className="w-2.5 h-2.5" />
-                </div>
+                {userProfile.avatarUrl ? (
+                  <img
+                    src={userProfile.avatarUrl}
+                    alt={userProfile.name || 'Usuario'}
+                    className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-[#EBF1EE] border-2 border-white shadow-xs flex items-center justify-center text-[#4A6B5B]">
+                    <User className="w-7 h-7" />
+                  </div>
+                )}
+                {userProfile.name && (
+                  <div
+                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#4A6B5B] rounded-full border-2 border-[#FAF8F5] flex items-center justify-center text-white text-[8px]"
+                    title="Validación Dermatológica Activa"
+                  >
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -279,10 +285,10 @@ export default function HomeScreen({
                   Perfil de Ciclado Cutáneo
                 </span>
                 <h3 className="font-serif text-[20px] font-semibold text-[#2D2825] leading-tight">
-                  {userProfile.name}
+                  {userProfile.name || 'Sin registrar'}
                 </h3>
                 <p className="text-[12px] font-sans text-[#7E756F] mt-0.5">
-                  Biotipo: <strong className="text-[#2D2825]">{userProfile.skinType}</strong> • {userProfile.secondaryBiotype}
+                  Biotipo: <strong className="text-[#2D2825]">{userProfile.skinType || 'Sin calibrar'}</strong> • {userProfile.secondaryBiotype || 'No definido'}
                 </p>
               </div>
             </div>
@@ -300,13 +306,13 @@ export default function HomeScreen({
             <div className="p-2.5 rounded-[14px] bg-white/70">
               <span className="text-[#7E756F] text-[11px] block">Racha Activa</span>
               <span className="font-serif text-[16px] font-bold text-[#4A6B5B]">
-                {userProfile.cycleStreakDays} Días Consecutivos
+                {userProfile.cycleStreakDays || 0} Días Consecutivos
               </span>
             </div>
             <div className="p-2.5 rounded-[14px] bg-white/70">
               <span className="text-[#7E756F] text-[11px] block">Adherencia al Protocolo</span>
               <span className="font-serif text-[16px] font-bold text-[#4A6B5B]">
-                94% (4/4 Fases)
+                {userProfile.cycleStreakDays > 0 ? '94% (4/4 Fases)' : '0% (Sin iniciar)'}
               </span>
             </div>
           </div>
@@ -323,10 +329,10 @@ export default function HomeScreen({
                 ESTADO DE BARRERA EPIDÉRMICA
               </span>
               <h3 className="font-serif text-[20px] font-semibold text-[#2D2825] mt-1">
-                {userProfile.barrierStatus}
+                {userProfile.barrierStatus || 'Sin evaluar'}
               </h3>
               <p className="text-[12px] font-sans text-[#7E756F] mt-0.5">
-                Pérdida Transepidérmica (TEWL): <strong className="text-[#4A6B5B]">{userProfile.tewlScore}</strong>
+                Pérdida Transepidérmica (TEWL): <strong className="text-[#4A6B5B]">{userProfile.tewlScore || '--'}</strong>
               </p>
             </div>
             <div className="w-10 h-10 rounded-full bg-[#EBF1EE] flex items-center justify-center text-[#4A6B5B] group-hover:scale-105 transition">
@@ -360,20 +366,20 @@ export default function HomeScreen({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="self-start px-3 py-1 rounded-full bg-[#8FA89B] text-white text-[11px] font-sans font-semibold uppercase tracking-wider shadow-xs">
-            Fase 3 • Esta Noche
+            Fase {currentPhaseData.phaseNumber} • Esta Noche
           </span>
           <span className="text-[12px] font-sans font-semibold text-[#7E756F] flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-[#4A6B5B]" />
-            Día {userProfile.activeNight} de 4 en Curso
+            Día {activeNightNumber} de 4 en Curso
           </span>
         </div>
 
         <h3 className="font-serif text-[21px] sm:text-[24px] font-semibold text-[#2D2825] mt-2 leading-snug">
-          Noche 3: Recuperación de Barrera Cutánea
+          {currentPhaseData.nightName}: {currentPhaseData.phaseTitle}
         </h3>
 
         <p className="text-[13.5px] font-sans text-[#4A433E] mt-1.5 leading-relaxed max-w-3xl">
-          Fase reparadora con lípidos fisiológicos (Ceramidas NP/AP/EOP) y activos calmantes (Centella Asiática, Pantenol B5) para restaurar la película hidrolipídica tras la noche de retinoides.
+          {currentPhaseData.clinicalGoal}
         </p>
 
         {/* Chips en píldora con activos clave */}
@@ -382,13 +388,19 @@ export default function HomeScreen({
             Activos Asignados para Hoy (Toca para ver ficha):
           </span>
           <div className="flex flex-wrap gap-2">
-            {activeChips.map((chip) => (
+            {currentPhaseData.keyActives.map((act, i) => (
               <button
-                key={chip.id}
-                onClick={() => handleChipClick(chip.id)}
+                key={i}
+                onClick={() => {
+                  const slug = act.toLowerCase().includes('niacin') ? 'niacinamida' :
+                               act.toLowerCase().includes('retin') ? 'retinol' :
+                               act.toLowerCase().includes('salic') ? 'acido-salicilico' :
+                               act.toLowerCase().includes('centella') ? 'centella-asiatica' : 'ceramidas';
+                  handleChipClick(slug);
+                }}
                 className="px-3.5 py-1.5 rounded-full bg-[#F2ECE4] hover:bg-[#EBF1EE] hover:border-[#8FA89B] border border-[#E2D9CD] text-[#2D2825] text-[12px] font-medium transition cursor-pointer flex items-center gap-1.5"
               >
-                <span>{chip.name}</span>
+                <span>{act}</span>
                 <Sparkles className="w-3 h-3 text-[#4A6B5B]" />
               </button>
             ))}
@@ -398,7 +410,7 @@ export default function HomeScreen({
         {/* CTA Button */}
         <div className="mt-5 pt-4 border-t border-[#E8E1D7] flex items-center justify-between">
           <span className="text-[12.5px] text-[#7E756F]">
-            4 Pasos guiados para la noche de hoy
+            {currentPhaseData.steps.length} Pasos guiados para la noche de hoy
           </span>
           <button
             onClick={() => onChangeTab('cycle')}
@@ -426,58 +438,82 @@ export default function HomeScreen({
 
         {/* Responsive Horizontal / Multi-column Carousel Shelf */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {currentShelf.map((product) => (
-            <div
-              key={product.id}
-              className="card-white p-3.5 border border-[#E8E1D7] rounded-[18px] flex flex-col justify-between group hover:border-[#8FA89B] hover:shadow-diffuse transition"
-            >
-              <div>
-                <div className="relative h-28 w-full rounded-[14px] overflow-hidden bg-[#FAF8F5] border border-[#E2D9CD] mb-2.5">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs text-[#4A6B5B] text-[9.5px] font-bold">
-                    {product.inciScore}% INCI
-                  </span>
+          {currentShelf.length === 0 ? (
+            <div className="col-span-full card-sand p-6 sm:p-8 border border-[#E2D9CD] rounded-[20px] text-center space-y-2.5">
+              <div className="w-12 h-12 rounded-full bg-[#EBF1EE] mx-auto flex items-center justify-center text-[#4A6B5B] shadow-xs">
+                <Layers className="w-6 h-6" />
+              </div>
+              <h4 className="font-serif text-[17px] font-semibold text-[#2D2825]">
+                Tu estantería de cosméticos está vacía
+              </h4>
+              <p className="text-[12.5px] text-[#7E756F] max-w-md mx-auto leading-relaxed">
+                Escanea el envase de tu producto con la cámara o audita la lista de ingredientes INCI para asignarlo a tus noches de ciclado.
+              </p>
+              <button
+                type="button"
+                onClick={() => onChangeTab('scanner')}
+                className="mt-2 px-5 py-2.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white text-[13px] font-semibold transition inline-flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Scan className="w-4 h-4" />
+                <span>Escanear Primer Producto</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {currentShelf.map((product) => (
+                <div
+                  key={product.id}
+                  className="card-white p-3.5 border border-[#E8E1D7] rounded-[18px] flex flex-col justify-between group hover:border-[#8FA89B] hover:shadow-diffuse transition"
+                >
+                  <div>
+                    <div className="relative h-28 w-full rounded-[14px] overflow-hidden bg-[#FAF8F5] border border-[#E2D9CD] mb-2.5">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                      <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs text-[#4A6B5B] text-[9.5px] font-bold">
+                        {product.inciScore}% INCI
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                      {product.brand}
+                    </span>
+
+                    <h4 className="font-serif text-[14px] font-semibold text-[#2D2825] line-clamp-1 mt-0.5">
+                      {product.name}
+                    </h4>
+
+                    <span className="text-[10.5px] text-[#4A6B5B] font-medium block mt-1">
+                      {product.assignedPhaseName}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-[#E8E1D7] flex items-center justify-between text-[10.5px] text-[#7E756F]">
+                    <span>PAO: {product.paoMonths}M</span>
+                    <span className="text-[#8FA89B] font-semibold">{product.volume}</span>
+                  </div>
                 </div>
+              ))}
 
-                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">
-                  {product.brand}
+              {/* Quick Add Product Card */}
+              <div
+                onClick={() => onChangeTab('scanner')}
+                className="card-sand p-4 border-2 border-dashed border-[#8FA89B]/50 rounded-[18px] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#EBF1EE] transition min-h-[180px]"
+              >
+                <div className="w-11 h-11 rounded-full bg-white border border-[#8FA89B] flex items-center justify-center text-[#4A6B5B] shadow-xs mb-2 group-hover:scale-105 transition">
+                  <Scan className="w-5 h-5" />
+                </div>
+                <span className="font-serif text-[14px] font-semibold text-[#2D2825]">
+                  Escanear Nuevo
                 </span>
-
-                <h4 className="font-serif text-[14px] font-semibold text-[#2D2825] line-clamp-1 mt-0.5">
-                  {product.name}
-                </h4>
-
-                <span className="text-[10.5px] text-[#4A6B5B] font-medium block mt-1">
-                  {product.assignedPhaseName}
+                <span className="text-[11px] text-[#7E756F] mt-0.5">
+                  Auditoría INCI AR
                 </span>
               </div>
-
-              <div className="mt-3 pt-2 border-t border-[#E8E1D7] flex items-center justify-between text-[10.5px] text-[#7E756F]">
-                <span>PAO: {product.paoMonths}M</span>
-                <span className="text-[#8FA89B] font-semibold">{product.volume}</span>
-              </div>
-            </div>
-          ))}
-
-          {/* Quick Add Product Card */}
-          <div
-            onClick={() => onChangeTab('scanner')}
-            className="card-sand p-4 border-2 border-dashed border-[#8FA89B]/50 rounded-[18px] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#EBF1EE] transition min-h-[180px]"
-          >
-            <div className="w-11 h-11 rounded-full bg-white border border-[#8FA89B] flex items-center justify-center text-[#4A6B5B] shadow-xs mb-2 group-hover:scale-105 transition">
-              <Scan className="w-5 h-5" />
-            </div>
-            <span className="font-serif text-[14px] font-semibold text-[#2D2825]">
-              Escanear Nuevo
-            </span>
-            <span className="text-[11px] text-[#7E756F] mt-0.5">
-              Auditoría INCI AR
-            </span>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

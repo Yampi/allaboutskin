@@ -24,7 +24,7 @@ interface CycleScreenProps {
 }
 
 export default function CycleScreen({ userProfile, onCompleteNight }: CycleScreenProps) {
-  const [activePhaseIndex, setActivePhaseIndex] = useState(userProfile.activeNight - 1);
+  const [activePhaseIndex, setActivePhaseIndex] = useState((userProfile?.activeNight || 1) - 1);
   const [routineSteps, setRoutineSteps] = useState(cyclePhasesMatrix);
   const [celebrationToast, setCelebrationToast] = useState(false);
 
@@ -105,7 +105,7 @@ export default function CycleScreen({ userProfile, onCompleteNight }: CycleScree
               Racha de Ciclado
             </span>
             <span className="font-serif text-[18px] font-bold text-[#4A6B5B]">
-              {userProfile.cycleStreakDays} Días Activos
+              {userProfile?.cycleStreakDays || 0} Días Activos
             </span>
           </div>
         </div>
@@ -355,7 +355,7 @@ export default function CycleScreen({ userProfile, onCompleteNight }: CycleScree
                 ¡Noche {currentPhase.phaseNumber} Registrada con Éxito!
               </h4>
               <p className="text-[12.5px] text-white/90">
-                Racha aumentada a {userProfile.cycleStreakDays + 1} días. Tu barrera cutánea mantiene un nivel óptimo del 95%.
+                Racha aumentada a {(userProfile?.cycleStreakDays || 0) + 1} días. Tu barrera cutánea mantiene un nivel óptimo del 95%.
               </p>
             </div>
           </div>

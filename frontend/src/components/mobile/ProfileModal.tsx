@@ -35,8 +35,10 @@ export default function ProfileModal({
   userProfile,
   onUpdateProfile,
 }: ProfileModalProps) {
-  const [selectedType, setSelectedType] = useState(userProfile.skinType);
-  const [selectedConditions, setSelectedConditions] = useState<string[]>(userProfile.conditions);
+  const [selectedType, setSelectedType] = useState(
+    userProfile.skinType && userProfile.skinType !== 'Sin calibrar' ? userProfile.skinType : 'Piel Mixta'
+  );
+  const [selectedConditions, setSelectedConditions] = useState<string[]>(userProfile.conditions || []);
 
   if (!isOpen) return null;
 
@@ -94,18 +96,24 @@ export default function ProfileModal({
         <div className="px-5 py-4 overflow-y-auto space-y-4 font-sans text-[#2D2825] text-[13.5px]">
           {/* User Badge Overview */}
           <div className="p-3.5 rounded-[20px] bg-[#F2ECE4] border border-[#E2D9CD] flex items-center gap-3">
-            <img
-              src={userProfile.avatarUrl}
-              alt={userProfile.name}
-              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-xs"
-            />
+            {userProfile.avatarUrl ? (
+              <img
+                src={userProfile.avatarUrl}
+                alt={userProfile.name || 'Usuario'}
+                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-xs"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-[#EBF1EE] border-2 border-white shadow-xs flex items-center justify-center text-[#4A6B5B]">
+                <User className="w-6 h-6" />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-serif text-[16px] font-semibold text-[#2D2825]">
-                  {userProfile.name}
+                  {userProfile.name || 'Sin registrar'}
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold">
-                  Día {userProfile.cycleStreakDays}
+                  Día {userProfile.cycleStreakDays || 0}
                 </span>
               </div>
               <p className="text-[11.5px] text-[#7E756F]">

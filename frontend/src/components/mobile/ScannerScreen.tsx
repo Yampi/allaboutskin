@@ -32,6 +32,7 @@ import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfIte
 import { sampleScanPresets } from './skincareData';
 import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/ocrService';
 import { scanImageWithGeminiVision } from '@/lib/api';
+import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
 
 interface ScannerScreenProps {
@@ -155,34 +156,45 @@ export default function ScannerScreen({
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     setCapturedImagePreview(dataUrl);
 
     canvas.toBlob(async (blob) => {
       if (blob) {
         await processImageWithVision(blob, dataUrl, 'Captura de Cámara en Vivo');
       }
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.85);
   };
 
   // Handle uploaded photo from file system / gallery
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = ''; // Reset input to allow selecting same file again
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setCapturedImagePreview(dataUrl);
-      await processImageWithVision(file, dataUrl, file.name);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsProcessing(true);
+      setOcrProgress(15);
+      setOcrStatusText('Optimizando foto para escaneo...');
+      const optimized = await optimizeImageForUpload(file, { maxDimension: 1400, quality: 0.82 });
+      setCapturedImagePreview(optimized.base64);
+      await processImageWithVision(optimized.blob, optimized.base64, file.name);
+    } catch (err) {
+      console.warn('Direct upload fallback:', err);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        setCapturedImagePreview(dataUrl);
+        await processImageWithVision(file, dataUrl, file.name);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Unified Multimodal Vision & Classification Pipeline (Selfie vs Skincare Product vs Error Amigable)
   const processImageWithVision = async (imageSource: File | Blob, dataUrlString?: string, fallbackName = 'Producto Escaneado') => {
     setIsProcessing(true);
-    setOcrProgress(15);
+    setOcrProgress(20);
     setOcrStatusText('Analizando imagen con Visión Dermatológica IA...');
     setAuditResult(null);
     setFaceSkinResult(null);
@@ -191,13 +203,27 @@ export default function ScannerScreen({
     setAdoptedProfileSuccess(false);
 
     let base64 = dataUrlString || '';
-    if (!base64) {
-      base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(imageSource);
-      });
+    let optimizedBlob: Blob = imageSource;
+    let mimeType = imageSource.type || 'image/jpeg';
+
+    // Ensure image is compressed to stay well within limits
+    if (!base64 || (typeof imageSource === 'object' && imageSource.size > 800 * 1024)) {
+      try {
+        const optimized = await optimizeImageForUpload(imageSource, { maxDimension: 1400, quality: 0.82 });
+        base64 = optimized.base64;
+        optimizedBlob = optimized.blob;
+        mimeType = optimized.mimeType;
+      } catch (optErr) {
+        console.warn('Image optimization skipped:', optErr);
+        if (!base64) {
+          base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(imageSource);
+          });
+        }
+      }
     }
 
     setCapturedImagePreview(base64);
@@ -206,7 +232,6 @@ export default function ScannerScreen({
       setOcrProgress(35);
       setOcrStatusText('Identificando si es Selfie o Producto Cosmético...');
 
-      const mimeType = imageSource.type || 'image/jpeg';
       const scanData = await scanImageWithGeminiVision(base64, mimeType);
 
       setOcrProgress(70);
@@ -236,7 +261,7 @@ export default function ScannerScreen({
         if (!detectedInci || detectedInci.length < 10) {
           try {
             setOcrStatusText('Extrayendo texto INCI detallado...');
-            const rawText = await performOpticalCharacterRecognition(imageSource, (p, s) => {
+            const rawText = await performOpticalCharacterRecognition(optimizedBlob, (p, s) => {
               setOcrProgress(70 + Math.round(p * 15));
             });
             const analysis = analyzeCosmeticLabel(rawText);
@@ -267,7 +292,7 @@ export default function ScannerScreen({
       console.warn('Vision API error, fallback to OCR/heuristic:', err);
       try {
         setOcrStatusText('Analizando imagen con escáner óptico...');
-        const rawText = await performOpticalCharacterRecognition(imageSource, (p, s) => {
+        const rawText = await performOpticalCharacterRecognition(optimizedBlob, (p, s) => {
           setOcrProgress(Math.round(p * 70));
           setOcrStatusText(s);
         });
@@ -315,6 +340,7 @@ export default function ScannerScreen({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          inci_text: formulaText,
           formula: formulaText,
           product_name: prodName || manualProductName || 'Cosmético Auditado',
         }),

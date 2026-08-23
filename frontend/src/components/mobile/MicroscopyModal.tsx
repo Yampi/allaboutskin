@@ -71,7 +71,7 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
 
             <div className="absolute bottom-3 right-3 bg-[#4A6B5B]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[10.5px] font-medium flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Integridad: {userProfile.barrierScore}%
+              Integridad: {userProfile.barrierScore > 0 ? `${userProfile.barrierScore}%` : 'Sin evaluar'}
             </div>
           </div>
 
@@ -82,9 +82,11 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
                 TEWL (Pérdida Agua)
               </span>
               <span className="font-semibold text-[15px] text-[#4A6B5B] block mt-0.5 font-mono">
-                {userProfile.tewlScore}
+                {userProfile.tewlScore || '--'}
               </span>
-              <span className="text-[9.5px] text-[#7E756F] block">Óptimo (&lt;10.0)</span>
+              <span className="text-[9.5px] text-[#7E756F] block">
+                {userProfile.tewlScore && userProfile.tewlScore !== '--' ? 'Óptimo (<10.0)' : 'No evaluado'}
+              </span>
             </div>
 
             <div className="bg-[#F2ECE4] p-3 rounded-[18px] border border-[#E2D9CD] text-center">
@@ -92,9 +94,11 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
                 Hidratación NMF
               </span>
               <span className="font-semibold text-[15px] text-[#4A6B5B] block mt-0.5 font-mono">
-                {userProfile.hydrationLevel}
+                {userProfile.hydrationLevel || '--'}
               </span>
-              <span className="text-[9.5px] text-[#7E756F] block">Adecuada</span>
+              <span className="text-[9.5px] text-[#7E756F] block">
+                {userProfile.hydrationLevel && userProfile.hydrationLevel !== '--' ? 'Adecuada' : 'No evaluada'}
+              </span>
             </div>
 
             <div className="bg-[#F2ECE4] p-3 rounded-[18px] border border-[#E2D9CD] text-center">
@@ -102,9 +106,11 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
                 Ciclado Activo
               </span>
               <span className="font-semibold text-[15px] text-[#2D2825] block mt-0.5">
-                Noche {userProfile.activeNight}
+                Noche {userProfile.activeNight || 1}
               </span>
-              <span className="text-[9.5px] text-[#8FA89B] font-semibold block">En Curso</span>
+              <span className="text-[9.5px] text-[#8FA89B] font-semibold block">
+                {userProfile.cycleStreakDays > 0 ? 'En Curso' : 'Inicio'}
+              </span>
             </div>
           </div>
 
@@ -116,9 +122,15 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
                 Diagnóstico Dermatológico Clínico
               </h3>
             </div>
-            <p className="text-[13px] text-[#4A433E] leading-relaxed">
-              La matriz lipídica intercorneocitaria muestra una continuidad lamelar del 94%. Los niveles de ceramidas y ácidos grasos libres tras la noche 2 de retinoides se encuentran estabilizados, permitiendo una noche de recuperación óptima con fito-activos.
-            </p>
+            {userProfile.barrierScore > 0 ? (
+              <p className="text-[13px] text-[#4A433E] leading-relaxed">
+                La matriz lipídica intercorneocitaria muestra una continuidad lamelar del {userProfile.barrierScore}%. Los niveles de ceramidas y ácidos grasos libres se encuentran evaluados conforme a tu protocolo de ciclado.
+              </p>
+            ) : (
+              <p className="text-[13px] text-[#4A433E] leading-relaxed">
+                Aún no se ha registrado un diagnóstico de barrera cutánea. Calibra tu biotipo en tu perfil o escanea tus productos habituales para generar biomarcadores dermatológicos precisos.
+              </p>
+            )}
           </div>
         </div>
 

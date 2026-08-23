@@ -497,8 +497,18 @@ export async function scanImageWithGeminiVision(base64Image: string, mimeType: s
     body: JSON.stringify({ image: base64Image, mimeType }),
   });
   if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.error || 'Error al analizar imagen con IA');
+    let errorMsg = 'Error al analizar imagen con IA';
+    try {
+      const errorJson = await res.json();
+      if (errorJson?.error) errorMsg = errorJson.error;
+    } catch {
+      if (res.status === 413) {
+        errorMsg = 'La imagen es demasiado pesada. Se requiere comprimir la foto antes de enviarla.';
+      } else if (res.status === 429) {
+        errorMsg = 'Has alcanzado el límite de escaneo de imágenes por minuto. Espera unos segundos.';
+      }
+    }
+    throw new Error(errorMsg);
   }
   const json = await res.json();
   return json.data;
