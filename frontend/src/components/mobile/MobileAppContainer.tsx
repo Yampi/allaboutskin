@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { NavTab, UserProfile, ActiveIngredient } from './types';
+import React, { useState, useEffect } from 'react';
+import { NavTab, UserProfile, ActiveIngredient, ProductShelfItem } from './types';
 import { initialUserProfile, activeIngredientsList, productShelfList } from './skincareData';
 import TopBar from './TopBar';
 import BottomNavBar from './BottomNavBar';
@@ -12,96 +12,99 @@ import LibraryScreen from './LibraryScreen';
 import IngredientDetailModal from './IngredientDetailModal';
 import MicroscopyModal from './MicroscopyModal';
 import ProfileModal from './ProfileModal';
-import { Smartphone, Monitor, Sparkles, ShieldCheck, Heart, SlidersHorizontal } from 'lucide-react';
+import { Sparkles, ShieldCheck, SlidersHorizontal, CheckCircle2, Award } from 'lucide-react';
+
+const STORAGE_KEY_PROFILE = 'allabout_skin_user_profile_v2';
+const STORAGE_KEY_SHELF = 'allabout_skin_shelf_items_v2';
 
 export default function MobileAppContainer() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
+  const [shelfItems, setShelfItems] = useState<ProductShelfItem[]>(productShelfList);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Modals
   const [selectedIngredient, setSelectedIngredient] = useState<ActiveIngredient | null>(null);
   const [isMicroscopyOpen, setIsMicroscopyOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Desktop Device Frame Simulator toggle (default true for desktop)
-  const [isDeviceFrame, setIsDeviceFrame] = useState(true);
+  // Load real user state from localStorage on client mount
+  useEffect(() => {
+    try {
+      const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
+      if (savedProfile) {
+        setUserProfile(JSON.parse(savedProfile));
+      }
 
+      const savedShelf = localStorage.getItem(STORAGE_KEY_SHELF);
+      if (savedShelf) {
+        setShelfItems(JSON.parse(savedShelf));
+      }
+    } catch (e) {
+      console.warn('Could not read from localStorage:', e);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Persist profile updates
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
-    setUserProfile((prev) => ({ ...prev, ...updated }));
+    setUserProfile((prev) => {
+      const next = { ...prev, ...updated };
+      try {
+        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(next));
+      } catch (e) {
+        console.warn('Could not save profile to localStorage:', e);
+      }
+      return next;
+    });
+
+    showToast('Perfil dermatológico calibrado con éxito.');
   };
 
+  // Complete a cycling night
   const handleCompleteNight = (completedNight: number) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      cycleStreakDays: prev.cycleStreakDays + 1,
-      activeNight: (completedNight % 4) + 1,
-    }));
+    setUserProfile((prev) => {
+      const next: UserProfile = {
+        ...prev,
+        cycleStreakDays: prev.cycleStreakDays + 1,
+        activeNight: (completedNight % 4) + 1,
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(next));
+      } catch (e) {
+        console.warn('Could not save streak to localStorage:', e);
+      }
+      return next;
+    });
   };
 
-  const handleAddProductToShelf = (productName: string, brand: string) => {
-    // Add success toast or internal update
+  // Add real evaluated product from camera/scanner to shelf
+  const handleAddProductToShelf = (newProduct: ProductShelfItem) => {
+    setShelfItems((prev) => {
+      const exists = prev.some((p) => p.name.toLowerCase() === newProduct.name.toLowerCase());
+      const next = exists ? prev : [newProduct, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_SHELF, JSON.stringify(next));
+      } catch (e) {
+        console.warn('Could not save shelf to localStorage:', e);
+      }
+      return next;
+    });
+
+    showToast(`"${newProduct.name}" añadido a tu estantería.`);
+  };
+
+  const showToast = (message: string) => {
+    setSuccessToast(message);
+    setTimeout(() => setSuccessToast(null), 3000);
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-[#2D2825] flex flex-col items-center justify-start selection:bg-[#8FA89B]/30">
-      {/* Desktop Preview Header Switcher (Visible on Large Screens for Paired Design Review) */}
-      <div className="hidden lg:flex items-center justify-between w-full max-w-5xl px-6 py-3 border-b border-[#E8E1D7] text-[12px] text-[#7E756F]">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#4A6B5B]" />
-          <span className="font-serif font-semibold text-[#2D2825] text-[14px]">
-            Allabout.skin — Mobile App Design System
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold">
-            Fase 4 Noches • Playfair + Inter
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsDeviceFrame(!isDeviceFrame)}
-            className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition border cursor-pointer ${
-              isDeviceFrame
-                ? 'bg-[#4A6B5B] text-white border-[#4A6B5B]'
-                : 'bg-white text-[#2D2825] border-[#E8E1D7] hover:border-[#8FA89B]'
-            }`}
-          >
-            {isDeviceFrame ? (
-              <>
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Modo Frame Móvil (390px)</span>
-              </>
-            ) : (
-              <>
-                <Monitor className="w-3.5 h-3.5" />
-                <span>Modo Pantalla Completa</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Mobile App Wrapper */}
-      <div
-        className={`w-full transition-all duration-300 flex flex-col ${
-          isDeviceFrame
-            ? 'max-w-[430px] my-0 sm:my-6 rounded-none sm:rounded-[36px] border-0 sm:border-[8px] sm:border-[#2D2825] shadow-none sm:shadow-2xl overflow-hidden bg-[#FAF8F5] min-h-[850px] relative'
-            : 'max-w-md w-full bg-[#FAF8F5]'
-        }`}
-      >
-        {/* iOS-Style Notch Bar / Top Indicator in Frame Mode */}
-        {isDeviceFrame && (
-          <div className="hidden sm:flex items-center justify-between px-6 pt-3 pb-1 bg-[#FAF8F5] text-[12px] font-semibold text-[#2D2825] border-b border-[#E8E1D7]/30">
-            <span>9:41</span>
-            <div className="w-20 h-4 bg-[#2D2825] rounded-full mx-auto" />
-            <div className="flex items-center gap-1.5 text-[10px]">
-              <span>5G</span>
-              <div className="w-4 h-2.5 border border-[#2D2825] rounded-xs p-0.5 flex items-center">
-                <div className="w-full h-full bg-[#2D2825] rounded-2xs" />
-              </div>
-            </div>
-          </div>
-        )}
-
+    <div className="min-h-screen bg-[#FAF8F5] text-[#2D2825] flex flex-col items-center justify-start selection:bg-[#8FA89B]/30 antialiased">
+      {/* Real Full Responsive App Shell (No Fake Phone Frames, No Fake Hardware Bezels) */}
+      <div className="w-full max-w-2xl min-h-screen flex flex-col bg-[#FAF8F5] relative sm:border-x sm:border-[#E8E1D7] sm:shadow-sm">
         {/* 1. Global Top Bar */}
         <TopBar
           onOpenProfile={() => setIsProfileOpen(true)}
@@ -113,6 +116,7 @@ export default function MobileAppContainer() {
           {activeTab === 'home' && (
             <HomeScreen
               userProfile={userProfile}
+              shelfItems={shelfItems}
               onChangeTab={setActiveTab}
               onOpenProfileModal={() => setIsProfileOpen(true)}
               onOpenMicroscopyModal={() => setIsMicroscopyOpen(true)}
@@ -211,7 +215,7 @@ export default function MobileAppContainer() {
                   Compromiso Científico Allabout.skin
                 </span>
                 <p className="leading-relaxed">
-                  Tus datos dermatológicos son procesados exclusivamente en local y contrastados con literatura médica de acceso abierto de PubMed y CosIng.
+                  Tus datos dermatológicos son procesados en local y contrastados en tiempo real con literatura médica indexada de PubMed y CosIng.
                 </p>
               </div>
             </div>
@@ -221,6 +225,18 @@ export default function MobileAppContainer() {
         {/* 3. Global Fixed Bottom Navigation Bar (64px) */}
         <BottomNavBar activeTab={activeTab} onChangeTab={setActiveTab} />
       </div>
+
+      {/* Global Toast Notification */}
+      {successToast && (
+        <div className="fixed top-4 left-4 right-4 z-50 max-w-sm mx-auto animate-in slide-in-from-top duration-300">
+          <div className="p-3.5 rounded-full bg-[#4A6B5B] text-white shadow-2xl flex items-center justify-between px-4 border border-[#8FA89B]">
+            <span className="text-[12.5px] font-medium flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#DFCAAC]" />
+              {successToast}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Global Modals */}
       <IngredientDetailModal

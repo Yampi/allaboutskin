@@ -20,6 +20,7 @@ import { productShelfList, activeIngredientsList } from './skincareData';
 
 interface HomeScreenProps {
   userProfile: UserProfile;
+  shelfItems?: ProductShelfItem[];
   onChangeTab: (tab: NavTab) => void;
   onOpenProfileModal: () => void;
   onOpenMicroscopyModal: () => void;
@@ -28,11 +29,14 @@ interface HomeScreenProps {
 
 export default function HomeScreen({
   userProfile,
+  shelfItems,
   onChangeTab,
   onOpenProfileModal,
   onOpenMicroscopyModal,
   onSelectIngredient,
 }: HomeScreenProps) {
+  const currentShelf = shelfItems && shelfItems.length > 0 ? shelfItems : productShelfList;
+
   // Key active chips for Night 3
   const activeChips = [
     { name: 'Ceramidas NP/AP/EOP', id: 'ceramidas' },
@@ -40,6 +44,7 @@ export default function HomeScreen({
     { name: 'Ácido Hialurónico', id: 'acido-hialuronico' },
     { name: 'Pantenol B5', id: 'pantenol' },
   ];
+
 
   const handleChipClick = (id: string) => {
     const found = activeIngredientsList.find((item) => item.id === id);
@@ -245,13 +250,13 @@ export default function HomeScreen({
             </h3>
           </div>
           <span className="text-[11.5px] font-sans font-medium text-[#7E756F]">
-            (5 Fórmulas Validadas)
+            ({currentShelf.length} Fórmulas Validadas)
           </span>
         </div>
 
         {/* Horizontal Carousel */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-4 px-4">
-          {productShelfList.map((product) => (
+          {currentShelf.map((product) => (
             <div
               key={product.id}
               className="card-white p-3 border border-[#E8E1D7] w-[170px] shrink-0 flex flex-col justify-between group hover:border-[#8FA89B] transition shadow-diffuse"
