@@ -129,6 +129,8 @@ export default function MobileAppContainer() {
           <ScannerScreen
             onAddProductToShelf={handleAddProductToShelf}
             onSelectIngredient={(ing) => setSelectedIngredient(ing)}
+            onUpdateProfile={handleUpdateProfile}
+            userProfile={userProfile}
           />
         )}
 

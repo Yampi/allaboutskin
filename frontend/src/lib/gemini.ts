@@ -301,6 +301,19 @@ ${question}`;
   }
 }
 
+function cleanJsonResponse(raw: string): string {
+  let cleaned = raw.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7);
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3);
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3);
+  }
+  return cleaned.trim();
+}
+
 /**
  * Classifies an uploaded photo into SKINCARE_PRODUCT, HUMAN_FACE, or INVALID,
  * executing the appropriate data extraction or visual diagnosis.
@@ -312,13 +325,13 @@ export async function classifyAndProcessImage(
   const apiKey = process.env.GEMINI_API_KEY || '';
 
   const systemInstruction = `Eres el Sistema Central de Visión y Clasificación Dermatológica de Allabout.skin.
-Tu misión es inspeccionar la fotografía provista y clasificarla de forma categórica y estricta en UNA de 3 opciones:
+Tu misión es inspeccionar minuciosamente la fotografía provista y clasificarla de forma categórica y estricta en UNA de 3 opciones:
 
 1. "SKINCARE_PRODUCT": La imagen contiene un producto cosmético, frasco, tubo, bote, caja o etiqueta con lista de ingredientes (INCI) o marca de cuidado facial/corporal/solar.
-2. "HUMAN_FACE": La imagen contiene el rostro (selfie o retrato) de una persona para evaluación dermatológica visual orientativa.
-3. "INVALID": La imagen NO es un cosmético ni un rostro humano (por ejemplo: alimentos, mascotas, ropa, paisajes, capturas de pantalla, objetos del hogar, o fotos completamente borrosas o no legibles).
+2. "HUMAN_FACE": La imagen contiene el rostro (selfie, foto frontal, retrato o primer plano de piel/mejillas/frente) de una persona para evaluación dermatológica visual orientativa.
+3. "INVALID": La imagen NO es un cosmético ni un rostro/piel humana (por ejemplo: alimentos, mascotas, ropa, paisajes, capturas de pantalla, objetos del hogar, o fotos completamente borrosas/oscuras/no legibles).
 
-REGLAS DE RESPUESTA EN FORMATO JSON ESTRICTO:
+REGLAS DE RESPUESTA EN FORMATO JSON ESTRICTO (sin texto adicional ni markdown fuera del JSON):
 
 Si es "SKINCARE_PRODUCT":
 {
@@ -359,40 +372,74 @@ Si es "INVALID":
 {
   "classification": "INVALID",
   "rejectionReason": "NOT_COSMETIC_OR_FACE",
-  "userFriendlyMessage": "No detectamos un producto de skincare ni el rostro de una persona en la foto. Por favor enfoca la etiqueta de tu cosmético o tómate una selfie con buena luz.",
+  "userFriendlyMessage": "No detectamos un producto de skincare ni el rostro de una persona en la foto. Por favor enfoca la etiqueta de tu cosmético o tómate una selfie con buena luz natural.",
   "confidence": 0.98
 }`;
 
-  const prompt = `Inspecciona minuciosamente esta imagen. Determina si es un producto cosmético (SKINCARE_PRODUCT), un rostro de persona (HUMAN_FACE) o un objeto/imagen no válida (INVALID) y devuelve el JSON correspondiente.`;
+  const prompt = `Inspecciona minuciosamente esta imagen. Determina si es un producto cosmético (SKINCARE_PRODUCT), un rostro/selfie de persona (HUMAN_FACE) o un objeto/imagen no válida (INVALID) y devuelve el JSON correspondiente.`;
 
   // Strip base64 data url prefix if present (e.g. data:image/jpeg;base64,...)
   const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
 
   if (!apiKey) {
+    // Graceful diagnostic fallback when running locally without GEMINI_API_KEY
     return {
       classification: 'INVALID',
       rejectionReason: 'NOT_COSMETIC_OR_FACE',
-      userFriendlyMessage: 'GEMINI_API_KEY no está configurada en las variables de entorno. Para que la IA reconozca tu rostro o tus cosméticos en tiempo real, añade GEMINI_API_KEY en la configuración de Vercel o en tu .env.local.',
+      userFriendlyMessage: 'GEMINI_API_KEY no está configurada en las variables de entorno. Para que la IA reconozca tu rostro o tus cosméticos en tiempo real, añade tu clave GEMINI_API_KEY en el archivo .env.local o en la configuración del servidor.',
       confidence: 0,
     };
   }
 
-  const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true);
-  const parsed = JSON.parse(rawJson);
+  try {
+    const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true);
+    const cleanedJson = cleanJsonResponse(rawJson);
+    const parsed = JSON.parse(cleanedJson);
 
-  // Normalization checks
-  if (parsed.classification !== 'SKINCARE_PRODUCT' && parsed.classification !== 'HUMAN_FACE' && parsed.classification !== 'INVALID') {
-    if (parsed.inciText || parsed.productName) {
-      parsed.classification = 'SKINCARE_PRODUCT';
-    } else if (parsed.faceAnalysis || parsed.skinTypeEstimate) {
-      parsed.classification = 'HUMAN_FACE';
-    } else {
-      parsed.classification = 'INVALID';
-      parsed.userFriendlyMessage = parsed.userFriendlyMessage || 'La imagen no corresponde a un cosmético ni a un rostro reconocible.';
+    // Normalization checks
+    if (parsed.classification !== 'SKINCARE_PRODUCT' && parsed.classification !== 'HUMAN_FACE' && parsed.classification !== 'INVALID') {
+      if (parsed.inciText || parsed.productName) {
+        parsed.classification = 'SKINCARE_PRODUCT';
+      } else if (parsed.faceAnalysis || parsed.skinTypeEstimate) {
+        parsed.classification = 'HUMAN_FACE';
+      } else {
+        parsed.classification = 'INVALID';
+        parsed.userFriendlyMessage = parsed.userFriendlyMessage || 'La imagen no corresponde a un cosmético ni a un rostro reconocible.';
+      }
     }
-  }
 
-  return parsed as VisionClassificationResult;
+    if (parsed.classification === 'HUMAN_FACE') {
+      const fa = parsed.faceAnalysis || {};
+      parsed.faceAnalysis = {
+        skinTypeEstimate: fa.skinTypeEstimate || parsed.skinTypeEstimate || 'COMBINATION',
+        skinTypeLabel: fa.skinTypeLabel || (fa.skinTypeEstimate === 'OILY' ? 'Piel Grasa' : fa.skinTypeEstimate === 'DRY' ? 'Piel Seca' : fa.skinTypeEstimate === 'SENSITIVE' ? 'Piel Sensible' : fa.skinTypeEstimate === 'NORMAL' ? 'Piel Normal' : 'Piel Mixta'),
+        zoneTAnalysis: {
+          shineLevel: fa.zoneTAnalysis?.shineLevel || 'MODERATE',
+          poresVisible: typeof fa.zoneTAnalysis?.poresVisible === 'boolean' ? fa.zoneTAnalysis.poresVisible : true,
+          description: fa.zoneTAnalysis?.description || 'Nivel de brillo y visibilidad de poros evaluados.',
+        },
+        cheeksAnalysis: {
+          hydrationState: fa.cheeksAnalysis?.hydrationState || 'BALANCED',
+          rednessPresent: typeof fa.cheeksAnalysis?.rednessPresent === 'boolean' ? fa.cheeksAnalysis.rednessPresent : false,
+          description: fa.cheeksAnalysis?.description || 'Estado de hidratación y barrera en mejillas evaluado.',
+        },
+        visibleConcerns: Array.isArray(fa.visibleConcerns) ? fa.visibleConcerns : ['Equilibrio de zona T', 'Mantenimiento de barrera'],
+        suggestedFocus: Array.isArray(fa.suggestedFocus) ? fa.suggestedFocus : ['Hidratación equilibrada', 'Fotoprotección diaria'],
+        confidence: typeof fa.confidence === 'number' ? fa.confidence : 0.88,
+        disclaimer: fa.disclaimer || 'Este análisis visual es una estimación referencial basada en IA y no sustituye una consulta médica dermatológica profesional.',
+      };
+    }
+
+    return parsed as VisionClassificationResult;
+  } catch (err: any) {
+    console.warn('Error parsing Gemini vision classification:', err);
+    return {
+      classification: 'INVALID',
+      rejectionReason: 'BLURRY_UNREADABLE',
+      userFriendlyMessage: 'Ocurrió un inconveniente al procesar la imagen con visión artificial. Por favor intenta con una foto más nítida o con mejor iluminación.',
+      confidence: 0,
+    };
+  }
 }
 
 /**
