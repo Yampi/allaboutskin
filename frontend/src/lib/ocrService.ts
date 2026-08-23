@@ -4,6 +4,7 @@ export interface OcrDetectionResult {
   rawText: string;
   cleanedText: string;
   labelType: 'FRONT_BRANDING' | 'BACK_INCI' | 'UNKNOWN';
+  isCosmeticValid: boolean;
   confidence: number;
   detectedBrand?: string;
   detectedProductName?: string;
@@ -314,6 +315,7 @@ export function analyzeCosmeticLabel(rawText: string): OcrDetectionResult {
         rawText,
         cleanedText: cleanFrontText,
         labelType: 'FRONT_BRANDING',
+        isCosmeticValid: true,
         confidence: 0.96,
         detectedBrand: item.brand,
         detectedProductName: item.name,
@@ -389,6 +391,7 @@ export function analyzeCosmeticLabel(rawText: string): OcrDetectionResult {
       rawText,
       cleanedText: cleanedInci,
       labelType: 'BACK_INCI',
+      isCosmeticValid: true,
       confidence: Math.min(0.98, 0.7 + inciScore * 0.06),
       isSunscreen: flatNormalized.includes('spf') || flatNormalized.includes('fps') || flatNormalized.includes('solar'),
     };
@@ -401,6 +404,7 @@ export function analyzeCosmeticLabel(rawText: string): OcrDetectionResult {
       rawText,
       cleanedText: cleanedTitle,
       labelType: 'FRONT_BRANDING',
+      isCosmeticValid: true,
       confidence: 0.90,
       detectedBrand: brandFound,
       detectedProductName: cleanedTitle || (brandFound ? `${brandFound} Cosmético` : 'Producto Cosmético'),
@@ -408,12 +412,13 @@ export function analyzeCosmeticLabel(rawText: string): OcrDetectionResult {
     };
   }
 
-  // UNKNOWN: Inconclusive / insufficient text
+  // UNKNOWN: Inconclusive / non-cosmetic text
   const defaultClean = cleanOcrCosmeticText(rawText, false);
   return {
     rawText,
     cleanedText: defaultClean,
     labelType: 'UNKNOWN',
+    isCosmeticValid: false,
     confidence: 0.40,
   };
 }

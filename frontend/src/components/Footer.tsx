@@ -3,7 +3,7 @@ import { Microscope, ShieldAlert, Sparkles } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#1E2822] text-[#B8C2BC] text-xs border-t border-[#2D3C33] mt-24">
+    <footer className="bg-[#1E2822] text-[#B8C2BC] text-xs border-t border-[#2D3C33] mt-24 mb-16 md:mb-0">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-12 mb-10">
           <div className="md:col-span-5 space-y-3">
@@ -24,6 +24,7 @@ export default function Footer() {
             <h4 className="text-white font-serif font-bold text-xs uppercase tracking-wider">Navegación</h4>
             <ul className="space-y-2 text-xs text-[#8E9C93]">
               <li><Link href="/" className="hover:text-white transition-colors">Analizador de Fórmulas & OCR</Link></li>
+              <li><Link href="/comparador" className="hover:text-white transition-colors">Comparador de Fórmulas</Link></li>
               <li><Link href="/mi-rutina" className="hover:text-white transition-colors">Mi Rutina & Calendario</Link></li>
               <li><Link href="/rutinas/skin-cycling" className="hover:text-white transition-colors">Protocolo Skin Cycling</Link></li>
               <li><Link href="/ingrediente" className="hover:text-white transition-colors">Biblioteca de Activos</Link></li>

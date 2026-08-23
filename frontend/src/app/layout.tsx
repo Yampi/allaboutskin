@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${plusJakarta.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
+      <body className="min-h-full flex flex-col bg-[#FAF8F5] text-[#1C1B1A] pb-16 md:pb-0">
         {children}
         <Analytics />
       </body>

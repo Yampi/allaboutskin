@@ -107,7 +107,7 @@ export default function FormulaComparator() {
             Comparativa de Fórmulas
           </span>
           <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A] flex items-center gap-2">
-            <Swords className="w-5 h-5 text-[#6B8B7B]" />
+            <Swords className="w-5 h-5 text-[#4F6D60]" />
             <span>Comparador Lado a Lado</span>
           </h2>
           <p className="text-xs text-[#66615C] mt-0.5">
@@ -143,7 +143,7 @@ export default function FormulaComparator() {
             key={idx}
             type="button"
             onClick={() => handleSelectDuel(duel)}
-            className="text-xs bg-[#FAF8F5] hover:bg-[#EEF4F0] hover:text-[#364B40] text-[#66615C] font-medium px-3 py-1.5 rounded-full border border-[#ECE6DC] transition-all cursor-pointer touch-target"
+            className="text-xs bg-[#FAF8F5] hover:bg-[#EEF4F0] hover:text-[#2D4A3E] text-[#66615C] font-medium px-3 py-1.5 rounded-full border border-[#ECE6DC] transition-all cursor-pointer touch-target"
           >
             <span>{duel.title}</span>
           </button>
@@ -155,7 +155,7 @@ export default function FormulaComparator() {
         {/* Formula A Input */}
         <div className="bg-[#FAF8F5] p-4 rounded-xl border border-[#ECE6DC] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#364B40] bg-[#EEF4F0] px-2.5 py-0.5 rounded-full border border-[#6B8B7B]/30 uppercase tracking-wider">
+            <span className="text-xs font-bold text-[#2D4A3E] bg-[#EEF4F0] px-2.5 py-0.5 rounded-full border border-[#4F6D60]/30 uppercase tracking-wider">
               Cosmético A
             </span>
           </div>
@@ -164,7 +164,7 @@ export default function FormulaComparator() {
             value={queryA}
             onChange={(e) => setQueryA(e.target.value)}
             placeholder="Escribe el primer producto o pega sus ingredientes..."
-            className="w-full bg-white border border-[#ECE6DC] rounded-xl p-3 text-xs sm:text-sm text-[#1C1B1A] focus:outline-none focus:border-[#6B8B7B] resize-none"
+            className="w-full bg-white border border-[#ECE6DC] rounded-xl p-3 text-xs sm:text-sm text-[#1C1B1A] focus:outline-none focus:border-[#4F6D60] resize-none"
           />
         </div>
 
@@ -180,7 +180,7 @@ export default function FormulaComparator() {
             value={queryB}
             onChange={(e) => setQueryB(e.target.value)}
             placeholder="Escribe el segundo producto o pega sus ingredientes..."
-            className="w-full bg-white border border-[#ECE6DC] rounded-xl p-3 text-xs sm:text-sm text-[#1C1B1A] focus:outline-none focus:border-[#6B8B7B] resize-none"
+            className="w-full bg-white border border-[#ECE6DC] rounded-xl p-3 text-xs sm:text-sm text-[#1C1B1A] focus:outline-none focus:border-[#4F6D60] resize-none"
           />
         </div>
       </div>
@@ -198,7 +198,7 @@ export default function FormulaComparator() {
           type="button"
           disabled={isLoading || !queryA.trim() || !queryB.trim()}
           onClick={() => handleCompare()}
-          className="bg-[#6B8B7B] hover:bg-[#5A7768] disabled:opacity-50 text-white font-semibold px-8 py-2.5 rounded-xl shadow-editorial flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer touch-target"
+          className="bg-[#4F6D60] hover:bg-[#3D5B4E] disabled:opacity-50 text-white font-semibold px-8 py-2.5 rounded-xl shadow-editorial flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer touch-target"
         >
           {isLoading ? (
             <>
@@ -221,18 +221,18 @@ export default function FormulaComparator() {
           {/* Side by Side Header Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Product A Card */}
-            <div className="bg-[#FAF8F5] rounded-2xl p-5 border border-[#6B8B7B]/40 space-y-4 shadow-xs">
+            <div className="bg-[#FAF8F5] rounded-2xl p-5 border border-[#4F6D60]/40 space-y-4 shadow-xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold text-[#364B40] uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-[#2D4A3E] uppercase tracking-wider">
                     Opción A
                   </span>
                   <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
                     {reportA.meta.product_name}
                   </h3>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-white border border-[#6B8B7B] flex flex-col items-center justify-center shrink-0">
-                  <span className="text-sm font-bold text-[#364B40] font-serif leading-none">{scoreA}</span>
+                <div className="w-12 h-12 rounded-full bg-white border border-[#4F6D60] flex flex-col items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-[#2D4A3E] font-serif leading-none">{scoreA}</span>
                   <span className="text-[8px] text-[#99938B] uppercase">/100</span>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export default function FormulaComparator() {
               </p>
 
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#ECE6DC]">
-                <span className="text-[10px] bg-white border border-[#ECE6DC] text-[#364B40] font-semibold px-2.5 py-0.5 rounded-full">
+                <span className="text-[10px] bg-white border border-[#ECE6DC] text-[#2D4A3E] font-semibold px-2.5 py-0.5 rounded-full">
                   🌿 {reportA.meta.active_ingredients_count} Activos
                 </span>
                 <span className="text-[10px] bg-white border border-[#ECE6DC] text-[#66615C] font-semibold px-2.5 py-0.5 rounded-full">
@@ -286,7 +286,7 @@ export default function FormulaComparator() {
           {/* Veredicto de Formulación */}
           <div className="bg-[#FAF8F5] rounded-2xl p-5 border border-[#ECE6DC] space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#6B8B7B]" />
+              <Sparkles className="w-4 h-4 text-[#4F6D60]" />
               <h4 className="font-serif font-bold text-sm text-[#1C1B1A]">
                 Veredicto Comparativo de Formulación
               </h4>

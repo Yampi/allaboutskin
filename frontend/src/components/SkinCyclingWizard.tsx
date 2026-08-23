@@ -134,8 +134,8 @@ export default function SkinCyclingWizard() {
     <div className="space-y-8">
       {/* Toast Notification */}
       {isSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1E2822] text-white px-5 py-3 rounded-2xl shadow-editorial-elevated flex items-center gap-3 border border-[#364B40] animate-in slide-in-from-bottom duration-300">
-          <CheckCircle2 className="w-5 h-5 text-[#6B8B7B]" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1E2822] text-white px-5 py-3 rounded-2xl shadow-editorial-elevated flex items-center gap-3 border border-[#2D4A3E] animate-in slide-in-from-bottom duration-300">
+          <CheckCircle2 className="w-5 h-5 text-[#4F6D60]" />
           <div>
             <p className="text-xs font-bold">Protocolo Guardado</p>
             <p className="text-[11px] text-[#B8C2BC]">Redirigiendo a tu calendario dérmico...</p>
@@ -159,18 +159,18 @@ export default function SkinCyclingWizard() {
             onClick={() => setCurrentStep(step.num)}
             className={`flex items-center gap-2 text-xs font-semibold transition cursor-pointer ${
               currentStep === step.num
-                ? 'text-[#364B40] font-bold'
+                ? 'text-[#2D4A3E] font-bold'
                 : currentStep > step.num
-                ? 'text-[#6B8B7B]'
+                ? 'text-[#4F6D60]'
                 : 'text-[#99938B]'
             }`}
           >
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
                 currentStep === step.num
-                  ? 'bg-[#364B40] text-white'
+                  ? 'bg-[#2D4A3E] text-white'
                   : currentStep > step.num
-                  ? 'bg-[#EEF4F0] text-[#364B40]'
+                  ? 'bg-[#EFF5F1] text-[#2D4A3E]'
                   : 'bg-[#FAF8F5] text-[#99938B] border border-[#ECE6DC]'
               }`}
             >
@@ -190,7 +190,7 @@ export default function SkinCyclingWizard() {
         {currentStep === 1 && (
           <div className="space-y-6 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest">
                 Paso 1 de 4
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
@@ -209,7 +209,7 @@ export default function SkinCyclingWizard() {
                   onClick={() => setSkinType(st.id)}
                   className={`p-4 rounded-xl text-left border transition-all duration-150 cursor-pointer ${
                     skinType === st.id
-                      ? 'bg-[#EEF4F0] border-[#6B8B7B] text-[#364B40] shadow-2xs'
+                      ? 'bg-[#EFF5F1] border-[#4F6D60] text-[#2D4A3E] shadow-2xs'
                       : 'bg-[#FAF8F5] hover:bg-[#F7F4EE] border-[#ECE6DC] text-[#66615C]'
                   }`}
                 >
@@ -229,7 +229,7 @@ export default function SkinCyclingWizard() {
         {currentStep === 2 && (
           <div className="space-y-6 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest">
                 Paso 2 de 4
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
@@ -250,7 +250,7 @@ export default function SkinCyclingWizard() {
                     onClick={() => toggleCondition(cond.id)}
                     className={`px-4 py-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
                       selected
-                        ? 'bg-[#364B40] text-white border-[#364B40]'
+                        ? 'bg-[#2D4A3E] text-white border-[#2D4A3E]'
                         : 'bg-[#FAF8F5] text-[#66615C] border-[#ECE6DC] hover:bg-[#F7F4EE]'
                     }`}
                   >
@@ -273,7 +273,7 @@ export default function SkinCyclingWizard() {
                     onClick={() => setFitzpatrick(fp.type)}
                     className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1.5 ${
                       fitzpatrick === fp.type
-                        ? 'bg-[#EEF4F0] border-[#6B8B7B]'
+                        ? 'bg-[#EFF5F1] border-[#4F6D60]'
                         : 'bg-[#FAF8F5] border-[#ECE6DC] hover:bg-[#F7F4EE]'
                     }`}
                   >
@@ -292,7 +292,7 @@ export default function SkinCyclingWizard() {
         {currentStep === 3 && (
           <div className="space-y-6 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest">
                 Paso 3 de 4
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
@@ -309,11 +309,11 @@ export default function SkinCyclingWizard() {
                 onClick={() => setBarrierStatus('HEALTHY')}
                 className={`p-4 rounded-xl text-left border transition cursor-pointer ${
                   barrierStatus === 'HEALTHY'
-                    ? 'bg-[#EEF4F0] border-[#6B8B7B] text-[#364B40]'
+                    ? 'bg-[#EFF5F1] border-[#4F6D60] text-[#2D4A3E]'
                     : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C]'
                 }`}
               >
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#364B40]">
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#2D4A3E]">
                   <ShieldCheck className="w-3.5 h-3.5" /> Cómoda / Equilibrada
                 </div>
                 <p className="text-xs text-[#66615C]">Tolerancia normal a cremas, sin ardor ni picor.</p>
@@ -364,7 +364,7 @@ export default function SkinCyclingWizard() {
                       onClick={() => setExperienceLevel(lvl)}
                       className={`py-2 px-3 rounded-xl border text-center text-xs font-semibold transition cursor-pointer ${
                         experienceLevel === lvl
-                          ? 'bg-[#364B40] text-white border-[#364B40]'
+                          ? 'bg-[#2D4A3E] text-white border-[#2D4A3E]'
                           : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C] hover:bg-[#F7F4EE]'
                       }`}
                     >
@@ -386,7 +386,7 @@ export default function SkinCyclingWizard() {
                   type="button"
                   onClick={() => setPregnancyOrNursing(!pregnancyOrNursing)}
                   className={`w-10 h-5 flex items-center rounded-full p-0.5 transition cursor-pointer ${
-                    pregnancyOrNursing ? 'bg-[#6B8B7B] justify-end' : 'bg-[#ECE6DC] justify-start'
+                    pregnancyOrNursing ? 'bg-[#4F6D60] justify-end' : 'bg-[#ECE6DC] justify-start'
                   }`}
                 >
                   <div className="bg-[#FFFFFF] w-4 h-4 rounded-full shadow-2xs" />
@@ -402,7 +402,7 @@ export default function SkinCyclingWizard() {
         {currentStep === 4 && (
           <div className="space-y-6 animate-in fade-in">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest">
                 Paso 4 de 4 · Resultado
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
@@ -421,14 +421,14 @@ export default function SkinCyclingWizard() {
                   className="p-4 rounded-xl bg-[#FAF8F5] border border-[#ECE6DC] space-y-2 flex flex-col justify-between"
                 >
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-[#6B8B7B] block">
+                    <span className="text-[10px] font-bold uppercase text-[#4F6D60] block">
                       Noche {night.nightNumber}
                     </span>
                     <h4 className="text-xs font-serif font-bold text-[#1C1B1A]">{night.title}</h4>
                     <p className="text-[11px] text-[#66615C] mt-1 leading-relaxed">{night.clinicalRationale}</p>
                   </div>
                   <div className="pt-2 border-t border-[#ECE6DC]">
-                    <span className="text-[10px] font-semibold text-[#364B40]">
+                    <span className="text-[10px] font-semibold text-[#2D4A3E]">
                       Activos: {night.recommendedActives.slice(0, 2).join(', ')}
                     </span>
                   </div>
@@ -437,14 +437,14 @@ export default function SkinCyclingWizard() {
             </div>
 
             {/* Rationale and Save CTA */}
-            <div className="bg-[#EEF4F0] p-4 rounded-xl border border-[#6B8B7B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span className="text-xs text-[#364B40] font-medium">
+            <div className="bg-[#EFF5F1] p-4 rounded-xl border border-[#4F6D60]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-xs text-[#2D4A3E] font-medium">
                 Al guardar, este ciclo configurará automáticamente tu calendario en Mi Rutina.
               </span>
               <button
                 type="button"
                 onClick={handleSaveProtocol}
-                className="bg-[#364B40] hover:bg-[#2A3B32] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-xs transition active:scale-95 cursor-pointer shrink-0"
+                className="bg-[#2D4A3E] hover:bg-[#2A3B32] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-xs transition active:scale-95 cursor-pointer shrink-0"
               >
                 Guardar en Mi Rutina
               </button>
@@ -471,7 +471,7 @@ export default function SkinCyclingWizard() {
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => prev + 1)}
-              className="bg-[#6B8B7B] hover:bg-[#5A7768] text-white text-xs font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              className="bg-[#4F6D60] hover:bg-[#3D5B4E] text-white text-xs font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
             >
               <span>Siguiente</span>
               <ArrowRight className="w-3.5 h-3.5" />

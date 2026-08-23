@@ -42,6 +42,47 @@ export interface ImageScanResult {
   notes: string[];
 }
 
+export interface FaceSkinAnalysis {
+  skinTypeEstimate: 'OILY' | 'DRY' | 'COMBINATION' | 'SENSITIVE' | 'NORMAL';
+  skinTypeLabel: string;
+  zoneTAnalysis: {
+    shineLevel: 'HIGH' | 'MODERATE' | 'LOW';
+    poresVisible: boolean;
+    description: string;
+  };
+  cheeksAnalysis: {
+    hydrationState: 'DRY' | 'NORMAL' | 'BALANCED';
+    rednessPresent: boolean;
+    description: string;
+  };
+  visibleConcerns: string[];
+  suggestedFocus: string[];
+  confidence: number;
+  disclaimer: string;
+}
+
+export type VisionClassificationResult = 
+  | {
+      classification: 'SKINCARE_PRODUCT';
+      brand: string | null;
+      productName: string | null;
+      inciText: string;
+      rawDetectedText: string;
+      confidence: number;
+      notes: string[];
+    }
+  | {
+      classification: 'HUMAN_FACE';
+      faceAnalysis: FaceSkinAnalysis;
+      confidence: number;
+    }
+  | {
+      classification: 'INVALID';
+      rejectionReason: 'NOT_COSMETIC_OR_FACE' | 'POOR_LIGHTING' | 'BLURRY_UNREADABLE';
+      userFriendlyMessage: string;
+      confidence: number;
+    };
+
 export interface RoutineAuditResult {
   routineSafetyScore: number; // 0 - 100
   verdict: string;
@@ -261,46 +302,131 @@ ${question}`;
 }
 
 /**
- * Extracts and cleans INCI ingredients from an uploaded photo using Gemini Vision.
+ * Classifies an uploaded photo into SKINCARE_PRODUCT, HUMAN_FACE, or INVALID,
+ * executing the appropriate data extraction or visual diagnosis.
  */
-export async function extractInciFromImage(
+export async function classifyAndProcessImage(
   base64Data: string,
   mimeType: string = 'image/jpeg'
-): Promise<ImageScanResult> {
+): Promise<VisionClassificationResult> {
   const apiKey = process.env.GEMINI_API_KEY || '';
 
-  const systemInstruction = `Eres un escáner de visión artificial especializado en cosmética y farmacología para Allabout.skin.
-Tu tarea es inspeccionar la fotografía de un envase o etiqueta cosmética y extraer con 100% de precisión la lista de ingredientes (INCI), el nombre del producto y la marca si son visibles.
-Corrige errores comunes de tipografía u oclusión óptica.
+  const systemInstruction = `Eres el Sistema Central de Visión y Clasificación Dermatológica de Allabout.skin.
+Tu misión es inspeccionar la fotografía provista y clasificarla de forma categórica y estricta en UNA de 3 opciones:
 
-Responde ÚNICAMENTE en formato JSON válido con la siguiente estructura:
+1. "SKINCARE_PRODUCT": La imagen contiene un producto cosmético, frasco, tubo, bote, caja o etiqueta con lista de ingredientes (INCI) o marca de cuidado facial/corporal/solar.
+2. "HUMAN_FACE": La imagen contiene el rostro (selfie o retrato) de una persona para evaluación dermatológica visual orientativa.
+3. "INVALID": La imagen NO es un cosmético ni un rostro humano (por ejemplo: alimentos, mascotas, ropa, paisajes, capturas de pantalla, objetos del hogar, o fotos completamente borrosas o no legibles).
+
+REGLAS DE RESPUESTA EN FORMATO JSON ESTRICTO:
+
+Si es "SKINCARE_PRODUCT":
 {
-  "brand": "Nombre de la marca (o null si no es visible)",
-  "productName": "Nombre del producto (o null si no es visible)",
-  "inciText": "Lista de ingredientes en formato INCI separados por coma (ej. Aqua, Niacinamide, Glycerin, Zinc PCA...)",
-  "rawDetectedText": "Texto plano completo detectado en la imagen",
+  "classification": "SKINCARE_PRODUCT",
+  "brand": "Nombre de la marca si es visible o null",
+  "productName": "Nombre del producto si es visible o null",
+  "inciText": "Lista de ingredientes INCI detectados separados por comas (ej. Aqua, Niacinamide, Glycerin...)",
+  "rawDetectedText": "Texto crudo completo visible en el envase",
   "confidence": 0.95,
-  "notes": ["Nota sobre la legibilidad de la imagen", "Advertencia si alguna sección estaba cortada"]
+  "notes": ["Notas de legibilidad o advertencias"]
+}
+
+Si es "HUMAN_FACE":
+{
+  "classification": "HUMAN_FACE",
+  "faceAnalysis": {
+    "skinTypeEstimate": "OILY" | "DRY" | "COMBINATION" | "SENSITIVE" | "NORMAL",
+    "skinTypeLabel": "Piel Grasa / Piel Seca / Piel Mixta / Piel Sensible / Piel Normal",
+    "zoneTAnalysis": {
+      "shineLevel": "HIGH" | "MODERATE" | "LOW",
+      "poresVisible": true,
+      "description": "Evaluación visual de brillo y poros en frente, nariz y mentón"
+    },
+    "cheeksAnalysis": {
+      "hydrationState": "DRY" | "NORMAL" | "BALANCED",
+      "rednessPresent": false,
+      "description": "Evaluación visual de tirantez o rojez en mejillas"
+    },
+    "visibleConcerns": ["Brillo en zona T", "Brotes visibles", "Rojeces"],
+    "suggestedFocus": ["Control de oleosidad", "Hidratación ligera en gel", "Fotoprotector toque seco"],
+    "confidence": 0.88,
+    "disclaimer": "Este análisis visual es una estimación referencial basada en IA y no sustituye una consulta médica dermatológica profesional."
+  },
+  "confidence": 0.90
+}
+
+Si es "INVALID":
+{
+  "classification": "INVALID",
+  "rejectionReason": "NOT_COSMETIC_OR_FACE",
+  "userFriendlyMessage": "No detectamos un producto de skincare ni el rostro de una persona en la foto. Por favor enfoca la etiqueta de tu cosmético o tómate una selfie con buena luz.",
+  "confidence": 0.98
 }`;
 
-  const prompt = `Analiza minuciosamente esta imagen de producto cosmético. Extrae la lista completa de ingredientes INCI y el nombre del producto.`;
+  const prompt = `Inspecciona minuciosamente esta imagen. Determina si es un producto cosmético (SKINCARE_PRODUCT), un rostro de persona (HUMAN_FACE) o un objeto/imagen no válida (INVALID) y devuelve el JSON correspondiente.`;
 
   // Strip base64 data url prefix if present (e.g. data:image/jpeg;base64,...)
   const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
 
   if (!apiKey) {
+    // Deterministic mock fallback for local testing without API key
     return {
+      classification: 'SKINCARE_PRODUCT',
       brand: 'Marca Detectada',
       productName: 'Producto Cosmético Escaneado',
       inciText: 'Aqua, Glycerin, Niacinamide, Zinc PCA, Hyaluronic Acid, Phenoxyethanol',
       rawDetectedText: 'Aqua, Glycerin, Niacinamide, Zinc PCA, Hyaluronic Acid, Phenoxyethanol',
       confidence: 0.85,
-      notes: ['Modo de prueba local: Configura GEMINI_API_KEY en Vercel para extracción de visión artificial en tiempo real.'],
+      notes: ['Modo de prueba local: Configura GEMINI_API_KEY en Vercel para clasificación multimodal en tiempo real.'],
     };
   }
 
   const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true);
-  return JSON.parse(rawJson);
+  const parsed = JSON.parse(rawJson);
+
+  // Normalization checks
+  if (parsed.classification !== 'SKINCARE_PRODUCT' && parsed.classification !== 'HUMAN_FACE' && parsed.classification !== 'INVALID') {
+    if (parsed.inciText || parsed.productName) {
+      parsed.classification = 'SKINCARE_PRODUCT';
+    } else if (parsed.faceAnalysis || parsed.skinTypeEstimate) {
+      parsed.classification = 'HUMAN_FACE';
+    } else {
+      parsed.classification = 'INVALID';
+      parsed.userFriendlyMessage = parsed.userFriendlyMessage || 'La imagen no corresponde a un cosmético ni a un rostro reconocible.';
+    }
+  }
+
+  return parsed as VisionClassificationResult;
+}
+
+/**
+ * Extracts and cleans INCI ingredients from an uploaded photo using Gemini Vision.
+ * (Preserved for backwards-compatibility)
+ */
+export async function extractInciFromImage(
+  base64Data: string,
+  mimeType: string = 'image/jpeg'
+): Promise<ImageScanResult> {
+  const res = await classifyAndProcessImage(base64Data, mimeType);
+  if (res.classification === 'SKINCARE_PRODUCT') {
+    return {
+      brand: res.brand,
+      productName: res.productName,
+      inciText: res.inciText,
+      rawDetectedText: res.rawDetectedText,
+      confidence: res.confidence,
+      notes: res.notes,
+    };
+  }
+  
+  return {
+    brand: null,
+    productName: null,
+    inciText: '',
+    rawDetectedText: '',
+    confidence: 0,
+    notes: [res.classification === 'HUMAN_FACE' ? 'Se detectó un rostro en lugar de un producto' : 'Imagen no válida como cosmético'],
+  };
 }
 
 /**

@@ -488,13 +488,18 @@ export async function sendCopilotMessage(params: {
   return json.data;
 }
 
-export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg') {
+import type { VisionClassificationResult } from './gemini';
+
+export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg'): Promise<VisionClassificationResult> {
   const res = await fetch('/api/ai/scan-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ image: base64Image, mimeType }),
   });
-  if (!res.ok) throw new Error('Error al analizar imagen con IA');
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => null);
+    throw new Error(errorJson?.error || 'Error al analizar imagen con IA');
+  }
   const json = await res.json();
   return json.data;
 }

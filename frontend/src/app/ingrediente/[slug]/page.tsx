@@ -215,9 +215,9 @@ export default async function IngredientPage({ params }: Props) {
       <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 text-xs font-semibold text-[#99938B]">
-          <Link href="/" className="hover:text-[#364B40]">Inicio</Link>
+          <Link href="/" className="hover:text-[#2D4A3E]">Inicio</Link>
           <span>/</span>
-          <Link href="/ingrediente" className="hover:text-[#364B40]">Biblioteca de Activos</Link>
+          <Link href="/ingrediente" className="hover:text-[#2D4A3E]">Biblioteca de Activos</Link>
           <span>/</span>
           <span className="text-[#1C1B1A] font-bold">{item.name}</span>
         </div>
@@ -226,7 +226,7 @@ export default async function IngredientPage({ params }: Props) {
         <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#ECE6DC] pb-5">
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-[#364B40] bg-[#EEF4F0] px-3 py-0.5 rounded-full uppercase tracking-widest inline-block">
+              <span className="text-[10px] font-bold text-[#2D4A3E] bg-[#EFF5F1] px-3 py-0.5 rounded-full uppercase tracking-widest inline-block">
                 CosIng UE · CAS {item.cas}
               </span>
               <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#1C1B1A] tracking-tight">
@@ -241,7 +241,7 @@ export default async function IngredientPage({ params }: Props) {
               <span className="text-[10px] text-[#99938B] font-bold uppercase tracking-wider block">
                 Evidencia Médica
               </span>
-              <span className="text-sm font-serif font-bold text-[#364B40] block mt-0.5">
+              <span className="text-sm font-serif font-bold text-[#2D4A3E] block mt-0.5">
                 {item.evidence}
               </span>
             </div>
@@ -259,7 +259,7 @@ export default async function IngredientPage({ params }: Props) {
             </div>
             <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
               <span className="text-[10px] text-[#99938B] font-bold uppercase block">Comedogenicidad</span>
-              <span className="font-bold text-[#364B40] mt-0.5 block">{item.comedogenic}</span>
+              <span className="font-bold text-[#2D4A3E] mt-0.5 block">{item.comedogenic}</span>
             </div>
             <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
               <span className="text-[10px] text-[#99938B] font-bold uppercase block">Aplicación</span>
@@ -276,8 +276,8 @@ export default async function IngredientPage({ params }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Sinergias */}
           <div className="bg-[#FFFFFF] rounded-2xl p-6 border border-[#ECE6DC] shadow-editorial space-y-3">
-            <div className="flex items-center gap-2 text-[#364B40]">
-              <CheckCircle2 className="w-4 h-4 text-[#6B8B7B]" />
+            <div className="flex items-center gap-2 text-[#2D4A3E]">
+              <CheckCircle2 className="w-4 h-4 text-[#4F6D60]" />
               <h2 className="font-serif font-bold text-sm text-[#1C1B1A]">
                 Combinaciones Sinérgicas
               </h2>
@@ -287,8 +287,8 @@ export default async function IngredientPage({ params }: Props) {
             </p>
             <ul className="space-y-1.5 pt-1">
               {item.synergies.map((syn, i) => (
-                <li key={i} className="text-xs text-[#1C1B1A] bg-[#EEF4F0] p-2.5 rounded-xl flex items-start gap-2">
-                  <span className="text-[#364B40] font-bold">✓</span>
+                <li key={i} className="text-xs text-[#1C1B1A] bg-[#EFF5F1] p-2.5 rounded-xl flex items-start gap-2">
+                  <span className="text-[#2D4A3E] font-bold">✓</span>
                   <span>{syn}</span>
                 </li>
               ))}
@@ -321,7 +321,7 @@ export default async function IngredientPage({ params }: Props) {
         <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-4">
           <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-3">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#6B8B7B]" />
+              <FileText className="w-4 h-4 text-[#4F6D60]" />
               <h2 className="font-serif font-bold text-base text-[#1C1B1A]">
                 Estudios Médicos Indexados en PubMed (NCBI)
               </h2>
@@ -342,7 +342,7 @@ export default async function IngredientPage({ params }: Props) {
                     href={`https://pubmed.ncbi.nlm.nih.gov/${std.pmid}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6B8B7B] hover:text-[#364B40] underline shrink-0 touch-target"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F6D60] hover:text-[#2D4A3E] underline shrink-0 touch-target"
                   >
                     <span>PMID: {std.pmid}</span>
                     <ExternalLink className="w-3 h-3" />

@@ -17,10 +17,16 @@
   --border-strong: #C8BEAF;
   
   /* Primary Sage (Botanical science) */
-  --primary-sage: #6B8B7B;
-  --primary-sage-light: #EEF4F0;
-  --primary-sage-dark: #364B40;
-  --primary-sage-hover: #5A7768;
+  --primary-sage: #4F6D60;
+  --primary-sage-light: #EFF5F1;
+  --primary-sage-dark: #2D4A3E;
+  --primary-sage-hover: #3D5B4E;
+  
+  /* Warm Accents (Phase 0) */
+  --accent-warm: #C4A882;
+  --accent-warm-light: #F5EDE3;
+  --surface-hero: #E8DDD0;
+  --surface-card-warm: #F5EDE3;
   
   /* Warning & Attention (Soft Warm Blush) */
   --accent-blush: #D97D75;

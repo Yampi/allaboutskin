@@ -239,19 +239,19 @@ export default function MyRoutineDashboardPage() {
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
       <Navbar />
 
-      <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-12">
+      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-12">
         
         {/* Header Editorial */}
         <div className="border-b border-[#ECE6DC] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest block">
+            <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest block">
               Mi Rutina & Protocolo
             </span>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C1B1A] tracking-tight">
-              {currentMonthYear.charAt(0).toUpperCase() + currentMonthYear.slice(1)}
+              Mi Calendario de Skin Cycling
             </h1>
             <p className="text-xs text-[#66615C]">
-              Protocolo activo: <strong className="text-[#1C1B1A] font-serif">{protocol?.protocolName}</strong>
+              Protocoliza tus noches, siente la diferencia...
             </p>
           </div>
 
@@ -267,7 +267,7 @@ export default function MyRoutineDashboardPage() {
               type="button"
               onClick={handleRunAiRoutineAudit}
               disabled={isAiAuditingRoutine}
-              className="inline-flex items-center gap-1.5 bg-[#364B40] hover:bg-[#2A3B32] disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-full transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#2D4A3E] hover:bg-[#2A3B32] disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-full transition active:scale-95 cursor-pointer"
             >
               {isAiAuditingRoutine ? (
                 <>
@@ -304,12 +304,12 @@ export default function MyRoutineDashboardPage() {
           <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-7 border border-[#ECE6DC] shadow-editorial space-y-4 animate-in fade-in">
             <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-3">
               <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-[#6B8B7B]" />
+                <Bot className="w-4 h-4 text-[#4F6D60]" />
                 <h3 className="font-serif font-bold text-sm text-[#1C1B1A]">
                   Diagnóstico Clínico de tu Rutina
                 </h3>
               </div>
-              <span className="text-xs font-bold text-[#364B40] bg-[#EEF4F0] px-3 py-0.5 rounded-full">
+              <span className="text-xs font-bold text-[#2D4A3E] bg-[#EFF5F1] px-3 py-0.5 rounded-full">
                 Seguridad {aiRoutineAudit.routineSafetyScore}%
               </span>
             </div>
@@ -340,7 +340,7 @@ export default function MyRoutineDashboardPage() {
                 <span className="w-2 h-2 rounded-full bg-[#B89B7D]" /> Exfoliación
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#6B8B7B]" /> Retinoide
+                <span className="w-2 h-2 rounded-full bg-[#4F6D60]" /> Retinoide
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#ECE6DC]" /> Recuperación
@@ -350,24 +350,26 @@ export default function MyRoutineDashboardPage() {
 
           <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center">
             {next7Days.map((day, idx) => {
-              const dotColor = day.category === 'EXFOLIATION' ? 'bg-[#B89B7D]' :
-                               day.category === 'RETINOID' ? 'bg-[#6B8B7B]' : 'bg-[#DCD5CA]';
+              const pillColor = day.category === 'EXFOLIATION' ? 'bg-[#B89B7D] text-white' :
+                               day.category === 'RETINOID' ? 'bg-[#4F6D60] text-white' : 'bg-[#DCD5CA] text-[#1C1B1A]';
               return (
                 <div
                   key={idx}
-                  className={`p-3 rounded-xl transition-all flex flex-col items-center justify-between gap-1.5 ${
+                  className={`p-4 rounded-xl transition-all flex flex-col items-center justify-center gap-1.5 ${
                     day.isToday
-                      ? 'bg-[#364B40] text-white shadow-xs'
-                      : 'bg-[#FAF8F5] text-[#1C1B1A] border border-[#ECE6DC]/70'
+                      ? 'bg-[#2D4A3E] text-white shadow-xs border-[#2D4A3E]'
+                      : 'bg-[#FFFFFF] text-[#1C1B1A] border border-[#ECE6DC] shadow-sm'
                   }`}
                 >
+                  <span className="text-2xl font-serif font-bold leading-none">
+                    {day.dayNumber}
+                  </span>
                   <span className={`text-[10px] font-bold uppercase tracking-wider ${day.isToday ? 'text-[#A2BAAD]' : 'text-[#99938B]'}`}>
                     {day.dayName}
                   </span>
-                  <span className="text-base sm:text-lg font-serif font-bold leading-none">
-                    {day.dayNumber}
-                  </span>
-                  <div className={`w-1.5 h-1.5 rounded-full ${day.isToday ? 'bg-white' : dotColor} mt-1`} />
+                  <div className={`px-2 py-0.5 mt-1 text-[9px] font-bold rounded-full ${pillColor}`}>
+                    {day.category === 'EXFOLIATION' ? 'Exfoliación' : day.category === 'RETINOID' ? 'Retinoide' : 'Recuperación'}
+                  </div>
                 </div>
               );
             })}
@@ -376,14 +378,14 @@ export default function MyRoutineDashboardPage() {
 
         {/* ESTA NOCHE / HOY (CARD PRINCIPAL DESTACADA) */}
         {currentNight && (
-          <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#6B8B7B]/30 shadow-editorial space-y-6">
+          <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#4F6D60]/30 shadow-editorial space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#ECE6DC] pb-4">
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-wider">
                   Esta Noche · Fase {currentNight.nightNumber}
                 </span>
                 <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A] flex items-center gap-2">
-                  <Moon className="w-5 h-5 text-[#364B40]" />
+                  <Moon className="w-5 h-5 text-[#2D4A3E]" />
                   <span>{currentNight.title}</span>
                 </h2>
                 <p className="text-xs text-[#66615C]">
@@ -398,7 +400,7 @@ export default function MyRoutineDashboardPage() {
                   onClick={() => setIsAmDone(!isAmDone)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
                     isAmDone
-                      ? 'bg-[#EEF4F0] text-[#364B40] border border-[#6B8B7B]/30'
+                      ? 'bg-[#EFF5F1] text-[#2D4A3E] border border-[#4F6D60]/30'
                       : 'bg-[#FAF8F5] text-[#66615C] border border-[#ECE6DC] hover:bg-[#F7F4EE]'
                   }`}
                 >
@@ -410,7 +412,7 @@ export default function MyRoutineDashboardPage() {
                   onClick={() => setIsPmDone(!isPmDone)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
                     isPmDone
-                      ? 'bg-[#EEF4F0] text-[#364B40] border border-[#6B8B7B]/30'
+                      ? 'bg-[#EFF5F1] text-[#2D4A3E] border border-[#4F6D60]/30'
                       : 'bg-[#FAF8F5] text-[#66615C] border border-[#ECE6DC] hover:bg-[#F7F4EE]'
                   }`}
                 >
@@ -449,7 +451,7 @@ export default function MyRoutineDashboardPage() {
             <button
               type="button"
               onClick={() => setIsAddProductOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-[#6B8B7B] hover:bg-[#5A7768] text-white text-xs font-semibold px-4 py-2 rounded-xl transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#4F6D60] hover:bg-[#3D5B4E] text-white text-xs font-semibold px-4 py-2 rounded-xl transition active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Añadir Producto</span>
@@ -522,7 +524,7 @@ export default function MyRoutineDashboardPage() {
                   value={newProductName}
                   onChange={(e) => setNewProductName(e.target.value)}
                   placeholder="ej: Retinol 0.3% en Escualano"
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#6B8B7B] focus:outline-none"
+                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
                 />
               </div>
 
@@ -533,7 +535,7 @@ export default function MyRoutineDashboardPage() {
                   value={newProductBrand}
                   onChange={(e) => setNewProductBrand(e.target.value)}
                   placeholder="ej: The Ordinary"
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#6B8B7B] focus:outline-none"
+                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
                 />
               </div>
 
@@ -542,7 +544,7 @@ export default function MyRoutineDashboardPage() {
                 <select
                   value={selectedPhase}
                   onChange={(e) => setSelectedPhase(parseInt(e.target.value))}
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#6B8B7B] focus:outline-none"
+                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
                 >
                   <option value={0}>☀️ Mañanas (AM)</option>
                   <option value={1}>🌙 Noche 1: Exfoliación</option>
@@ -556,7 +558,7 @@ export default function MyRoutineDashboardPage() {
                 <select
                   value={newProductCategory}
                   onChange={(e) => setNewProductCategory(e.target.value as any)}
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#6B8B7B] focus:outline-none"
+                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
                 >
                   <option value="CLEANSER">Limpiador</option>
                   <option value="SERUM">Sérum / Activo Concentrado</option>
@@ -580,7 +582,7 @@ export default function MyRoutineDashboardPage() {
                 type="button"
                 onClick={handleAddProduct}
                 disabled={!newProductName.trim()}
-                className="bg-[#6B8B7B] hover:bg-[#5A7768] disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-xl"
+                className="bg-[#4F6D60] hover:bg-[#3D5B4E] disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-xl"
               >
                 Guardar
               </button>

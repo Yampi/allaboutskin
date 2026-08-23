@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractInciFromImage } from '@/lib/gemini';
+import { classifyAndProcessImage } from '@/lib/gemini';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { validateBase64Image, sanitizeText } from '@/lib/security';
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedMimeType = sanitizeText(mimeType || 'image/jpeg', 30);
-    const scanResult = await extractInciFromImage(image, sanitizedMimeType);
+    const scanResult = await classifyAndProcessImage(image, sanitizedMimeType);
 
     return NextResponse.json(
       {

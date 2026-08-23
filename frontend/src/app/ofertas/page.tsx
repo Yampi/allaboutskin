@@ -176,21 +176,21 @@ export default function OffersAndProductsPage() {
         
         {/* TOP HERO HEADER */}
         <div className="border-b border-[#ECE6DC] pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1.5 max-w-xl">
-            <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest bg-[#EEF4F0] px-3 py-0.5 rounded-full inline-block">
+          <div className="space-y-2.5 max-w-xl">
+            <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest bg-[#EFF5F1] px-3 py-0.5 rounded-full inline-block">
               Catálogo Curado & Evidencia
             </span>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C1B1A] tracking-tight">
-              Cosméticos con <span className="text-[#6B8B7B]">Respaldo Científico</span>
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#1C1B1A] tracking-tight">
+              Cosméticos con <span className="text-[#4F6D60]">Respaldo Científico</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed">
+            <p className="text-sm text-[#66615C] leading-relaxed">
               Curaduría científica independiente de productos con evidencia clínica real, concentraciones óptimas y compatibilidad dérmica comprobada.
             </p>
           </div>
 
           <div className="bg-[#FFFFFF] border border-[#ECE6DC] p-4 rounded-xl shadow-editorial space-y-1 shrink-0 max-w-xs text-xs text-[#66615C]">
-            <div className="flex items-center gap-1.5 font-semibold text-[#364B40]">
-              <ShieldCheck className="w-4 h-4 text-[#6B8B7B]" />
+            <div className="flex items-center gap-1.5 font-semibold text-[#2D4A3E]">
+              <ShieldCheck className="w-4 h-4 text-[#4F6D60]" />
               <span>Criterio Independiente</span>
             </div>
             <p className="text-[11px] leading-relaxed">
@@ -209,7 +209,7 @@ export default function OffersAndProductsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por marca, cosmético o activo..."
-                className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl pl-9 pr-4 py-2 text-xs text-[#1C1B1A] placeholder-[#99938B] focus:outline-none focus:border-[#6B8B7B] focus:bg-white transition"
+                className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl pl-9 pr-4 py-2 text-xs text-[#1C1B1A] placeholder-[#99938B] focus:outline-none focus:border-[#4F6D60] focus:bg-white transition"
               />
             </div>
 
@@ -227,8 +227,8 @@ export default function OffersAndProductsPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border transition whitespace-nowrap cursor-pointer touch-target ${
                   selectedCategory === cat.id
-                    ? 'bg-[#364B40] text-white border-[#364B40]'
-                    : 'bg-[#FAF8F5] text-[#66615C] border-[#ECE6DC] hover:bg-[#EEF4F0] hover:text-[#364B40]'
+                    ? 'bg-[#2D4A3E] text-white border-[#2D4A3E]'
+                    : 'bg-[#FAF8F5] text-[#66615C] border-[#ECE6DC] hover:bg-[#EFF5F1] hover:text-[#2D4A3E]'
                 }`}
               >
                 {cat.label}
@@ -243,11 +243,11 @@ export default function OffersAndProductsPage() {
             {filteredOffers.map((item) => (
               <div
                 key={item.id}
-                className="bg-[#FFFFFF] rounded-2xl p-5 border border-[#ECE6DC] shadow-editorial flex flex-col justify-between space-y-4 hover:border-[#6B8B7B]/40 transition"
+                className="bg-[#FFFFFF] rounded-2xl p-5 border border-[#ECE6DC] shadow-editorial flex flex-col justify-between space-y-4 hover:border-[#4F6D60]/40 transition"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#364B40] bg-[#EEF4F0] px-2.5 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-[#2D4A3E] bg-[#EFF5F1] px-2.5 py-0.5 rounded-full">
                       {item.category}
                     </span>
                     <span className="text-[10px] text-[#99938B] font-semibold">
@@ -269,7 +269,7 @@ export default function OffersAndProductsPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[#66615C]">Concentración:</span>
-                      <span className="font-semibold text-[#364B40]">{item.activeConcentration}</span>
+                      <span className="font-semibold text-[#2D4A3E]">{item.activeConcentration}</span>
                     </div>
                   </div>
                 </div>
@@ -291,7 +291,7 @@ export default function OffersAndProductsPage() {
                     </div>
 
                     {item.discountPercentage > 0 && (
-                      <span className="inline-flex items-center gap-0.5 bg-[#EEF4F0] text-[#364B40] text-xs font-bold px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-0.5 bg-[#EFF5F1] text-[#2D4A3E] text-xs font-bold px-2 py-0.5 rounded-full">
                         <TrendingDown className="w-3 h-3" />
                         <span>-{item.discountPercentage}%</span>
                       </span>
@@ -301,9 +301,9 @@ export default function OffersAndProductsPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       href={`/?formula=${encodeURIComponent(item.inciSummary)}`}
-                      className="w-full bg-[#FAF8F5] hover:bg-[#EEF4F0] text-[#364B40] border border-[#ECE6DC] text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
+                      className="w-full bg-[#FAF8F5] hover:bg-[#EFF5F1] text-[#2D4A3E] border border-[#ECE6DC] text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
                     >
-                      <Sparkles className="w-3 h-3 text-[#6B8B7B]" />
+                      <Sparkles className="w-3 h-3 text-[#4F6D60]" />
                       <span>Auditar INCI</span>
                     </Link>
 
@@ -311,7 +311,7 @@ export default function OffersAndProductsPage() {
                       href={item.storeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full bg-[#364B40] hover:bg-[#2A3B32] text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
+                      className="w-full bg-[#2D4A3E] hover:bg-[#2A3B32] text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
                     >
                       <span>Ver Oferta</span>
                       <ExternalLink className="w-3 h-3" />

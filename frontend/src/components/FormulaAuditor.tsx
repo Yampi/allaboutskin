@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import FormulaSearchCard from '@/components/home/FormulaSearchCard';
 import { 
   Microscope, 
   AlertTriangle, 
@@ -32,7 +33,11 @@ import {
   Bot,
   Send,
   Cpu,
-  BookOpen
+  BookOpen,
+  User,
+  ShieldAlert,
+  Info,
+  CheckCircle
 } from 'lucide-react';
 import { 
   AuditReport, 
@@ -49,6 +54,7 @@ import {
   sendCopilotMessage,
   scanImageWithGeminiVision
 } from '@/lib/api';
+import type { FaceSkinAnalysis } from '@/lib/gemini';
 import { UserRoutineProduct } from '@/types/skinCycling';
 import { 
   performOpticalCharacterRecognition, 
@@ -57,40 +63,8 @@ import {
   cleanOcrCosmeticText 
 } from '@/lib/ocrService';
 
-const QUICK_PRESETS = [
-  {
-    label: 'The Ordinary Niacinamida 10%',
-    desc: 'Poros & Sebo',
-    input: 'The Ordinary Niacinamide 10% + Zinc 1%: Aqua, Niacinamide, Pentylene Glycol, Zinc PCA, Tamarindus Indica Seed Gum, Phenoxyethanol.',
-    price: 6.50,
-  },
-  {
-    label: "Paula's Choice BHA 2%",
-    desc: 'Acné & Puntos Negros',
-    input: "Paula's Choice 2% BHA Liquid: Water, Methylpropanediol, Butylene Glycol, Salicylic Acid, Green Tea Extract, Sodium Hydroxide.",
-    price: 35.00,
-  },
-  {
-    label: 'Retinol 0.5% en Escualano',
-    desc: 'Renovación Celular',
-    input: 'Retinol Anti-Edad: Squalane, Caprylic/Capric Triglyceride, Retinol, Solanum Lycopersicum Fruit Extract, Rosmarinus Officinalis Leaf Extract.',
-    price: 9.80,
-  },
-  {
-    label: 'Cicaplast Baume B5+',
-    desc: 'Reparador / Cica',
-    input: 'La Roche-Posay Cicaplast Baume B5+: Aqua, Hydrogenated Polyisobutene, Dimethicone, Glycerin, Butyrospermum Parkii Butter, Panthenol, Centella Asiatica, Madecassoside, Zinc Gluconate.',
-    price: 18.00,
-  },
-  {
-    label: 'Hawaiian Tropic Ozono 50+',
-    desc: 'Solar FPS 50+',
-    input: 'Hawaiian Tropic Ozono Duo Defense FPS 50+: Aqua, Homosalate, Octocrylene, Ethylhexyl Salicylate, Butyl Methoxydibenzoylmethane, Cetearyl Alcohol, Glycerin, Dimethicone, Phenoxyethanol.',
-    price: 14.99,
-  }
-];
 
-export default function FormulaAuditor() {
+export default function FormulaAuditor({ hideSearchUI = false }: { hideSearchUI?: boolean }) {
   const [omniInput, setOmniInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +105,13 @@ export default function FormulaAuditor() {
   const [ocrResult, setOcrResult] = useState<OcrDetectionResult | null>(null);
   const [editableOcrText, setEditableOcrText] = useState('');
   const [ocrEngine, setOcrEngine] = useState<'GEMINI_VISION' | 'LOCAL_OCR'>('GEMINI_VISION');
+
+  // Multi-route Classifier States (Face Diagnosis & Rejection Handling)
+  const [faceSkinResult, setFaceSkinResult] = useState<FaceSkinAnalysis | null>(null);
+  const [isFaceAnalysisModalOpen, setIsFaceAnalysisModalOpen] = useState(false);
+  const [isScanRejected, setIsScanRejected] = useState(false);
+  const [scanRejectionMessage, setScanRejectionMessage] = useState<string | null>(null);
+  const [skinTypeToast, setSkinTypeToast] = useState<string | null>(null);
 
   // Recent Audits
   const [recentAudits, setRecentAudits] = useState<RecentAuditItem[]>([]);
@@ -382,8 +363,10 @@ export default function FormulaAuditor() {
     setOcrImagePreview(previewUrl);
     setIsOcrModalOpen(true);
     setIsOcrScanning(true);
+    setIsScanRejected(false);
+    setScanRejectionMessage(null);
     setOcrProgress(0.1);
-    setOcrStatusText(ocrEngine === 'GEMINI_VISION' ? 'Analizando envase con Gemini Vision...' : 'Analizando imagen del cosmético...');
+    setOcrStatusText(ocrEngine === 'GEMINI_VISION' ? 'Clasificando imagen con Gemini Vision IA...' : 'Analizando imagen del cosmético...');
     setOcrResult(null);
     setEditableOcrText('');
 
@@ -393,21 +376,35 @@ export default function FormulaAuditor() {
         reader.onload = async () => {
           try {
             const base64Data = reader.result as string;
-            setOcrStatusText('Extrayendo lista INCI con IA...');
+            setOcrStatusText('Analizando cosmético o rostro...');
             const scanData = await scanImageWithGeminiVision(base64Data, file.type || 'image/jpeg');
-            
-            const detectedName = scanData.productName ? `${scanData.brand ? `${scanData.brand} ` : ''}${scanData.productName}` : '';
-            const detectedInci = scanData.inciText || scanData.rawDetectedText || '';
-            const combined = detectedName ? `${detectedName}: ${detectedInci}` : detectedInci;
-            
-            setEditableOcrText(combined);
-            setOcrResult({
-              cleanedText: combined,
-              detectedProductName: detectedName || undefined,
-              confidence: scanData.confidence || 0.95,
-              rawText: scanData.rawDetectedText || '',
-              labelType: 'INCI_BACK_PANEL'
-            } as any);
+
+            if (scanData.classification === 'SKINCARE_PRODUCT') {
+              const detectedName = scanData.productName ? `${scanData.brand ? `${scanData.brand} ` : ''}${scanData.productName}` : '';
+              const detectedInci = scanData.inciText || scanData.rawDetectedText || '';
+              const combined = detectedName ? `${detectedName}: ${detectedInci}` : detectedInci;
+              
+              setEditableOcrText(combined);
+              setOcrResult({
+                cleanedText: combined,
+                detectedProductName: detectedName || undefined,
+                confidence: scanData.confidence || 0.95,
+                rawText: scanData.rawDetectedText || '',
+                labelType: 'INCI_BACK_PANEL',
+                isCosmeticValid: true,
+              } as any);
+            } else if (scanData.classification === 'HUMAN_FACE') {
+              setIsOcrModalOpen(false);
+              setFaceSkinResult(scanData.faceAnalysis);
+              setIsFaceAnalysisModalOpen(true);
+            } else {
+              // INVALID
+              setIsScanRejected(true);
+              setScanRejectionMessage(
+                scanData.userFriendlyMessage || 
+                'No hemos detectado un producto de skincare ni el rostro de una persona en la foto. Asegúrate de enfocar la etiqueta de tu cosmético o tomar una selfie con buena luz.'
+              );
+            }
           } catch (err: any) {
             console.warn('Gemini vision fallback to local OCR:', err);
             await runLocalOcr(file);
@@ -421,7 +418,8 @@ export default function FormulaAuditor() {
       }
     } catch (err: any) {
       setOcrStatusText('Error al leer imagen');
-      setError('No pudimos leer la foto con claridad. Intenta con mejor luz o escribe el nombre.');
+      setIsScanRejected(true);
+      setScanRejectionMessage('No pudimos procesar la foto con claridad. Intenta con mejor luz o escribe el nombre.');
       setIsOcrScanning(false);
     }
   };
@@ -435,10 +433,15 @@ export default function FormulaAuditor() {
     const analysis = analyzeCosmeticLabel(recognizedText);
     setOcrResult(analysis);
 
-    if (analysis.labelType === 'FRONT_BRANDING' && analysis.suggestedOfficialInci) {
-      setEditableOcrText(`${analysis.detectedProductName || 'Producto'}: ${analysis.suggestedOfficialInci}`);
+    if (!analysis.isCosmeticValid && (!analysis.cleanedText || analysis.cleanedText.length < 15)) {
+      setIsScanRejected(true);
+      setScanRejectionMessage('No detectamos una lista de ingredientes cosméticos reconocible ni una etiqueta en la imagen.');
     } else {
-      setEditableOcrText(analysis.cleanedText || cleanOcrCosmeticText(recognizedText));
+      if (analysis.labelType === 'FRONT_BRANDING' && analysis.suggestedOfficialInci) {
+        setEditableOcrText(`${analysis.detectedProductName || 'Producto'}: ${analysis.suggestedOfficialInci}`);
+      } else {
+        setEditableOcrText(analysis.cleanedText || cleanOcrCosmeticText(recognizedText));
+      }
     }
     setIsOcrScanning(false);
   };
@@ -454,146 +457,28 @@ export default function FormulaAuditor() {
   const complementarySteps = getComplementaryRoutine();
 
   return (
-    <div className="w-full space-y-12">
-      
-      {/* 1. HERO SEARCH & SCANNER (EDITORIAL CANVAS ELEVATION) */}
-      <div className="space-y-6">
-        {/* Editorial Headline */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-[#1C1B1A] tracking-tight leading-[1.15]">
-            Entiende lo que aplicas.<br />
-            <span className="text-[#6B8B7B]">Decide con ciencia.</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#66615C] max-w-lg mx-auto leading-relaxed">
-            Analiza ingredientes, productos o fórmulas completas y descubre qué dice la evidencia científica antes de usarlos en tu piel.
-          </p>
-        </div>
+    <div className="w-full">
+      {/* Hidden file input for OCR */}
+      <input type="file" ref={fileInputRef} onChange={handleCameraCapture} accept="image/*" capture="environment" className="hidden" />
 
-        {/* Search & OCR Box */}
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-[#FFFFFF] rounded-2xl border border-[#ECE6DC] p-2 sm:p-2.5 shadow-editorial transition-all duration-300 focus-within:border-[#6B8B7B] focus-within:shadow-editorial-elevated">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              
-              <div className="flex items-center pl-3 text-[#6B8B7B]">
-                <Search className="w-4 h-4" />
-              </div>
-
-              <textarea
-                rows={omniInput.length > 80 ? 2 : 1}
-                value={omniInput}
-                onChange={(e) => setOmniInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAudit();
-                  }
-                }}
-                placeholder="¿Qué quieres analizar? Ingrediente, producto o fórmula..."
-                className="w-full bg-transparent px-2.5 py-2 text-[#1C1B1A] text-xs sm:text-sm placeholder:text-[#99938B] focus:outline-none resize-none leading-relaxed font-sans"
-              />
-
-              {omniInput && (
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="p-2 text-[#99938B] hover:text-[#1C1B1A] rounded-full transition-colors self-center cursor-pointer"
-                  title="Limpiar"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              <div className="flex items-center gap-2 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-[#ECE6DC]">
-                {/* Photo OCR Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 text-xs font-semibold bg-[#F7F4EE] hover:bg-[#EEF4F0] text-[#364B40] px-3.5 py-2 rounded-xl transition duration-150 active:scale-95 flex-shrink-0 touch-target cursor-pointer"
-                  title="Tomar foto al envase o lista de ingredientes"
-                >
-                  <Camera className="w-3.5 h-3.5 text-[#6B8B7B]" />
-                  <span className="hidden xs:inline">Escanear</span>
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleCameraCapture}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                />
-
-                {/* Submit Action */}
-                <button
-                  type="button"
-                  onClick={() => handleAudit()}
-                  disabled={isLoading || !omniInput.trim()}
-                  className="flex-grow sm:flex-grow-0 bg-[#6B8B7B] hover:bg-[#5A7768] disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs sm:text-sm transition duration-150 active:scale-95 flex-shrink-0 touch-target cursor-pointer"
-                >
-                  {isLoading ? (
-                    <>
-                      <Activity className="w-3.5 h-3.5 animate-spin" />
-                      <span>Analizando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Analizar</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Value Proposition Typographic Strip */}
-          <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 text-[11px] text-[#736E67] font-medium flex-wrap">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6B8B7B]" />
-              Evidencia científica
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6B8B7B]" />
-              Compatibilidad
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6B8B7B]" />
-              Rutinas personalizadas
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6B8B7B]" />
-              Skin Cycling
-            </span>
-          </div>
-
-          {/* Quick Presets Row */}
-          <div className="mt-4 flex items-center gap-2 flex-wrap justify-center">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#99938B]">
-              Ejemplos:
-            </span>
-            {QUICK_PRESETS.slice(0, 4).map((preset, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setOmniInput(preset.input);
-                  if (preset.price) setProductPrice(preset.price.toString());
-                  handleAudit(preset.input, preset.price);
-                }}
-                className="text-[11px] bg-[#FFFFFF] hover:bg-[#EEF4F0] hover:text-[#364B40] text-[#66615C] font-medium px-3 py-1 rounded-full border border-[#ECE6DC] transition active:scale-95 cursor-pointer"
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      {!hideSearchUI && (
+        <FormulaSearchCard
+          omniInput={omniInput}
+          setOmniInput={setOmniInput}
+          isLoading={isLoading}
+          onAudit={handleAudit}
+          onClear={handleClear}
+          onCameraClick={() => fileInputRef.current?.click()}
+          productPrice={productPrice}
+          setProductPrice={setProductPrice}
+        />
+      )}
 
       {/* OCR MODAL */}
       {isOcrModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#1C1B1A]/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-[#FFFFFF] rounded-2xl shadow-editorial-elevated border border-[#ECE6DC] w-full max-w-lg overflow-hidden my-auto">
-            <div className="bg-[#364B40] text-white p-4 sm:p-5 flex items-center justify-between">
+            <div className="bg-[#2D4A3E] text-white p-4 sm:p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <ScanLine className="w-4 h-4 text-[#A2BAAD]" />
                 <div>
@@ -612,7 +497,7 @@ export default function FormulaAuditor() {
             {/* Engine Switcher */}
             <div className="px-5 pt-3 flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#66615C] flex items-center gap-1">
-                <Cpu className="w-3.5 h-3.5 text-[#6B8B7B]" />
+                <Cpu className="w-3.5 h-3.5 text-[#4F6D60]" />
                 Motor de lectura:
               </span>
               <div className="flex items-center gap-1 bg-[#F7F4EE] p-1 rounded-full border border-[#ECE6DC]">
@@ -621,7 +506,7 @@ export default function FormulaAuditor() {
                   onClick={() => setOcrEngine('GEMINI_VISION')}
                   className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition flex items-center gap-1 ${
                     ocrEngine === 'GEMINI_VISION'
-                      ? 'bg-[#364B40] text-white'
+                      ? 'bg-[#2D4A3E] text-white'
                       : 'text-[#66615C] hover:text-[#1C1B1A]'
                   }`}
                 >
@@ -633,7 +518,7 @@ export default function FormulaAuditor() {
                   onClick={() => setOcrEngine('LOCAL_OCR')}
                   className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition ${
                     ocrEngine === 'LOCAL_OCR'
-                      ? 'bg-[#364B40] text-white'
+                      ? 'bg-[#2D4A3E] text-white'
                       : 'text-[#66615C] hover:text-[#1C1B1A]'
                   }`}
                 >
@@ -652,24 +537,51 @@ export default function FormulaAuditor() {
                   />
                 )}
                 {isOcrScanning && (
-                  <div className="absolute inset-0 bg-[#364B40]/40 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
+                  <div className="absolute inset-0 bg-[#2D4A3E]/40 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
                     <Activity className="w-6 h-6 text-white animate-spin mb-2" />
                     <span className="text-white font-semibold text-xs">{ocrStatusText}</span>
                   </div>
                 )}
               </div>
 
-              {!isOcrScanning && ocrResult && (
+              {/* REJECTION STATE ALERT */}
+              {!isOcrScanning && isScanRejected && (
+                <div className="space-y-3 p-4 bg-[#FDF2F0] border border-[#D97D75]/40 rounded-xl animate-in fade-in">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldAlert className="w-5 h-5 text-[#D97D75] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-[#943C36]">Imagen no reconocida</h4>
+                      <p className="text-[11px] text-[#943C36]/90 mt-0.5 leading-relaxed">
+                        {scanRejectionMessage}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-white/80 p-3 rounded-lg border border-[#D97D75]/20 text-[11px] text-[#66615C] space-y-1.5">
+                    <p className="font-semibold text-[#1C1B1A]">💡 Consejos para escanear:</p>
+                    <p className="flex items-center gap-1.5">
+                      <span>🧴</span>
+                      <span><strong>Cosméticos:</strong> Enfoca la lista de ingredientes (INCI) o el frente con buena luz.</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <span>👤</span>
+                      <span><strong>Diagnóstico Facial:</strong> Toma una selfie clara de tu rostro sin maquillaje ni filtros.</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* SUCCESS RECOGNIZED PRODUCT STATE */}
+              {!isOcrScanning && !isScanRejected && ocrResult && (
                 <div className="space-y-2">
-                  <div className="p-2.5 bg-[#EEF4F0] border border-[#6B8B7B]/30 rounded-xl flex items-center gap-2 text-xs text-[#364B40]">
+                  <div className="p-2.5 bg-[#EEF4F0] border border-[#4F6D60]/30 rounded-xl flex items-center gap-2 text-xs text-[#2D4A3E]">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Texto reconocido con éxito.</span>
+                    <span>Producto cosmético reconocido con éxito.</span>
                   </div>
                   <textarea
                     rows={3}
                     value={editableOcrText}
                     onChange={(e) => setEditableOcrText(e.target.value)}
-                    className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl p-2.5 text-xs text-[#1C1B1A] focus:bg-[#FFFFFF] focus:border-[#6B8B7B] focus:outline-none"
+                    className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl p-2.5 text-xs text-[#1C1B1A] focus:bg-[#FFFFFF] focus:border-[#4F6D60] focus:outline-none"
                     placeholder="Texto detectado..."
                   />
                 </div>
@@ -682,19 +594,177 @@ export default function FormulaAuditor() {
                 onClick={() => setIsOcrModalOpen(false)}
                 className="text-xs font-semibold text-[#66615C] px-3.5 py-1.5 rounded-full hover:bg-[#ECE6DC] transition cursor-pointer"
               >
-                Cancelar
+                Cerrar
+              </button>
+              {isScanRejected ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-[#2D4A3E] hover:bg-[#2A3A32] text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#A2BAAD]" />
+                  <span>Tomar otra foto</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isOcrScanning || !editableOcrText.trim()}
+                  onClick={handleConfirmOcrAudit}
+                  className="bg-[#4F6D60] hover:bg-[#3D5B4E] disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Evaluar Fórmula</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FACIAL SKIN DIAGNOSIS MODAL */}
+      {isFaceAnalysisModalOpen && faceSkinResult && (
+        <div className="fixed inset-0 z-50 bg-[#1C1B1A]/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#FFFFFF] rounded-2xl shadow-editorial-elevated border border-[#ECE6DC] w-full max-w-lg overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="bg-[#2D4A3E] text-white p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <User className="w-5 h-5 text-[#A2BAAD]" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif font-bold text-sm sm:text-base">Diagnóstico Facial de Piel</h3>
+                    <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-sans tracking-wide">
+                      IA Orientativa
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-white/80">Evaluación visual basada en IA y biotipos dérmicos</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsFaceAnalysisModalOpen(false)}
+                className="text-white/70 hover:text-white p-1 rounded-lg transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Face Preview thumbnail & Skin Type Banner */}
+              <div className="flex items-center gap-3.5 bg-[#EEF4F0] p-4 rounded-xl border border-[#4F6D60]/30">
+                {ocrImagePreview && (
+                  <img
+                    src={ocrImagePreview}
+                    alt="Selfie del usuario"
+                    className="w-14 h-14 rounded-xl object-cover border border-[#4F6D60]/40 shrink-0"
+                  />
+                )}
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-[#2D4A3E] tracking-wider">
+                    Biotipo Dérmico Estimado
+                  </span>
+                  <h4 className="text-lg font-serif font-bold text-[#1C1B1A]">
+                    {faceSkinResult.skinTypeLabel || `Piel ${faceSkinResult.skinTypeEstimate}`}
+                  </h4>
+                  <span className="text-[11px] text-[#4F6D60] font-semibold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Nivel de certeza visual: {Math.round(faceSkinResult.confidence * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Zone Analysis Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-[#ECE6DC] space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#1C1B1A] flex items-center gap-1">
+                      <Sun className="w-3.5 h-3.5 text-[#4F6D60]" />
+                      Zona T (Frente/Nariz)
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      faceSkinResult.zoneTAnalysis.shineLevel === 'HIGH' ? 'bg-[#FDF2F0] text-[#943C36]' :
+                      faceSkinResult.zoneTAnalysis.shineLevel === 'MODERATE' ? 'bg-[#FFF8E6] text-[#8C6B1F]' :
+                      'bg-[#EEF4F0] text-[#2D4A3E]'
+                    }`}>
+                      Brillo {faceSkinResult.zoneTAnalysis.shineLevel === 'HIGH' ? 'Alto' : faceSkinResult.zoneTAnalysis.shineLevel === 'MODERATE' ? 'Moderado' : 'Bajo'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#66615C] leading-relaxed">
+                    {faceSkinResult.zoneTAnalysis.description}
+                  </p>
+                </div>
+
+                <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-[#ECE6DC] space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#1C1B1A] flex items-center gap-1">
+                      <Moon className="w-3.5 h-3.5 text-[#4F6D60]" />
+                      Mejillas & Contorno
+                    </span>
+                    <span className="text-[10px] font-bold bg-[#EEF4F0] text-[#2D4A3E] px-2 py-0.5 rounded-full">
+                      {faceSkinResult.cheeksAnalysis.hydrationState === 'DRY' ? 'Seca / Tirante' :
+                       faceSkinResult.cheeksAnalysis.hydrationState === 'BALANCED' ? 'Equilibrada' : 'Normal'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#66615C] leading-relaxed">
+                    {faceSkinResult.cheeksAnalysis.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Suggested Focus Actives */}
+              <div className="bg-[#FFFFFF] p-3.5 rounded-xl border border-[#ECE6DC] space-y-2">
+                <span className="text-xs font-bold text-[#1C1B1A] block">
+                  Enfoque cosmético sugerido para tu piel:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {faceSkinResult.suggestedFocus.map((focus, i) => (
+                    <span key={i} className="text-[11px] bg-[#F7F4EE] text-[#2D4A3E] font-medium px-2.5 py-1 rounded-lg border border-[#ECE6DC]">
+                      ✓ {focus}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dermatological Disclaimer */}
+              <div className="p-3 bg-[#FFF8E6] border border-[#E6C673]/40 rounded-xl flex items-start gap-2.5 text-xs text-[#8C6B1F]">
+                <Info className="w-4 h-4 text-[#C2921E] shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <span className="font-bold">Aviso médico orientativo:</span> {faceSkinResult.disclaimer}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="bg-[#FAF8F5] p-3.5 border-t border-[#ECE6DC] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFaceAnalysisModalOpen(false)}
+                className="text-xs font-semibold text-[#66615C] px-3.5 py-2 rounded-xl hover:bg-[#ECE6DC] transition text-center cursor-pointer"
+              >
+                Cerrar
               </button>
               <button
                 type="button"
-                disabled={isOcrScanning || !editableOcrText.trim()}
-                onClick={handleConfirmOcrAudit}
-                className="bg-[#6B8B7B] hover:bg-[#5A7768] disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                onClick={() => {
+                  setUserSkinType(faceSkinResult.skinTypeEstimate);
+                  setIsFaceAnalysisModalOpen(false);
+                  setSkinTypeToast(`¡Tu perfil se actualizó a ${faceSkinResult.skinTypeLabel || faceSkinResult.skinTypeEstimate}!`);
+                  setTimeout(() => setSkinTypeToast(null), 4500);
+                }}
+                className="bg-[#4F6D60] hover:bg-[#3D5B4E] text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
               >
-                <Sparkles className="w-3 h-3" />
-                <span>Evaluar Fórmula</span>
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Adoptar para mi perfil de piel ({faceSkinResult.skinTypeEstimate})</span>
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TOAST CONFIRMATION */}
+      {skinTypeToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2D4A3E] text-white px-4 py-3 rounded-2xl shadow-editorial-elevated border border-[#A2BAAD]/40 flex items-center gap-2.5 text-xs animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-[#A2BAAD] shrink-0" />
+          <span className="font-semibold">{skinTypeToast}</span>
         </div>
       )}
 
@@ -719,7 +789,7 @@ export default function FormulaAuditor() {
             <div className="border-b border-[#ECE6DC] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-[#364B40] uppercase tracking-widest bg-[#EEF4F0] px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold text-[#2D4A3E] uppercase tracking-widest bg-[#EEF4F0] px-2.5 py-0.5 rounded-full">
                     Análisis Científico Completado
                   </span>
                   <span className="text-xs text-[#99938B]">
@@ -746,10 +816,10 @@ export default function FormulaAuditor() {
             <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-4">
               <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-3">
                 <span className="text-xs font-serif font-bold text-[#1C1B1A] uppercase tracking-wider flex items-center gap-1.5">
-                  <Microscope className="w-4 h-4 text-[#6B8B7B]" />
+                  <Microscope className="w-4 h-4 text-[#4F6D60]" />
                   1. Evidencia Científica & Respaldo
                 </span>
-                <span className="text-[10px] font-bold bg-[#EEF4F0] text-[#364B40] px-3 py-1 rounded-full">
+                <span className="text-[10px] font-bold bg-[#EEF4F0] text-[#2D4A3E] px-3 py-1 rounded-full">
                   Grado {report.scientific_evidence.overall_evidence_grade} · {report.scientific_evidence.overall_evidence_grade === 'A' ? 'Alta Certeza' : 'Moderada'}
                 </span>
               </div>
@@ -764,7 +834,7 @@ export default function FormulaAuditor() {
                 </span>
                 <Link
                   href="/ingrediente"
-                  className="text-[#6B8B7B] hover:text-[#364B40] font-semibold inline-flex items-center gap-1 shrink-0"
+                  className="text-[#4F6D60] hover:text-[#2D4A3E] font-semibold inline-flex items-center gap-1 shrink-0"
                 >
                   <span>Ver estudios en PubMed</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -781,7 +851,7 @@ export default function FormulaAuditor() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {report.clinical_indications.map((ind, i) => (
                   <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-[#FAF8F5] border border-[#ECE6DC]/60">
-                    <Check className="w-4 h-4 text-[#6B8B7B] shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-[#4F6D60] shrink-0 mt-0.5" />
                     <div>
                       <span className="text-xs font-bold text-[#1C1B1A] block">{ind.name}</span>
                       <span className="text-[11px] text-[#66615C]">Efecto comprobado en ensayos dermatológicos</span>
@@ -799,9 +869,9 @@ export default function FormulaAuditor() {
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#F7F4EE] p-4 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#FFFFFF] flex items-center justify-center text-[#364B40]">
+                  <div className="w-9 h-9 rounded-full bg-[#FFFFFF] flex items-center justify-center text-[#2D4A3E]">
                     {report.layering_and_usage.recommended_timing === 'PM' ? (
-                      <Moon className="w-4 h-4 text-[#364B40]" />
+                      <Moon className="w-4 h-4 text-[#2D4A3E]" />
                     ) : (
                       <Sun className="w-4 h-4 text-[#B89B7D]" />
                     )}
@@ -817,7 +887,7 @@ export default function FormulaAuditor() {
                   </div>
                 </div>
 
-                <span className="text-xs text-[#364B40] font-semibold bg-[#FFFFFF] px-3 py-1.5 rounded-full border border-[#ECE6DC]">
+                <span className="text-xs text-[#2D4A3E] font-semibold bg-[#FFFFFF] px-3 py-1.5 rounded-full border border-[#ECE6DC]">
                   {report.layering_and_usage.layering_rule}
                 </span>
               </div>
@@ -827,8 +897,8 @@ export default function FormulaAuditor() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Compatibles */}
               <div className="bg-[#FFFFFF] rounded-2xl p-6 border border-[#ECE6DC] shadow-editorial space-y-3">
-                <span className="text-xs font-serif font-bold text-[#364B40] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#ECE6DC] pb-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#6B8B7B]" />
+                <span className="text-xs font-serif font-bold text-[#2D4A3E] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#ECE6DC] pb-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#4F6D60]" />
                   4A. Combinar favorablemente con:
                 </span>
                 <p className="text-xs text-[#66615C]">
@@ -837,7 +907,7 @@ export default function FormulaAuditor() {
                 <div className="space-y-1.5 pt-1">
                   {(aiDiagnosis?.layeringAdvice?.combineWith && aiDiagnosis.layeringAdvice.combineWith.length > 0 ? aiDiagnosis.layeringAdvice.combineWith : ['Niacinamida', 'Ácido Hialurónico', 'Ceramidas', 'Pantenol (B5)']).map((item: string, i: number) => (
                     <div key={i} className="text-xs text-[#1C1B1A] bg-[#EEF4F0] px-3 py-2 rounded-xl flex items-center gap-2">
-                      <span className="text-[#364B40] font-bold">✓</span>
+                      <span className="text-[#2D4A3E] font-bold">✓</span>
                       <span>{item}</span>
                     </div>
                   ))}
@@ -870,7 +940,7 @@ export default function FormulaAuditor() {
                 <span className="text-xs font-serif font-bold text-[#1C1B1A] uppercase tracking-wider">
                   5. ¿Dónde va en tu rutina? Orden de Aplicación
                 </span>
-                <span className="text-[11px] text-[#6B8B7B] font-semibold">
+                <span className="text-[11px] text-[#4F6D60] font-semibold">
                   {stepInfo.stepName}
                 </span>
               </div>
@@ -882,7 +952,7 @@ export default function FormulaAuditor() {
                     key={step.stepNumber}
                     className={`p-4 rounded-xl border flex flex-col justify-between space-y-2 transition-all ${
                       step.isCurrentProduct
-                        ? 'bg-[#EEF4F0] border-[#6B8B7B] ring-2 ring-[#6B8B7B]/20'
+                        ? 'bg-[#EEF4F0] border-[#4F6D60] ring-2 ring-[#4F6D60]/20'
                         : 'bg-[#FAF8F5] border-[#ECE6DC]'
                     }`}
                   >
@@ -892,13 +962,13 @@ export default function FormulaAuditor() {
                           Paso {step.stepNumber}
                         </span>
                         {step.isCurrentProduct && (
-                          <span className="text-[9px] font-bold bg-[#364B40] text-white px-2 py-0.5 rounded-full">
+                          <span className="text-[9px] font-bold bg-[#2D4A3E] text-white px-2 py-0.5 rounded-full">
                             Tu producto
                           </span>
                         )}
                       </div>
                       <h5 className="text-xs font-bold text-[#1C1B1A]">{step.stepName}</h5>
-                      <p className="text-xs text-[#364B40] font-medium mt-1">{step.productName}</p>
+                      <p className="text-xs text-[#2D4A3E] font-medium mt-1">{step.productName}</p>
                     </div>
                     <span className="text-[10px] text-[#99938B]">{step.brand}</span>
                   </div>
@@ -924,7 +994,7 @@ export default function FormulaAuditor() {
                         name="routineMode"
                         checked={routineFrequencyChoice === 'DAILY'}
                         onChange={() => setRoutineFrequencyChoice('DAILY')}
-                        className="text-[#6B8B7B] focus:ring-[#6B8B7B]"
+                        className="text-[#4F6D60] focus:ring-[#4F6D60]"
                       />
                       <span>Diaria Fija</span>
                     </label>
@@ -934,7 +1004,7 @@ export default function FormulaAuditor() {
                         name="routineMode"
                         checked={routineFrequencyChoice === 'WEEKLY'}
                         onChange={() => setRoutineFrequencyChoice('WEEKLY')}
-                        className="text-[#6B8B7B] focus:ring-[#6B8B7B]"
+                        className="text-[#4F6D60] focus:ring-[#4F6D60]"
                       />
                       <span>Skin Cycling</span>
                     </label>
@@ -943,9 +1013,9 @@ export default function FormulaAuditor() {
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
                   {isRoutineSaved ? (
-                    <div className="w-full bg-[#EEF4F0] border border-[#6B8B7B]/30 text-[#364B40] p-3 rounded-xl text-xs font-bold flex items-center justify-between">
+                    <div className="w-full bg-[#EEF4F0] border border-[#4F6D60]/30 text-[#2D4A3E] p-3 rounded-xl text-xs font-bold flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-[#6B8B7B]" />
+                        <CheckCircle2 className="w-4 h-4 text-[#4F6D60]" />
                         <span>¡Guardado exitosamente en tu rutina!</span>
                       </div>
                       <Link href="/mi-rutina" className="underline flex items-center gap-1">
@@ -961,7 +1031,7 @@ export default function FormulaAuditor() {
                       <button
                         type="button"
                         onClick={handleSaveRoutineConfig}
-                        className="w-full sm:w-auto bg-[#364B40] hover:bg-[#2A3B32] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                        className="w-full sm:w-auto bg-[#2D4A3E] hover:bg-[#2A3B32] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Añadir a mi rutina</span>
@@ -980,8 +1050,8 @@ export default function FormulaAuditor() {
                 className="w-full flex items-center justify-between text-left cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#EEF4F0] text-[#364B40] flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-[#6B8B7B]" />
+                  <div className="w-8 h-8 rounded-full bg-[#EEF4F0] text-[#2D4A3E] flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-[#4F6D60]" />
                   </div>
                   <div>
                     <h4 className="text-sm font-serif font-bold text-[#1C1B1A]">
@@ -1010,7 +1080,7 @@ export default function FormulaAuditor() {
                         type="button"
                         disabled={isCopilotSending}
                         onClick={() => handleSendCopilotMessage(presetQ)}
-                        className="text-xs bg-[#FAF8F5] hover:bg-[#EEF4F0] hover:text-[#364B40] text-[#66615C] font-medium px-3 py-1.5 rounded-full border border-[#ECE6DC] transition active:scale-95 cursor-pointer"
+                        className="text-xs bg-[#FAF8F5] hover:bg-[#EEF4F0] hover:text-[#2D4A3E] text-[#66615C] font-medium px-3 py-1.5 rounded-full border border-[#ECE6DC] transition active:scale-95 cursor-pointer"
                       >
                         {presetQ}
                       </button>
@@ -1026,14 +1096,14 @@ export default function FormulaAuditor() {
                           className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           {msg.role === 'assistant' && (
-                            <div className="w-6 h-6 rounded-full bg-[#EEF4F0] text-[#364B40] flex items-center justify-center shrink-0 mt-0.5">
-                              <Bot className="w-3.5 h-3.5 text-[#6B8B7B]" />
+                            <div className="w-6 h-6 rounded-full bg-[#EEF4F0] text-[#2D4A3E] flex items-center justify-center shrink-0 mt-0.5">
+                              <Bot className="w-3.5 h-3.5 text-[#4F6D60]" />
                             </div>
                           )}
                           <div
                             className={`p-3 rounded-xl text-xs max-w-[85%] leading-relaxed ${
                               msg.role === 'user'
-                                ? 'bg-[#364B40] text-white'
+                                ? 'bg-[#2D4A3E] text-white'
                                 : 'bg-[#FFFFFF] text-[#1C1B1A] border border-[#ECE6DC] shadow-2xs whitespace-pre-line'
                             }`}
                           >
@@ -1043,8 +1113,8 @@ export default function FormulaAuditor() {
                       ))}
                       {isCopilotSending && (
                         <div className="flex gap-2 justify-start">
-                          <div className="w-6 h-6 rounded-full bg-[#EEF4F0] text-[#364B40] flex items-center justify-center shrink-0">
-                            <Activity className="w-3.5 h-3.5 text-[#6B8B7B] animate-spin" />
+                          <div className="w-6 h-6 rounded-full bg-[#EEF4F0] text-[#2D4A3E] flex items-center justify-center shrink-0">
+                            <Activity className="w-3.5 h-3.5 text-[#4F6D60] animate-spin" />
                           </div>
                           <div className="p-2.5 bg-[#FFFFFF] border border-[#ECE6DC] rounded-xl text-xs text-[#99938B] italic">
                             Consultando modelo dermatológico...
@@ -1068,13 +1138,13 @@ export default function FormulaAuditor() {
                       }}
                       disabled={isCopilotSending}
                       placeholder="Escribe tu consulta dermatológica..."
-                      className="flex-grow bg-[#FAF8F5] focus:bg-[#FFFFFF] border border-[#ECE6DC] focus:border-[#6B8B7B] rounded-xl px-3.5 py-2 text-xs text-[#1C1B1A] focus:outline-none transition"
+                      className="flex-grow bg-[#FAF8F5] focus:bg-[#FFFFFF] border border-[#ECE6DC] focus:border-[#4F6D60] rounded-xl px-3.5 py-2 text-xs text-[#1C1B1A] focus:outline-none transition"
                     />
                     <button
                       type="button"
                       onClick={() => handleSendCopilotMessage()}
                       disabled={isCopilotSending || !copilotInput.trim()}
-                      className="bg-[#6B8B7B] hover:bg-[#5A7768] disabled:opacity-50 text-white p-2 rounded-xl transition active:scale-95 shrink-0 cursor-pointer"
+                      className="bg-[#4F6D60] hover:bg-[#3D5B4E] disabled:opacity-50 text-white p-2 rounded-xl transition active:scale-95 shrink-0 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
@@ -1111,7 +1181,7 @@ export default function FormulaAuditor() {
                   <div className="max-h-56 overflow-y-auto divide-y divide-[#ECE6DC] text-xs">
                     {report.ingredients_breakdown.map((item, idx) => (
                       <div key={idx} className="py-2 flex items-center justify-between">
-                        <span className={`font-medium ${item.is_active ? 'text-[#364B40] font-bold' : 'text-[#66615C]'}`}>
+                        <span className={`font-medium ${item.is_active ? 'text-[#2D4A3E] font-bold' : 'text-[#66615C]'}`}>
                           {item.position}. {item.inci_name} {item.common_name ? `(${item.common_name})` : ''}
                         </span>
                         <span className="text-[10px] text-[#99938B]">
@@ -1133,8 +1203,8 @@ export default function FormulaAuditor() {
                   onClick={() => handleFeedback(true)}
                   className={`px-3 py-1.5 rounded-full font-semibold transition flex items-center gap-1.5 cursor-pointer ${
                     feedbackGiven === 'HELPFUL'
-                      ? 'bg-[#364B40] text-white'
-                      : 'bg-[#FFFFFF] text-[#364B40] border border-[#ECE6DC] hover:bg-[#EEF4F0]'
+                      ? 'bg-[#2D4A3E] text-white'
+                      : 'bg-[#FFFFFF] text-[#2D4A3E] border border-[#ECE6DC] hover:bg-[#EEF4F0]'
                   }`}
                 >
                   <ThumbsUp className="w-3 h-3" />
