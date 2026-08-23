@@ -111,7 +111,7 @@ export interface RoutineAuditResult {
 }
 
 const GEMINI_MODELS = [
-  'gemini-2.5-flash',
+  'gemini-2.0-flash',
   'gemini-1.5-flash',
   'gemini-1.5-pro'
 ];
@@ -369,15 +369,11 @@ Si es "INVALID":
   const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
 
   if (!apiKey) {
-    // Deterministic mock fallback for local testing without API key
     return {
-      classification: 'SKINCARE_PRODUCT',
-      brand: 'Marca Detectada',
-      productName: 'Producto Cosmético Escaneado',
-      inciText: 'Aqua, Glycerin, Niacinamide, Zinc PCA, Hyaluronic Acid, Phenoxyethanol',
-      rawDetectedText: 'Aqua, Glycerin, Niacinamide, Zinc PCA, Hyaluronic Acid, Phenoxyethanol',
-      confidence: 0.85,
-      notes: ['Modo de prueba local: Configura GEMINI_API_KEY en Vercel para clasificación multimodal en tiempo real.'],
+      classification: 'INVALID',
+      rejectionReason: 'NOT_COSMETIC_OR_FACE',
+      userFriendlyMessage: 'GEMINI_API_KEY no está configurada en las variables de entorno. Para que la IA reconozca tu rostro o tus cosméticos en tiempo real, añade GEMINI_API_KEY en la configuración de Vercel o en tu .env.local.',
+      confidence: 0,
     };
   }
 

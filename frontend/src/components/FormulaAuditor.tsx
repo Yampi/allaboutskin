@@ -406,8 +406,9 @@ export default function FormulaAuditor({ hideSearchUI = false }: { hideSearchUI?
               );
             }
           } catch (err: any) {
-            console.warn('Gemini vision fallback to local OCR:', err);
-            await runLocalOcr(file);
+            console.warn('Error en visión IA:', err);
+            setIsScanRejected(true);
+            setScanRejectionMessage(err?.message || 'No pudimos procesar la imagen con la IA. Verifica tu conexión o intenta con otra foto.');
           } finally {
             setIsOcrScanning(false);
           }
@@ -433,7 +434,7 @@ export default function FormulaAuditor({ hideSearchUI = false }: { hideSearchUI?
     const analysis = analyzeCosmeticLabel(recognizedText);
     setOcrResult(analysis);
 
-    if (!analysis.isCosmeticValid && (!analysis.cleanedText || analysis.cleanedText.length < 15)) {
+    if (!analysis.isCosmeticValid) {
       setIsScanRejected(true);
       setScanRejectionMessage('No detectamos una lista de ingredientes cosméticos reconocible ni una etiqueta en la imagen.');
     } else {
