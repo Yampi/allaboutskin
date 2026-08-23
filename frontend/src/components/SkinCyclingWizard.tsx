@@ -9,14 +9,13 @@ import {
   Flame,
   CheckCircle2,
   Calendar,
-  Save,
   Baby,
-  Layers,
   ChevronRight,
-  Info,
   ArrowRight,
-  RefreshCw,
-  Zap
+  ArrowLeft,
+  Zap,
+  Moon,
+  Sun
 } from 'lucide-react';
 import {
   SkinType,
@@ -29,13 +28,12 @@ import {
 import { generateCustomProtocol } from '@/lib/skinCyclingEngine';
 import { getCurrentUser, setSavedCustomProtocol } from '@/lib/api';
 import AuthModal from './AuthModal';
-import AdBanner from './AdBanner';
 
 const SKIN_TYPES: { id: SkinType; label: string; desc: string }[] = [
-  { id: 'COMBINATION', label: 'Mixta', desc: 'Frente/nariz con brillo y mejillas normales o secas' },
+  { id: 'COMBINATION', label: 'Mixta', desc: 'Zona T con brillo y mejillas normales o secas' },
   { id: 'OILY', label: 'Grasa', desc: 'Brillo en todo el rostro y poros visibles' },
   { id: 'DRY', label: 'Seca', desc: 'Sensación tirante, opaca o descamada' },
-  { id: 'SENSITIVE', label: 'Sensible', desc: 'Se enrojece o pica con facilidad' },
+  { id: 'SENSITIVE', label: 'Sensible', desc: 'Se enrojece o reacciona con facilidad' },
   { id: 'NORMAL', label: 'Normal', desc: 'Equilibrada, sin exceso de grasa ni sequedad' },
 ];
 
@@ -45,20 +43,23 @@ const FITZPATRICK_SCALE: { type: FitzpatrickType; label: string; tone: string; d
   { type: 3, label: 'Trigueña clara', tone: 'bg-[#eed0b0] border-[#d8b087]', desc: 'Se quema moderado, broncea gradual' },
   { type: 4, label: 'Trigueña / Oliva', tone: 'bg-[#d8a776] border-[#bd8853]', desc: 'Rara vez se quema, broncea fácil' },
   { type: 5, label: 'Morena oscura', tone: 'bg-[#a76e3e] border-[#8a5426]', desc: 'Casi nunca se quema, pigmenta rápido' },
-  { type: 6, label: 'Oscura', tone: 'bg-[#5c371d] border-[#44230d]', desc: 'Piel muy pigmentada, alta resistencia al sol' },
+  { type: 6, label: 'Oscura', tone: 'bg-[#5c371d] border-[#44230d]', desc: 'Piel muy pigmentada, alta resistencia' },
 ];
 
 const CONDITIONS_LIST: { id: SkinCondition; label: string }[] = [
   { id: 'ACNE', label: 'Acné o Granitos' },
   { id: 'ROSACEA', label: 'Rojeces o Rosácea' },
   { id: 'HYPERPIGMENTATION', label: 'Manchas del Sol o Melasma' },
-  { id: 'AGING', label: 'Líneas de Expresión y Arrugas' },
-  { id: 'CLOGGED_PORES', label: 'Puntos Negros y Poros Obstruidos' },
-  { id: 'REDNESS', label: 'Piel Reactiva / Sensibilidad' },
+  { id: 'AGING', label: 'Líneas de Expresión' },
+  { id: 'CLOGGED_PORES', label: 'Puntos Negros & Poros' },
+  { id: 'REDNESS', label: 'Piel Reactiva / Sensible' },
 ];
 
 export default function SkinCyclingWizard() {
   const router = useRouter();
+
+  // Wizard Step State: 1 | 2 | 3 | 4
+  const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Diagnostic State
   const [skinType, setSkinType] = useState<SkinType>('COMBINATION');
@@ -72,16 +73,6 @@ export default function SkinCyclingWizard() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSavedToast, setIsSavedToast] = useState(false);
 
-  // Quick Beginner Preset
-  const handleApplyBeginnerPreset = () => {
-    setSkinType('COMBINATION');
-    setFitzpatrick(3);
-    setBarrierStatus('HEALTHY');
-    setExperienceLevel('BEGINNER');
-    setConditions(['CLOGGED_PORES']);
-  };
-
-  // Generate dynamic protocol based on inputs
   const protocol = useMemo(() => {
     const input: SkinDiagnosisInput = {
       skinType,
@@ -119,7 +110,7 @@ export default function SkinCyclingWizard() {
       setIsSavedToast(true);
       setTimeout(() => {
         router.push('/mi-rutina');
-      }, 700);
+      }, 600);
     } else {
       setIsAuthModalOpen(true);
     }
@@ -129,18 +120,25 @@ export default function SkinCyclingWizard() {
     setIsSavedToast(true);
     setTimeout(() => {
       router.push('/mi-rutina');
-    }, 700);
+    }, 600);
   };
 
+  const STEPS_NAV = [
+    { num: 1, label: 'Tu piel' },
+    { num: 2, label: 'Tus objetivos' },
+    { num: 3, label: 'Tu tolerancia' },
+    { num: 4, label: 'Tu protocolo' },
+  ];
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* Toast Notification */}
       {isSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1A4D63] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#5FA8C2] animate-in slide-in-from-bottom duration-300">
-          <CheckCircle2 className="w-5 h-5 text-[#8EC5DB]" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1E2822] text-white px-5 py-3 rounded-2xl shadow-editorial-elevated flex items-center gap-3 border border-[#364B40] animate-in slide-in-from-bottom duration-300">
+          <CheckCircle2 className="w-5 h-5 text-[#6B8B7B]" />
           <div>
-            <p className="text-xs font-bold">¡Rutina Guardada con Éxito!</p>
-            <p className="text-[11px] text-[#A8D4E6]">Redirigiendo a tu calendario de Skin Cycling...</p>
+            <p className="text-xs font-bold">Protocolo Guardado</p>
+            <p className="text-[11px] text-[#B8C2BC]">Redirigiendo a tu calendario dérmico...</p>
           </div>
         </div>
       )}
@@ -152,197 +150,96 @@ export default function SkinCyclingWizard() {
         onSuccess={handleAuthSuccess}
       />
 
-      {/* SECTION 1: INTERACTIVE DIAGNOSTIC CONFIGURATOR */}
-      <section className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-8">
-        <div className="border-b border-[#EFECE6] pb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-[#7A9A8B] font-bold text-xs uppercase tracking-widest mb-1">
-              <Sparkles className="w-4 h-4 text-[#7A9A8B]" />
-              <span>Configurador Dermatológico & Cosmético</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2B2A29] tracking-tight">
-              Personaliza tu Ritual de Noches (Skin Cycling)
-            </h2>
-            <p className="text-xs sm:text-sm text-[#6E6A66] mt-1">
-              Organiza las noches de exfoliación química, retinoides y descanso con base en tu tolerancia y biotipo.
-            </p>
-          </div>
-
-          {/* Quick Beginner Starter */}
+      {/* STEP PROGRESSION BAR (QUIET EDITORIAL STEPPER) */}
+      <div className="flex items-center justify-between max-w-xl mx-auto border-b border-[#ECE6DC] pb-4">
+        {STEPS_NAV.map((step) => (
           <button
+            key={step.num}
             type="button"
-            onClick={handleApplyBeginnerPreset}
-            className="flex-shrink-0 inline-flex items-center gap-2 bg-[#EFF5F1] hover:bg-[#E2ECE5] text-[#4F6D60] text-xs font-bold px-4 py-2.5 rounded-full border border-[#7A9A8B]/30 transition-all duration-200 cursor-pointer touch-target"
+            onClick={() => setCurrentStep(step.num)}
+            className={`flex items-center gap-2 text-xs font-semibold transition cursor-pointer ${
+              currentStep === step.num
+                ? 'text-[#364B40] font-bold'
+                : currentStep > step.num
+                ? 'text-[#6B8B7B]'
+                : 'text-[#99938B]'
+            }`}
           >
-            <Zap className="w-4 h-4 text-[#7A9A8B]" />
-            <span>Ritual Estándar para Principiantes</span>
+            <span
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                currentStep === step.num
+                  ? 'bg-[#364B40] text-white'
+                  : currentStep > step.num
+                  ? 'bg-[#EEF4F0] text-[#364B40]'
+                  : 'bg-[#FAF8F5] text-[#99938B] border border-[#ECE6DC]'
+              }`}
+            >
+              {step.num}
+            </span>
+            <span className="hidden sm:inline">{step.label}</span>
           </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 1. Tipo de Piel */}
-          <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase text-[#6E6A66] tracking-wider">
-              1. ¿Cómo es tu piel habitualmente?
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      {/* MAIN STEP CONTAINER */}
+      <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-8 min-h-[380px] flex flex-col justify-between">
+        
+        {/* ======================================================== */}
+        {/* PASO 1: TU PIEL                                         */}
+        {/* ======================================================== */}
+        {currentStep === 1 && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+                Paso 1 de 4
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
+                ¿Cómo describirías tu piel habitualmente?
+              </h2>
+              <p className="text-xs text-[#66615C]">
+                Esto determina la proporción adecuada entre días de exfoliación y noches de recuperación.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SKIN_TYPES.map((st) => (
                 <button
                   key={st.id}
                   type="button"
                   onClick={() => setSkinType(st.id)}
-                  className={`p-3.5 rounded-2xl text-left border transition-all duration-200 text-xs font-semibold cursor-pointer touch-target ${
+                  className={`p-4 rounded-xl text-left border transition-all duration-150 cursor-pointer ${
                     skinType === st.id
-                      ? 'bg-[#EFF5F1] border-[#7A9A8B] text-[#4F6D60] shadow-xs'
-                      : 'bg-[#FAF8F5] hover:bg-[#F5F2EC] border-[#EFECE6] text-[#6E6A66]'
+                      ? 'bg-[#EEF4F0] border-[#6B8B7B] text-[#364B40] shadow-2xs'
+                      : 'bg-[#FAF8F5] hover:bg-[#F7F4EE] border-[#ECE6DC] text-[#66615C]'
                   }`}
                 >
-                  <span className="block font-bold text-sm mb-0.5">{st.label}</span>
-                  <span className="text-[10px] text-[#9C9790] line-clamp-2 leading-tight">
+                  <span className="block font-serif font-bold text-sm text-[#1C1B1A] mb-1">{st.label}</span>
+                  <span className="text-xs text-[#66615C] leading-snug">
                     {st.desc}
                   </span>
                 </button>
               ))}
             </div>
           </div>
+        )}
 
-          {/* 2. Tono y Reacción al Sol */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase text-[#6E6A66] tracking-wider">
-                2. Fototipo / Reacción al Sol
-              </label>
-              <span className="text-[11px] text-[#9C9790] font-medium">Previene manchas post-inflamatorias</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {FITZPATRICK_SCALE.map((fp) => (
-                <button
-                  key={fp.type}
-                  type="button"
-                  onClick={() => setFitzpatrick(fp.type)}
-                  className={`flex flex-col items-center p-2.5 rounded-2xl border transition-all duration-200 text-center cursor-pointer touch-target ${
-                    fitzpatrick === fp.type
-                      ? 'border-[#7A9A8B] bg-[#EFF5F1] ring-2 ring-[#7A9A8B]/20 shadow-xs'
-                      : 'border-[#EFECE6] hover:border-[#E6E1D8] bg-[#FAF8F5]'
-                  }`}
-                  title={fp.desc}
-                >
-                  <span className={`w-7 h-7 rounded-full border shadow-inner mb-1.5 ${fp.tone}`} />
-                  <span className="text-[11px] font-bold text-[#2B2A29] leading-tight">{fp.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. Estado de la Barrera Cutánea */}
-          <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase text-[#6E6A66] tracking-wider">
-              3. ¿Cómo sientes tu piel en estos días?
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setBarrierStatus('HEALTHY')}
-                className={`p-3.5 rounded-2xl text-left border transition-all duration-200 cursor-pointer touch-target ${
-                  barrierStatus === 'HEALTHY'
-                    ? 'bg-[#EFF5F1] border-[#7A9A8B] text-[#4F6D60] shadow-xs'
-                    : 'bg-[#FAF8F5] border-[#EFECE6] text-[#6E6A66]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#4F6D60]">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Cómoda / Óptima
-                </div>
-                <p className="text-[11px] text-[#9C9790]">Tolerancia normal a cremas, sin ardor ni tirantez.</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBarrierStatus('COMPROMISED')}
-                className={`p-3.5 rounded-2xl text-left border transition-all duration-200 cursor-pointer touch-target ${
-                  barrierStatus === 'COMPROMISED'
-                    ? 'bg-[#FAF8F5] border-[#C4A482] text-[#8F7253] shadow-xs'
-                    : 'bg-[#FAF8F5] border-[#EFECE6] text-[#6E6A66]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#C4A482]">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Sensible / Tirante
-                </div>
-                <p className="text-[11px] text-[#9C9790]">Sensación seca o picor leve al usar ciertos productos.</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBarrierStatus('ACUTELY_DAMAGED')}
-                className={`p-3.5 rounded-2xl text-left border transition-all duration-200 cursor-pointer touch-target ${
-                  barrierStatus === 'ACUTELY_DAMAGED'
-                    ? 'bg-[#F8EFEA] border-[#E8D5D0] text-[#A46864] shadow-xs'
-                    : 'bg-[#FAF8F5] border-[#EFECE6] text-[#6E6A66]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#A46864]">
-                  <Flame className="w-3.5 h-3.5" /> Muy Irritada
-                </div>
-                <p className="text-[11px] text-[#9C9790]">Ardor al poner cualquier crema o rojez evidente.</p>
-              </button>
-            </div>
-          </div>
-
-          {/* 4. Experiencia con Activos y Situación */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase text-[#6E6A66] tracking-wider mb-2">
-                4. ¿Qué experiencia tienes usando activos concentrados?
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'] as ExperienceLevel[]).map((lvl) => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => setExperienceLevel(lvl)}
-                    className={`py-2.5 px-3 rounded-full border text-center text-xs font-bold transition-all duration-200 cursor-pointer touch-target ${
-                      experienceLevel === lvl
-                        ? 'bg-[#7A9A8B] border-[#7A9A8B] text-white shadow-xs'
-                        : 'bg-[#FAF8F5] border-[#EFECE6] text-[#6E6A66] hover:bg-[#F5F2EC]'
-                    }`}
-                  >
-                    {lvl === 'BEGINNER' ? 'Principiante' : lvl === 'INTERMEDIATE' ? 'Intermedio' : 'Avanzado'}
-                  </button>
-                ))}
-              </div>
+        {/* ======================================================== */}
+        {/* PASO 2: TUS OBJETIVOS & FOTOTIPO                         */}
+        {/* ======================================================== */}
+        {currentStep === 2 && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+                Paso 2 de 4
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
+                ¿Qué te gustaría priorizar en tu piel?
+              </h2>
+              <p className="text-xs text-[#66615C]">
+                Selecciona uno o más objetivos para enfocar los activos sugeridos.
+              </p>
             </div>
 
-            {/* Embarazo o Lactancia Switch */}
-            <div className="flex items-center justify-between p-3.5 bg-[#F8EFEA]/80 border border-[#E8D5D0] rounded-2xl">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#F2E2DC] text-[#A46864] flex items-center justify-center font-bold">
-                  <Baby className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-[#2B2A29] block">
-                    ¿En periodo de embarazo o lactancia?
-                  </span>
-                  <span className="text-[10px] text-[#6E6A66]">
-                    Sustituye automáticamente retinoides por alternativas botánicas seguras (Bakuchiol).
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPregnancyOrNursing(!pregnancyOrNursing)}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 cursor-pointer touch-target ${
-                  pregnancyOrNursing ? 'bg-[#7A9A8B] justify-end' : 'bg-[#E6E1D8] justify-start'
-                }`}
-              >
-                <div className="bg-[#FFFFFF] w-4 h-4 rounded-full shadow-md transform transition-all" />
-              </button>
-            </div>
-          </div>
-
-          {/* 5. Condiciones o Necesidades Específicas (Chips en Pill) */}
-          <div className="lg:col-span-2 space-y-3">
-            <label className="block text-xs font-bold uppercase text-[#6E6A66] tracking-wider">
-              5. ¿Qué te gustaría priorizar en tu piel?
-            </label>
             <div className="flex flex-wrap gap-2">
               {CONDITIONS_LIST.map((cond) => {
                 const selected = conditions.includes(cond.id);
@@ -351,142 +248,238 @@ export default function SkinCyclingWizard() {
                     key={cond.id}
                     type="button"
                     onClick={() => toggleCondition(cond.id)}
-                    className={`py-2 px-4 rounded-full text-xs font-semibold border transition-all duration-200 flex items-center gap-1.5 cursor-pointer touch-target ${
+                    className={`px-4 py-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
                       selected
-                        ? 'bg-[#7A9A8B] border-[#7A9A8B] text-white shadow-xs'
-                        : 'bg-[#FAF8F5] hover:bg-[#EFF5F1] hover:text-[#4F6D60] border-[#EFECE6] text-[#6E6A66]'
+                        ? 'bg-[#364B40] text-white border-[#364B40]'
+                        : 'bg-[#FAF8F5] text-[#66615C] border-[#ECE6DC] hover:bg-[#F7F4EE]'
                     }`}
                   >
-                    {selected ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : null}
-                    {cond.label}
+                    {selected ? '✓ ' : ''}{cond.label}
                   </button>
                 );
               })}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* SECTION 2: DYNAMIC GENERATED PROTOCOL */}
-      <section className="space-y-8 animate-in fade-in duration-300">
-        {/* Protocol Banner Header */}
-        <div className="bg-gradient-to-r from-[#4F6D60] via-[#5A796B] to-[#3D554A] text-[#FDFBF7] rounded-3xl p-6 sm:p-8 shadow-beauty relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-[#FFFFFF]/20 text-[#FDFBF7] border border-white/20 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm">
-                  Ciclo de {protocol.cycleLength} Noches
-                </span>
-                <span className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  Score de Barrera: {protocol.barrierScore}
-                </span>
+            {/* Fototipo selector */}
+            <div className="pt-4 border-t border-[#ECE6DC] space-y-2">
+              <span className="text-xs font-serif font-bold text-[#1C1B1A] uppercase tracking-wider block">
+                Tono de piel & Reacción al sol
+              </span>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {FITZPATRICK_SCALE.map((fp) => (
+                  <button
+                    key={fp.type}
+                    type="button"
+                    onClick={() => setFitzpatrick(fp.type)}
+                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1.5 ${
+                      fitzpatrick === fp.type
+                        ? 'bg-[#EEF4F0] border-[#6B8B7B]'
+                        : 'bg-[#FAF8F5] border-[#ECE6DC] hover:bg-[#F7F4EE]'
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full border ${fp.tone}`} />
+                    <span className="text-[11px] font-semibold text-[#1C1B1A]">{fp.label}</span>
+                  </button>
+                ))}
               </div>
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-white">
-                {protocol.protocolName}
-              </h3>
-              <p className="text-xs sm:text-sm text-[#FDFBF7]/90 leading-relaxed">
-                {protocol.summary}
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* PASO 3: TU TOLERANCIA & EXPERIENCIA                     */}
+        {/* ======================================================== */}
+        {currentStep === 3 && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+                Paso 3 de 4
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
+                ¿Cómo sientes tu barrera dérmica actualmente?
+              </h2>
+              <p className="text-xs text-[#66615C]">
+                Nos aseguramos de no prescribir activos irritantes si tu piel está sensibilizada.
               </p>
             </div>
 
-            {/* Save CTA Button */}
-            <div className="flex-shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setBarrierStatus('HEALTHY')}
+                className={`p-4 rounded-xl text-left border transition cursor-pointer ${
+                  barrierStatus === 'HEALTHY'
+                    ? 'bg-[#EEF4F0] border-[#6B8B7B] text-[#364B40]'
+                    : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#364B40]">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Cómoda / Equilibrada
+                </div>
+                <p className="text-xs text-[#66615C]">Tolerancia normal a cremas, sin ardor ni picor.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBarrierStatus('COMPROMISED')}
+                className={`p-4 rounded-xl text-left border transition cursor-pointer ${
+                  barrierStatus === 'COMPROMISED'
+                    ? 'bg-[#F9F5F0] border-[#B89B7D] text-[#7A5E43]'
+                    : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#B89B7D]">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Tirante o Reactiva
+                </div>
+                <p className="text-xs text-[#66615C]">Sensación seca o ligera molestia con ciertos productos.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBarrierStatus('ACUTELY_DAMAGED')}
+                className={`p-4 rounded-xl text-left border transition cursor-pointer ${
+                  barrierStatus === 'ACUTELY_DAMAGED'
+                    ? 'bg-[#FDF2F0] border-[#D97D75] text-[#943C36]'
+                    : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-1 text-[#D97D75]">
+                  <Flame className="w-3.5 h-3.5" /> Muy Irritada
+                </div>
+                <p className="text-xs text-[#66615C]">Ardor con casi cualquier crema o rojez constante.</p>
+              </button>
+            </div>
+
+            {/* Experience level & Pregnancy */}
+            <div className="pt-4 border-t border-[#ECE6DC] space-y-4">
+              <div>
+                <span className="text-xs font-serif font-bold text-[#1C1B1A] uppercase tracking-wider block mb-2">
+                  Experiencia previa con activos concentrados:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'] as ExperienceLevel[]).map((lvl) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setExperienceLevel(lvl)}
+                      className={`py-2 px-3 rounded-xl border text-center text-xs font-semibold transition cursor-pointer ${
+                        experienceLevel === lvl
+                          ? 'bg-[#364B40] text-white border-[#364B40]'
+                          : 'bg-[#FAF8F5] border-[#ECE6DC] text-[#66615C] hover:bg-[#F7F4EE]'
+                      }`}
+                    >
+                      {lvl === 'BEGINNER' ? 'Principiante' : lvl === 'INTERMEDIATE' ? 'Intermedio' : 'Avanzado'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pregnancy switch */}
+              <div className="flex items-center justify-between p-3.5 bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Baby className="w-4 h-4 text-[#B89B7D]" />
+                  <span className="text-xs font-semibold text-[#1C1B1A]">
+                    ¿En periodo de embarazo o lactancia?
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPregnancyOrNursing(!pregnancyOrNursing)}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition cursor-pointer ${
+                    pregnancyOrNursing ? 'bg-[#6B8B7B] justify-end' : 'bg-[#ECE6DC] justify-start'
+                  }`}
+                >
+                  <div className="bg-[#FFFFFF] w-4 h-4 rounded-full shadow-2xs" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* PASO 4: TU PROTOCOLO PERSONALIZADO                       */}
+        {/* ======================================================== */}
+        {currentStep === 4 && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+                Paso 4 de 4 · Resultado
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
+                {protocol.protocolName}
+              </h2>
+              <p className="text-xs text-[#66615C]">
+                Ciclo de {protocol.cycleLength} noches adaptado a tu biotipo dérmico.
+              </p>
+            </div>
+
+            {/* Nights breakdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {protocol.nights.map((night) => (
+                <div
+                  key={night.nightNumber}
+                  className="p-4 rounded-xl bg-[#FAF8F5] border border-[#ECE6DC] space-y-2 flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-[#6B8B7B] block">
+                      Noche {night.nightNumber}
+                    </span>
+                    <h4 className="text-xs font-serif font-bold text-[#1C1B1A]">{night.title}</h4>
+                    <p className="text-[11px] text-[#66615C] mt-1 leading-relaxed">{night.clinicalRationale}</p>
+                  </div>
+                  <div className="pt-2 border-t border-[#ECE6DC]">
+                    <span className="text-[10px] font-semibold text-[#364B40]">
+                      Activos: {night.recommendedActives.slice(0, 2).join(', ')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rationale and Save CTA */}
+            <div className="bg-[#EEF4F0] p-4 rounded-xl border border-[#6B8B7B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-xs text-[#364B40] font-medium">
+                Al guardar, este ciclo configurará automáticamente tu calendario en Mi Rutina.
+              </span>
               <button
                 type="button"
                 onClick={handleSaveProtocol}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#FDFBF7] hover:bg-white text-[#4F6D60] font-bold text-sm px-7 py-3.5 rounded-full shadow-beauty transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-target"
+                className="bg-[#364B40] hover:bg-[#2A3B32] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-xs transition active:scale-95 cursor-pointer shrink-0"
               >
-                <Save className="w-4 h-4 text-[#7A9A8B]" />
-                <span>Guardar y Ver Mi Calendario</span>
+                Guardar en Mi Rutina
               </button>
             </div>
           </div>
+        )}
+
+        {/* NAVIGATION BUTTONS */}
+        <div className="pt-4 border-t border-[#ECE6DC] flex items-center justify-between">
+          {currentStep > 1 ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((prev) => prev - 1)}
+              className="text-xs font-semibold text-[#66615C] hover:text-[#1C1B1A] flex items-center gap-1 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Anterior</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {currentStep < 4 && (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((prev) => prev + 1)}
+              className="bg-[#6B8B7B] hover:bg-[#5A7768] text-white text-xs font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+            >
+              <span>Siguiente</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Dynamic Nights Cards Grid */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${Math.min(protocol.nights.length, 5)} gap-5`}>
-          {protocol.nights.map((night) => {
-            const isExfoliation = night.category === 'EXFOLIATION';
-            const isRetinoid = night.category === 'RETINOID';
-            const badgeBg = isExfoliation
-              ? 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/30'
-              : isRetinoid
-              ? 'bg-[#F8EFEA] text-[#A46864] border-[#E8D5D0]'
-              : 'bg-[#FAF8F5] text-[#C4A482] border-[#C4A482]/30';
-
-            const numBg = isExfoliation
-              ? 'bg-[#EFF5F1] text-[#4F6D60]'
-              : isRetinoid
-              ? 'bg-[#F8EFEA] text-[#A46864]'
-              : 'bg-[#FAF8F5] text-[#8F7253]';
-
-            return (
-              <div
-                key={night.nightNumber}
-                className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty hover:border-[#7A9A8B]/40 hover:shadow-beauty-hover transition-all duration-300 flex flex-col justify-between space-y-4 relative"
-              >
-                <div className="space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <div className={`w-9 h-9 rounded-full ${numBg} flex items-center justify-center font-bold text-xs`}>
-                      0{night.nightNumber}
-                    </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
-                      Noche {night.nightNumber} de {protocol.cycleLength}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h4 className="text-lg font-serif font-bold text-[#2B2A29] leading-snug">
-                      {night.title}
-                    </h4>
-                    <p className="text-xs text-[#7A9A8B] font-semibold mt-0.5">
-                      {night.subtitle}
-                    </p>
-                  </div>
-
-                  {/* Actives Chips */}
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase text-[#9C9790] tracking-wider">
-                      Activos recomendados:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {night.recommendedActives.map((act, i) => (
-                        <span
-                          key={i}
-                          className="bg-[#FAF8F5] text-[#6E6A66] text-[11px] font-medium px-2.5 py-1 rounded-full border border-[#EFECE6]"
-                        >
-                          {act}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Step By Step Instructions */}
-                  <div className="pt-3 border-t border-[#EFECE6] space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-[#9C9790] tracking-wider block">
-                      Ritual de aplicación:
-                    </span>
-                    <ul className="text-xs text-[#6E6A66] space-y-1.5">
-                      {night.suggestedSteps.map((st, i) => (
-                        <li key={i} className="flex items-start gap-2 leading-relaxed">
-                          <span className="text-[#7A9A8B] font-bold">•</span>
-                          <span>{st}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-[#EFECE6]">
-                  <p className="text-[11px] text-[#9C9790] leading-relaxed italic">
-                    💡 {night.clinicalRationale}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

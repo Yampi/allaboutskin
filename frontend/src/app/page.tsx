@@ -12,7 +12,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Microscope,
-  SlidersHorizontal
+  Compass
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -22,67 +22,68 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29] selection:bg-[#E8D5D0] selection:text-[#2B2A29]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A] selection:bg-[#FDF2F0] selection:text-[#943C36]">
       <Navbar />
 
-      <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-10">
+      <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-16">
         
-        {/* MAIN FOCUSED MODULE: AUDITOR & FORMULA SCANNER (PHOTO + INCI + GUIDED FLOW) */}
+        {/* MAIN FOCUSED MODULE: AUDITOR & FORMULA SCANNER */}
         <section className="w-full">
           <FormulaAuditor />
         </section>
 
-        {/* COMPARADOR DE FÓRMULAS LADO A LADO (COLAPSABLE / SECUNDARIO) */}
-        <section className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-7 border border-[#EFECE6] shadow-beauty space-y-4">
-          <div className="flex items-center justify-between border-b border-[#EFECE6] pb-4">
-            <div>
-              <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest block">
-                Herramienta Avanzada
-              </span>
-              <h3 className="text-lg sm:text-xl font-serif font-bold text-[#2B2A29]">
-                Comparador de Fórmulas Lado a Lado
-              </h3>
-              <p className="text-xs text-[#6E6A66] mt-0.5">
-                Compara dos productos simultáneamente para ver cuál tiene mejor concentración y tolerancia dérmica.
-              </p>
-            </div>
+        {/* COMPARADOR DE FÓRMULAS LADO A LADO (SECONDARY EDITORIAL SURFACE) */}
+        <section className="border-t border-[#ECE6DC] pt-12 space-y-6">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-[#99938B] uppercase tracking-widest block">
+              Comparativa Científica
+            </span>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A]">
+              Comparador de Fórmulas Lado a Lado
+            </h3>
+            <p className="text-xs sm:text-sm text-[#66615C] max-w-xl">
+              Compara dos productos simultáneamente para evaluar concentración de activos, compatibilidad dérmica y relación calidad-ciencia.
+            </p>
           </div>
           <FormulaComparator />
         </section>
 
-        {/* MÓDULOS DE LA PLATAFORMA (ACCESO RÁPIDO Y DIRECTO) */}
-        <section className="space-y-4">
-          <div className="text-center max-w-md mx-auto space-y-1">
-            <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-widest">
-              Ecosistema Allabout.skin
+        {/* MÓDULOS DE LA PLATAFORMA (ACCESO EDITORIAL LIGERO) */}
+        <section className="border-t border-[#ECE6DC] pt-12 space-y-8">
+          <div className="text-center max-w-lg mx-auto space-y-1.5">
+            <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest">
+              Exploración & Cuidado Continuo
             </span>
-            <h3 className="text-lg font-serif font-bold text-[#2B2A29]">
-              Explora los Módulos Especializados
+            <h3 className="text-2xl font-serif font-bold text-[#1C1B1A]">
+              Herramientas de Bienestar Dérmico
             </h3>
+            <p className="text-xs text-[#66615C]">
+              Todo lo necesario para tomar decisiones informadas sobre tu piel.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {/* Módulo Rutina */}
             <Link
               href="/mi-rutina"
-              className="bg-[#FFFFFF] hover:bg-[#FAF8F5] p-5 rounded-3xl border border-[#EFECE6] hover:border-[#7A9A8B]/40 transition-all duration-300 shadow-beauty flex flex-col justify-between space-y-4 group"
+              className="bg-[#FFFFFF] hover:bg-[#F7F4EE] p-6 rounded-2xl border border-[#ECE6DC] hover:border-[#6B8B7B]/40 transition-all duration-300 shadow-editorial flex flex-col justify-between space-y-4 group"
             >
-              <div className="w-10 h-10 rounded-2xl bg-[#EFF5F1] text-[#4F6D60] border border-[#7A9A8B]/30 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-                <Calendar className="w-5 h-5 text-[#7A9A8B]" />
+              <div className="w-9 h-9 rounded-xl bg-[#EEF4F0] text-[#364B40] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <Calendar className="w-4 h-4 text-[#6B8B7B]" />
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#7A9A8B] uppercase tracking-wider block">
-                  Módulo 2
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-wider block">
+                  Seguimiento
                 </span>
-                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#4F6D60]">
+                <h4 className="text-base font-serif font-bold text-[#1C1B1A] group-hover:text-[#364B40]">
                   Mi Rutina & Calendario
                 </h4>
-                <p className="text-xs text-[#6E6A66] leading-relaxed">
-                  Rutina diaria fija, Skin Cycling de noches alternas y seguimiento diario.
+                <p className="text-xs text-[#66615C] leading-relaxed">
+                  Rutina diaria fija, Skin Cycling de noches alternas y control de uso.
                 </p>
               </div>
-              <div className="text-xs font-bold text-[#7A9A8B] flex items-center gap-1">
-                <span>Ir a Mi Rutina</span>
+              <div className="text-xs font-bold text-[#364B40] flex items-center gap-1">
+                <span>Abrir calendario</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>
@@ -90,49 +91,49 @@ export default function Home() {
             {/* Módulo Activos */}
             <Link
               href="/ingrediente"
-              className="bg-[#FFFFFF] hover:bg-[#FAF8F5] p-5 rounded-3xl border border-[#EFECE6] hover:border-[#E8D5D0] transition-all duration-300 shadow-beauty flex flex-col justify-between space-y-4 group"
+              className="bg-[#FFFFFF] hover:bg-[#F7F4EE] p-6 rounded-2xl border border-[#ECE6DC] hover:border-[#B89B7D]/40 transition-all duration-300 shadow-editorial flex flex-col justify-between space-y-4 group"
             >
-              <div className="w-10 h-10 rounded-2xl bg-[#F8EFEA] text-[#A46864] border border-[#E8D5D0] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-                <BookOpen className="w-5 h-5 text-[#A46864]" />
+              <div className="w-9 h-9 rounded-xl bg-[#F9F5F0] text-[#7A5E43] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <BookOpen className="w-4 h-4 text-[#B89B7D]" />
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#A46864] uppercase tracking-wider block">
-                  Módulo 3
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-[#7A5E43] uppercase tracking-wider block">
+                  Biblioteca
                 </span>
-                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#A46864]">
+                <h4 className="text-base font-serif font-bold text-[#1C1B1A] group-hover:text-[#7A5E43]">
                   Guía de Activos
                 </h4>
-                <p className="text-xs text-[#6E6A66] leading-relaxed">
-                  Biblioteca técnica con pH, compatibilidad y evidencia CosIng UE.
+                <p className="text-xs text-[#66615C] leading-relaxed">
+                  Fichas técnicas con pH óptimo, compatibilidades y evidencia PubMed.
                 </p>
               </div>
-              <div className="text-xs font-bold text-[#A46864] flex items-center gap-1">
-                <span>Ver Catálogo</span>
+              <div className="text-xs font-bold text-[#7A5E43] flex items-center gap-1">
+                <span>Ver biblioteca</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>
 
-            {/* Módulo Ofertas */}
+            {/* Módulo Skin Cycling */}
             <Link
-              href="/ofertas"
-              className="bg-[#FFFFFF] hover:bg-[#FAF8F5] p-5 rounded-3xl border border-[#EFECE6] hover:border-[#C4A482]/40 transition-all duration-300 shadow-beauty flex flex-col justify-between space-y-4 group"
+              href="/rutinas/skin-cycling"
+              className="bg-[#FFFFFF] hover:bg-[#F7F4EE] p-6 rounded-2xl border border-[#ECE6DC] hover:border-[#6B8B7B]/40 transition-all duration-300 shadow-editorial flex flex-col justify-between space-y-4 group"
             >
-              <div className="w-10 h-10 rounded-2xl bg-[#F7F2EB] text-[#8F7253] border border-[#C4A482]/30 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-                <Layers className="w-5 h-5 text-[#C4A482]" />
+              <div className="w-9 h-9 rounded-xl bg-[#EEF4F0] text-[#364B40] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <Compass className="w-4 h-4 text-[#6B8B7B]" />
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#8F7253] uppercase tracking-wider block">
-                  Módulo 4
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-wider block">
+                  Protocolo
                 </span>
-                <h4 className="text-sm font-serif font-bold text-[#2B2A29] group-hover:text-[#8F7253]">
-                  Productos & Ofertas
+                <h4 className="text-base font-serif font-bold text-[#1C1B1A] group-hover:text-[#364B40]">
+                  Skin Cycling Guiado
                 </h4>
-                <p className="text-xs text-[#6E6A66] leading-relaxed">
-                  Catálogo curado, comparativas de precio y fórmulas recomendadas.
+                <p className="text-xs text-[#66615C] leading-relaxed">
+                  Configura tu ciclo personalizado según tu tolerancia y tipo de piel.
                 </p>
               </div>
-              <div className="text-xs font-bold text-[#8F7253] flex items-center gap-1">
-                <span>Explorar Ofertas</span>
+              <div className="text-xs font-bold text-[#364B40] flex items-center gap-1">
+                <span>Configurar ciclo</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>

@@ -23,7 +23,7 @@ export interface SkinDiagnosisInput {
   experienceLevel: ExperienceLevel;
 }
 
-export type NightCategory = 'EXFOLIATION' | 'RETINOID' | 'RECOVERY' | 'REST_ONLY' | 'SOS_RESCUE';
+export type NightCategory = 'EXFOLIATION' | 'RETINOID' | 'RECOVERY' | 'REST_ONLY';
 
 export interface ProtocolNight {
   nightNumber: number;
@@ -52,10 +52,10 @@ export interface SkinCyclingProtocol {
 
 export interface UserRoutineProduct {
   id: string;
-  phaseId: number; // Night number or 0 for daily AM, or -1 for SOS
+  phaseId: number; // Night number or 0 for daily AM
   productName: string;
   brand?: string;
   inciSummary?: string;
-  category: 'CLEANSER' | 'TONER' | 'SERUM' | 'EXFOLIANT' | 'RETINOID' | 'MOISTURIZER' | 'SPF' | 'SOS_TREATMENT';
+  category: 'CLEANSER' | 'TONER' | 'SERUM' | 'EXFOLIANT' | 'RETINOID' | 'MOISTURIZER' | 'SPF';
   notes?: string;
 }

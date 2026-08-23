@@ -1,52 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --bg-linen: #FDFBF7;
-  --bg-linen-soft: #F7F4EF;
-  --surface: #FFFFFF;
-  --surface-card: #FAF8F5;
-  --border-ivory: #EFECE6;
-  --border-soft: #E6E1D8;
+  /* Canvas & Base (Off-white / Warm Linen) */
+  --bg-canvas: #FAF8F5;
+  --bg-canvas-subtle: #F4EFE6;
   
-  --accent-sage: #7A9A8B;
-  --accent-sage-light: #EFF5F1;
-  --accent-sage-dark: #4F6D60;
+  /* Surfaces */
+  --surface-base: #FFFFFF;
+  --surface-muted: #F7F4EE;
+  --surface-card: #FFFFFF;
+  --surface-dark: #1E2822;
   
-  --accent-blush: #E8D5D0;
-  --accent-blush-soft: #F8EFEA;
-  --accent-blush-dark: #A46864;
+  /* Borders */
+  --border-subtle: #ECE6DC;
+  --border-muted: #E0D8CB;
+  --border-strong: #C8BEAF;
   
-  --accent-taupe: #C4A482;
-  --accent-taupe-light: #F7F2EB;
-  --accent-taupe-dark: #8F7253;
+  /* Primary Sage (Botanical science) */
+  --primary-sage: #6B8B7B;
+  --primary-sage-light: #EEF4F0;
+  --primary-sage-dark: #364B40;
+  --primary-sage-hover: #5A7768;
   
-  --text-charcoal: #2B2A29;
-  --text-muted: #6E6A66;
-  --text-light: #9C9790;
+  /* Warning & Attention (Soft Warm Blush) */
+  --accent-blush: #D97D75;
+  --accent-blush-soft: #FDF2F0;
+  --accent-blush-dark: #943C36;
+  
+  /* Taupe & Warm Accents */
+  --accent-taupe: #B89B7D;
+  --accent-taupe-light: #F9F5F0;
+  --accent-taupe-dark: #7A5E43;
+  
+  /* Scientific Navy & Institutional */
+  --scientific-navy: #1C2630;
+  --scientific-navy-soft: #EFF3F7;
+  --scientific-navy-dark: #0E151C;
+  
+  /* Typography Text Colors */
+  --text-charcoal: #1C1B1A;
+  --text-muted: #66615C;
+  --text-light: #99938B;
 }
 
 @theme inline {
-  --color-background: var(--bg-linen);
+  --color-background: var(--bg-canvas);
   --color-foreground: var(--text-charcoal);
   --font-sans: var(--font-plus-jakarta), var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: var(--font-playfair), "Cormorant Garamond", Georgia, serif;
 }
 
 body {
-  background-color: var(--bg-linen);
+  background-color: var(--bg-canvas);
   color: var(--text-charcoal);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Soft Diffuse Shadow for Beauty-Tech cards */
+/* Editorial Minimalist Shadows */
+.shadow-editorial {
+  box-shadow: 0 2px 14px -2px rgba(28, 27, 26, 0.03), 0 1px 4px -1px rgba(28, 27, 26, 0.02);
+}
+
+.shadow-editorial-elevated {
+  box-shadow: 0 12px 36px -6px rgba(28, 27, 26, 0.06), 0 4px 12px -2px rgba(28, 27, 26, 0.02);
+}
+
+/* Legacy alias for backwards compatibility */
 .shadow-beauty {
-  box-shadow: 0 4px 20px -2px rgba(43, 42, 41, 0.04), 0 2px 6px -1px rgba(43, 42, 41, 0.02);
+  box-shadow: 0 2px 14px -2px rgba(28, 27, 26, 0.03), 0 1px 4px -1px rgba(28, 27, 26, 0.02);
 }
 
 .shadow-beauty-hover {
-  box-shadow: 0 10px 30px -4px rgba(43, 42, 41, 0.07), 0 4px 10px -2px rgba(43, 42, 41, 0.03);
+  box-shadow: 0 10px 30px -4px rgba(28, 27, 26, 0.06), 0 4px 10px -2px rgba(28, 27, 26, 0.02);
 }
 
 /* Safe area for mobile bottom nav */

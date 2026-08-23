@@ -205,90 +205,90 @@ export default async function IngredientPage({ params }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
 
-      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full space-y-8">
+      <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center space-x-2 text-xs font-semibold text-[#9C9790]">
-          <Link href="/" className="hover:text-[#4F6D60]">Inicio</Link>
+        <div className="flex items-center space-x-2 text-xs font-semibold text-[#99938B]">
+          <Link href="/" className="hover:text-[#364B40]">Inicio</Link>
           <span>/</span>
-          <Link href="/ingrediente" className="hover:text-[#4F6D60]">Biblioteca de Activos</Link>
+          <Link href="/ingrediente" className="hover:text-[#364B40]">Biblioteca de Activos</Link>
           <span>/</span>
-          <span className="text-[#2B2A29] font-bold">{item.name}</span>
+          <span className="text-[#1C1B1A] font-bold">{item.name}</span>
         </div>
 
-        {/* Hero Card Header */}
-        <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-5 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-[#4F6D60] bg-[#EFF5F1] px-3.5 py-1 rounded-full border border-[#7A9A8B]/30 uppercase tracking-widest">
-                Ficha CosIng UE • CAS {item.cas}
+        {/* Hero Monograph Header */}
+        <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#ECE6DC] pb-5">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-[#364B40] bg-[#EEF4F0] px-3 py-0.5 rounded-full uppercase tracking-widest inline-block">
+                CosIng UE · CAS {item.cas}
               </span>
-              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#2B2A29] mt-2 tracking-tight">
+              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#1C1B1A] tracking-tight">
                 {item.name}
               </h1>
-              <p className="text-xs text-[#9C9790] font-mono">
-                Denominación INCI Oficial: <strong>{item.inci}</strong>
+              <p className="text-xs text-[#99938B] font-mono">
+                Denominación INCI: <strong>{item.inci}</strong>
               </p>
             </div>
 
-            <div className="text-left sm:text-right bg-[#FAF8F5] p-3 sm:p-4 rounded-2xl border border-[#EFECE6] shrink-0">
-              <span className="text-[10px] text-[#9C9790] font-bold uppercase tracking-wider block">
+            <div className="bg-[#FAF8F5] p-3 sm:p-4 rounded-xl border border-[#ECE6DC] shrink-0 text-left sm:text-right">
+              <span className="text-[10px] text-[#99938B] font-bold uppercase tracking-wider block">
                 Evidencia Médica
               </span>
-              <span className="text-sm sm:text-base font-serif font-bold text-[#4F6D60] block mt-0.5">
+              <span className="text-sm font-serif font-bold text-[#364B40] block mt-0.5">
                 {item.evidence}
               </span>
             </div>
           </div>
 
-          <p className="text-xs sm:text-sm text-[#6E6A66] leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed">
             {item.summary}
           </p>
 
           {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-[#EFECE6] text-xs">
-            <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFECE6]">
-              <span className="text-[10px] text-[#9C9790] font-bold uppercase block">pH Óptimo</span>
-              <span className="font-bold text-[#2B2A29] font-serif mt-0.5 block">{item.phRange}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+            <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
+              <span className="text-[10px] text-[#99938B] font-bold uppercase block">pH Óptimo</span>
+              <span className="font-bold text-[#1C1B1A] mt-0.5 block">{item.phRange}</span>
             </div>
-            <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFECE6]">
-              <span className="text-[10px] text-[#9C9790] font-bold uppercase block">Comedogenicidad</span>
-              <span className="font-bold text-[#4F6D60] mt-0.5 block">{item.comedogenic}</span>
+            <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
+              <span className="text-[10px] text-[#99938B] font-bold uppercase block">Comedogenicidad</span>
+              <span className="font-bold text-[#364B40] mt-0.5 block">{item.comedogenic}</span>
             </div>
-            <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFECE6]">
-              <span className="text-[10px] text-[#9C9790] font-bold uppercase block">Aplicación</span>
-              <span className="font-bold text-[#2B2A29] mt-0.5 block">{item.timing}</span>
+            <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
+              <span className="text-[10px] text-[#99938B] font-bold uppercase block">Aplicación</span>
+              <span className="font-bold text-[#1C1B1A] mt-0.5 block">{item.timing}</span>
             </div>
-            <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFECE6]">
-              <span className="text-[10px] text-[#9C9790] font-bold uppercase block">Categoría</span>
-              <span className="font-bold text-[#2B2A29] mt-0.5 block truncate">{item.category}</span>
+            <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
+              <span className="text-[10px] text-[#99938B] font-bold uppercase block">Categoría</span>
+              <span className="font-bold text-[#1C1B1A] mt-0.5 block truncate">{item.category}</span>
             </div>
           </div>
         </div>
 
-        {/* Section: Cross-Compatibility Matrix (Sinergias vs Conflictos) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Section: Cross-Compatibility Matrix */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Sinergias */}
-          <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty space-y-3">
-            <div className="flex items-center gap-2 text-[#4F6D60]">
-              <CheckCircle2 className="w-5 h-5 text-[#7A9A8B]" />
-              <h2 className="font-serif font-bold text-base text-[#2B2A29]">
-                Combinaciones Sinérgicas Recomendadas
+          <div className="bg-[#FFFFFF] rounded-2xl p-6 border border-[#ECE6DC] shadow-editorial space-y-3">
+            <div className="flex items-center gap-2 text-[#364B40]">
+              <CheckCircle2 className="w-4 h-4 text-[#6B8B7B]" />
+              <h2 className="font-serif font-bold text-sm text-[#1C1B1A]">
+                Combinaciones Sinérgicas
               </h2>
             </div>
-            <p className="text-xs text-[#6E6A66]">
-              Activos que potencian sus resultados o amortiguan la irritación:
+            <p className="text-xs text-[#66615C]">
+              Activos que potencian sus resultados o amortiguan la reactividad:
             </p>
-            <ul className="space-y-2 pt-1">
+            <ul className="space-y-1.5 pt-1">
               {item.synergies.map((syn, i) => (
-                <li key={i} className="text-xs text-[#2B2A29] bg-[#EFF5F1] p-3 rounded-2xl border border-[#7A9A8B]/20 flex items-start gap-2">
-                  <span className="text-[#4F6D60] font-bold">✓</span>
+                <li key={i} className="text-xs text-[#1C1B1A] bg-[#EEF4F0] p-2.5 rounded-xl flex items-start gap-2">
+                  <span className="text-[#364B40] font-bold">✓</span>
                   <span>{syn}</span>
                 </li>
               ))}
@@ -296,19 +296,19 @@ export default async function IngredientPage({ params }: Props) {
           </div>
 
           {/* Incompatibilidades */}
-          <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty space-y-3">
-            <div className="flex items-center gap-2 text-[#A46864]">
-              <AlertTriangle className="w-5 h-5 text-[#A46864]" />
-              <h2 className="font-serif font-bold text-base text-[#2B2A29]">
-                Conflictos Químicos & Precauciones
+          <div className="bg-[#FFFFFF] rounded-2xl p-6 border border-[#ECE6DC] shadow-editorial space-y-3">
+            <div className="flex items-center gap-2 text-[#943C36]">
+              <AlertTriangle className="w-4 h-4 text-[#D97D75]" />
+              <h2 className="font-serif font-bold text-sm text-[#1C1B1A]">
+                Conflictos & Precauciones
               </h2>
             </div>
-            <p className="text-xs text-[#6E6A66]">
+            <p className="text-xs text-[#66615C]">
               Evita aplicar en la misma capa para no alterar el pH o provocar sobreexfoliación:
             </p>
-            <ul className="space-y-2 pt-1">
+            <ul className="space-y-1.5 pt-1">
               {item.conflicts.map((conf, i) => (
-                <li key={i} className="text-xs text-[#A46864] bg-[#F8EFEA] p-3 rounded-2xl border border-[#E8D5D0] flex items-start gap-2">
+                <li key={i} className="text-xs text-[#943C36] bg-[#FDF2F0] p-2.5 rounded-xl flex items-start gap-2">
                   <span className="font-bold">⚠️</span>
                   <span>{conf}</span>
                 </li>
@@ -318,40 +318,40 @@ export default async function IngredientPage({ params }: Props) {
         </div>
 
         {/* Section: PubMed Clinical Studies */}
-        <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty space-y-4">
-          <div className="flex items-center justify-between border-b border-[#EFECE6] pb-3">
+        <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#ECE6DC] shadow-editorial space-y-4">
+          <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-3">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#7A9A8B]" />
-              <h2 className="font-serif font-bold text-lg text-[#2B2A29]">
+              <FileText className="w-4 h-4 text-[#6B8B7B]" />
+              <h2 className="font-serif font-bold text-base text-[#1C1B1A]">
                 Estudios Médicos Indexados en PubMed (NCBI)
               </h2>
             </div>
-            <span className="text-[10px] text-[#9C9790] uppercase tracking-wider font-bold">
-              Evidencia Revisada por Pares
+            <span className="text-[10px] text-[#99938B] uppercase tracking-wider font-bold">
+              Peer-Reviewed
             </span>
           </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             {item.studies.map((std, i) => (
-              <div key={i} className="bg-[#FAF8F5] p-4 sm:p-5 rounded-2xl border border-[#EFECE6] space-y-2">
+              <div key={i} className="bg-[#FAF8F5] p-4 rounded-xl border border-[#ECE6DC] space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-[#2B2A29]">
+                  <span className="text-xs font-bold text-[#1C1B1A]">
                     {std.title}
                   </span>
                   <a
                     href={`https://pubmed.ncbi.nlm.nih.gov/${std.pmid}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7A9A8B] hover:text-[#4F6D60] underline shrink-0 touch-target"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6B8B7B] hover:text-[#364B40] underline shrink-0 touch-target"
                   >
-                    <span>PubMed: {std.pmid}</span>
+                    <span>PMID: {std.pmid}</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-                <div className="text-[11px] text-[#9C9790]">
+                <div className="text-[11px] text-[#99938B]">
                   <span>{std.journal} ({std.year})</span>
                 </div>
-                <p className="text-xs text-[#6E6A66] bg-white p-3 rounded-xl border border-[#EFECE6] leading-relaxed">
+                <p className="text-xs text-[#66615C] bg-white p-3 rounded-xl border border-[#ECE6DC] leading-relaxed">
                   <strong>Conclusión clínica:</strong> {std.conclusion}
                 </p>
               </div>
@@ -359,25 +359,25 @@ export default async function IngredientPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Action CTA: Auditar Producto con este activo */}
-        <div className="bg-gradient-to-r from-[#4F6D60] via-[#5A796B] to-[#3D554A] text-[#FDFBF7] rounded-3xl p-6 sm:p-8 shadow-beauty flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
+        {/* Action CTA */}
+        <div className="bg-[#1E2822] text-[#FAF8F5] rounded-2xl p-6 sm:p-8 shadow-editorial flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-[#E8D5D0] uppercase tracking-widest block">
+            <span className="text-[10px] font-bold text-[#A2BAAD] uppercase tracking-widest block">
               Evaluador de Fórmulas
             </span>
             <h3 className="text-xl font-serif font-bold text-white">
-              ¿Tienes un cosmético que contiene {item.name}?
+              ¿Tienes un cosmético con {item.name}?
             </h3>
-            <p className="text-xs text-[#FDFBF7]/90 max-w-xl">
-              Audita su fórmula completa para verificar su compatibilidad y descubrir si contiene irritantes ocultos.
+            <p className="text-xs text-[#B8C2BC] max-w-xl">
+              Audita su fórmula completa para verificar su compatibilidad y comprobar si contiene irritantes ocultos.
             </p>
           </div>
 
           <Link
             href="/"
-            className="bg-[#FDFBF7] text-[#4F6D60] hover:bg-white text-xs font-bold px-6 py-3 rounded-full shadow-xs flex-shrink-0 transition-all duration-200 hover:scale-[1.02] touch-target"
+            className="bg-[#FAF8F5] text-[#1E2822] hover:bg-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-xs flex-shrink-0 transition active:scale-95 touch-target"
           >
-            Evaluar cosmético ahora →
+            Evaluar fórmula ahora →
           </Link>
         </div>
       </main>

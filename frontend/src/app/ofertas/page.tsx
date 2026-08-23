@@ -6,14 +6,10 @@ import {
   Tag,
   Sparkles,
   Search,
-  Filter,
   CheckCircle2,
   ArrowRight,
   ExternalLink,
   ShieldCheck,
-  Percent,
-  Star,
-  Info,
   TrendingDown
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -31,7 +27,7 @@ interface ProductOffer {
   activeIngredient: string;
   activeConcentration: string;
   skinTypeRecommendation: string[];
-  scientificRating: number; // out of 100
+  scientificRating: number;
   storeName: string;
   storeUrl: string;
   inciSummary: string;
@@ -55,7 +51,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Sephora / Farmacia Oficial',
     storeUrl: '#',
     inciSummary: 'Water, Methylpropanediol, Butylene Glycol, Salicylic Acid, Polysorbate 20, Camellia Oleifera Leaf Extract...',
-    highlightBadge: '⭐ Estándar de Oro BHA'
+    highlightBadge: 'Estándar de Oro BHA'
   },
   {
     id: 'prod_2',
@@ -73,7 +69,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Laboratorio Oficial',
     storeUrl: '#',
     inciSummary: 'Aqua, Caprylic/Capric Triglyceride, Squalane, Retinal, Allantoin, Biosaccharide Gum-1...',
-    highlightBadge: '🔬 Mejor Costo/Beneficio'
+    highlightBadge: 'Mejor Costo/Beneficio'
   },
   {
     id: 'prod_3',
@@ -91,7 +87,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Farmacias Dermatológicas',
     storeUrl: '#',
     inciSummary: 'Aqua, Hydrogenated Polyisobutene, Dimethicone, Glycerin, Butyrospermum Parkii Butter, Panthenol, Madecassoside, Zinc Gluconate...',
-    highlightBadge: '🛡️ Reparador de Barrera'
+    highlightBadge: 'Reparador de Barrera'
   },
   {
     id: 'prod_4',
@@ -109,7 +105,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Farmacias Dermatológicas',
     storeUrl: '#',
     inciSummary: 'Aqua, Silica, Diisopropyl Sebacate, Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine, Methoxypropylamino Cyclohexenylidene Ethoxyethylcyanoacetate...',
-    highlightBadge: '☀️ Mayor Protección UVA'
+    highlightBadge: 'Mayor Protección UVA'
   },
   {
     id: 'prod_5',
@@ -127,7 +123,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Deciem / Tiendas de Belleza',
     storeUrl: '#',
     inciSummary: 'Aqua, Niacinamide, Pentylene Glycol, Zinc PCA, Dimethyl Isosorbide, Tamarindus Indica Seed Gum...',
-    highlightBadge: '💎 Básico Seborregulador'
+    highlightBadge: 'Básico Seborregulador'
   },
   {
     id: 'prod_6',
@@ -145,7 +141,7 @@ const SAMPLE_OFFERS: ProductOffer[] = [
     storeName: 'Farmacias Dermatológicas',
     storeUrl: '#',
     inciSummary: 'Aqua, Ethylhexyl Palmitate, Glycerin, Dipropylene Glycol, Carbomer, Sodium Hydroxide, Capryl Glycol...',
-    highlightBadge: '🌿 Respetuoso del Manto Lipídico'
+    highlightBadge: 'Respetuoso del Manto'
   }
 ];
 
@@ -154,12 +150,12 @@ export default function OffersAndProductsPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const categories = [
-    { id: 'ALL', label: 'Todos los Productos' },
-    { id: 'EXFOLIANT', label: 'Exfoliantes Químicos' },
+    { id: 'ALL', label: 'Todos' },
+    { id: 'EXFOLIANT', label: 'Exfoliantes' },
     { id: 'RETINOID', label: 'Retinoides' },
-    { id: 'MOISTURIZER', label: 'Hidratantes & Barrera' },
-    { id: 'SPF', label: 'Protectores Solares' },
-    { id: 'SERUM', label: 'Sérums Activos' },
+    { id: 'MOISTURIZER', label: 'Hidratantes' },
+    { id: 'SPF', label: 'Protección Solar' },
+    { id: 'SERUM', label: 'Sérums' },
     { id: 'CLEANSER', label: 'Limpiadores' },
   ];
 
@@ -173,72 +169,66 @@ export default function OffersAndProductsPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
       <Navbar />
 
-      <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
         
         {/* TOP HERO HEADER */}
-        <div className="bg-[#FFFFFF] rounded-3xl p-6 sm:p-8 border border-[#EFECE6] shadow-beauty flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-[#4F6D60] bg-[#EFF5F1] px-3.5 py-1 rounded-full border border-[#7A9A8B]/30 uppercase tracking-widest">
-                Módulo de Productos & Ofertas
-              </span>
-              <span className="text-xs text-[#9C9790]">•</span>
-              <span className="text-xs font-medium text-[#6E6A66]">
-                Transparencia Científica
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2B2A29] tracking-tight">
-              Cosméticos con <span className="text-[#7A9A8B]">Respaldo Comprobado</span>
+        <div className="border-b border-[#ECE6DC] pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1.5 max-w-xl">
+            <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest bg-[#EEF4F0] px-3 py-0.5 rounded-full inline-block">
+              Catálogo Curado & Evidencia
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C1B1A] tracking-tight">
+              Cosméticos con <span className="text-[#6B8B7B]">Respaldo Científico</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#6E6A66] leading-relaxed">
-              Curaduría científica independiente de productos con evidencia clínica real, comparativas de precio por gramo de activo y mejores ofertas de farmacia.
+            <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed">
+              Curaduría científica independiente de productos con evidencia clínica real, concentraciones óptimas y compatibilidad dérmica comprobada.
             </p>
           </div>
 
-          <div className="bg-[#FAF8F5] border border-[#EFECE6] p-4 rounded-2xl space-y-1.5 shrink-0 max-w-xs">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#4F6D60]">
-              <ShieldCheck className="w-4 h-4 text-[#7A9A8B]" />
-              <span>Criterio Sin Publicidad Engañosa</span>
+          <div className="bg-[#FFFFFF] border border-[#ECE6DC] p-4 rounded-xl shadow-editorial space-y-1 shrink-0 max-w-xs text-xs text-[#66615C]">
+            <div className="flex items-center gap-1.5 font-semibold text-[#364B40]">
+              <ShieldCheck className="w-4 h-4 text-[#6B8B7B]" />
+              <span>Criterio Independiente</span>
             </div>
-            <p className="text-[11px] text-[#6E6A66] leading-relaxed">
-              Ninguna marca paga por posicionamiento. Solo listamos fórmulas con activos respaldados por literatura dermatológica.
+            <p className="text-[11px] leading-relaxed">
+              Ninguna marca paga por posicionamiento. Solo listamos fórmulas con activos respaldados en ensayos clínicos.
             </p>
           </div>
         </div>
 
         {/* SEARCH & FILTERS BAR */}
-        <div className="bg-[#FFFFFF] rounded-3xl p-4 sm:p-6 border border-[#EFECE6] shadow-beauty space-y-4">
-          <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-            <div className="relative w-full md:max-w-md">
-              <Search className="w-4 h-4 text-[#9C9790] absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="bg-[#FFFFFF] rounded-2xl p-4 sm:p-5 border border-[#ECE6DC] shadow-editorial space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="w-4 h-4 text-[#99938B] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por marca, cosmético o activo (ej: Retinal, BHA)..."
-                className="w-full bg-[#FAF8F5] border border-[#EFECE6] rounded-full pl-9 pr-4 py-2.5 text-xs text-[#2B2A29] placeholder-[#9C9790] focus:outline-none focus:border-[#7A9A8B] focus:bg-white"
+                placeholder="Buscar por marca, cosmético o activo..."
+                className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl pl-9 pr-4 py-2 text-xs text-[#1C1B1A] placeholder-[#99938B] focus:outline-none focus:border-[#6B8B7B] focus:bg-white transition"
               />
             </div>
 
-            <span className="text-xs font-semibold text-[#6E6A66] shrink-0">
+            <span className="text-xs text-[#66615C] shrink-0">
               {filteredOffers.length} {filteredOffers.length === 1 ? 'fórmula disponible' : 'fórmulas disponibles'}
             </span>
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`text-xs font-bold px-4 py-2 rounded-full border transition whitespace-nowrap cursor-pointer touch-target ${
+                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border transition whitespace-nowrap cursor-pointer touch-target ${
                   selectedCategory === cat.id
-                    ? 'bg-[#7A9A8B] text-white border-[#7A9A8B] shadow-xs'
-                    : 'bg-[#FAF8F5] text-[#6E6A66] border-[#EFECE6] hover:bg-[#EFF5F1] hover:text-[#4F6D60]'
+                    ? 'bg-[#364B40] text-white border-[#364B40]'
+                    : 'bg-[#FAF8F5] text-[#66615C] border-[#ECE6DC] hover:bg-[#EEF4F0] hover:text-[#364B40]'
                 }`}
               >
                 {cat.label}
@@ -248,114 +238,96 @@ export default function OffersAndProductsPage() {
         </div>
 
         {/* OFFERS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOffers.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty flex flex-col justify-between space-y-4 hover:border-[#7A9A8B]/40 transition-all duration-200"
-            >
-              <div className="space-y-3">
-                {/* Badges & Category */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold text-[#4F6D60] bg-[#EFF5F1] px-2.5 py-0.5 rounded-full border border-[#7A9A8B]/30 uppercase tracking-wider">
-                    {item.category}
-                  </span>
-                  {item.highlightBadge && (
-                    <span className="text-[10px] font-bold text-[#A46864] bg-[#F8EFEA] px-2.5 py-0.5 rounded-full border border-[#E8D5D0]">
-                      {item.highlightBadge}
+        {filteredOffers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredOffers.map((item) => (
+              <div
+                key={item.id}
+                className="bg-[#FFFFFF] rounded-2xl p-5 border border-[#ECE6DC] shadow-editorial flex flex-col justify-between space-y-4 hover:border-[#6B8B7B]/40 transition"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-[#364B40] bg-[#EEF4F0] px-2.5 py-0.5 rounded-full">
+                      {item.category}
                     </span>
-                  )}
-                </div>
-
-                {/* Product Name & Brand */}
-                <div>
-                  <span className="text-xs font-bold text-[#9C9790] uppercase tracking-wider block">
-                    {item.brand}
-                  </span>
-                  <h3 className="text-lg font-serif font-bold text-[#2B2A29] leading-snug mt-0.5">
-                    {item.name}
-                  </h3>
-                </div>
-
-                {/* Active Ingredient & Concentration */}
-                <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFECE6] space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6E6A66]">Activo Principal:</span>
-                    <span className="font-bold text-[#2B2A29]">{item.activeIngredient}</span>
+                    <span className="text-[10px] text-[#99938B] font-semibold">
+                      {item.scientificRating}% Puntuación
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6E6A66]">Concentración / Tipo:</span>
-                    <span className="font-bold text-[#4F6D60]">{item.activeConcentration}</span>
-                  </div>
-                </div>
 
-                {/* Biotipo Recommendation */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#9C9790] uppercase tracking-wider block">
-                    Recomendado para:
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {item.skinTypeRecommendation.map((type, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] bg-white border border-[#EFECE6] px-2 py-0.5 rounded-md text-[#6E6A66] font-medium"
-                      >
-                        {type}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Price & Action Section */}
-              <div className="pt-3 border-t border-[#EFECE6] space-y-3">
-                <div className="flex items-baseline justify-between">
                   <div>
-                    <span className="text-xs text-[#9C9790] block">Mejor precio detectado</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-bold text-[#2B2A29] font-serif">
-                        ${item.bestPrice.toFixed(2)}
-                      </span>
-                      {item.originalPrice > item.bestPrice && (
-                        <span className="text-xs text-[#9C9790] line-through">
-                          ${item.originalPrice.toFixed(2)}
-                        </span>
-                      )}
+                    <span className="text-xs text-[#99938B] block font-medium">{item.brand}</span>
+                    <h3 className="font-serif font-bold text-base text-[#1C1B1A] leading-snug mt-0.5">
+                      {item.name}
+                    </h3>
+                  </div>
+
+                  <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#ECE6DC]/70 space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#66615C]">Activo:</span>
+                      <span className="font-semibold text-[#1C1B1A]">{item.activeIngredient}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#66615C]">Concentración:</span>
+                      <span className="font-semibold text-[#364B40]">{item.activeConcentration}</span>
                     </div>
                   </div>
-
-                  {item.discountPercentage > 0 && (
-                    <span className="inline-flex items-center gap-1 bg-[#EFF5F1] text-[#4F6D60] text-xs font-bold px-2.5 py-1 rounded-full border border-[#7A9A8B]/30">
-                      <TrendingDown className="w-3.5 h-3.5" />
-                      <span>-{item.discountPercentage}%</span>
-                    </span>
-                  )}
                 </div>
 
-                {/* Actions: Audit Formula or View Store */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href={`/?formula=${encodeURIComponent(item.inciSummary)}`}
-                    className="w-full bg-[#FAF8F5] hover:bg-[#EFF5F1] text-[#4F6D60] border border-[#EFECE6] text-xs font-bold py-2.5 rounded-full flex items-center justify-center gap-1 transition cursor-pointer touch-target"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Auditar INCI</span>
-                  </Link>
+                <div className="pt-3 border-t border-[#ECE6DC] space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <span className="text-[10px] text-[#99938B] block">Precio referencia</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-serif font-bold text-[#1C1B1A]">
+                          ${item.bestPrice.toFixed(2)}
+                        </span>
+                        {item.originalPrice > item.bestPrice && (
+                          <span className="text-xs text-[#99938B] line-through">
+                            ${item.originalPrice.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                  <a
-                    href={item.storeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-[#4F6D60] hover:bg-[#3D554A] text-white text-xs font-bold py-2.5 rounded-full flex items-center justify-center gap-1 shadow-xs transition cursor-pointer touch-target"
-                  >
-                    <span>Ver Oferta</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                    {item.discountPercentage > 0 && (
+                      <span className="inline-flex items-center gap-0.5 bg-[#EEF4F0] text-[#364B40] text-xs font-bold px-2 py-0.5 rounded-full">
+                        <TrendingDown className="w-3 h-3" />
+                        <span>-{item.discountPercentage}%</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href={`/?formula=${encodeURIComponent(item.inciSummary)}`}
+                      className="w-full bg-[#FAF8F5] hover:bg-[#EEF4F0] text-[#364B40] border border-[#ECE6DC] text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
+                    >
+                      <Sparkles className="w-3 h-3 text-[#6B8B7B]" />
+                      <span>Auditar INCI</span>
+                    </Link>
+
+                    <a
+                      href={item.storeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-[#364B40] hover:bg-[#2A3B32] text-white text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1 transition"
+                    >
+                      <span>Ver Oferta</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#ECE6DC] space-y-3">
+            <Search className="w-8 h-8 text-[#99938B] mx-auto" />
+            <h3 className="text-base font-serif font-bold text-[#1C1B1A]">No se encontraron cosméticos</h3>
+            <p className="text-xs text-[#66615C]">Intenta con otros términos o selecciona otra categoría.</p>
+          </div>
+        )}
 
       </main>
 

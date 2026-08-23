@@ -76,13 +76,13 @@ const INGREDIENTS = [
   {
     slug: 'panthenol',
     name: 'Pantenol (Provitamina B5)',
-    category: 'Regenerador de Barrera & SOS',
+    category: 'Regenerador de Barrera & Reparación',
     evidence: 'NIVEL A (Clínico)',
     ph: '4.5 - 7.0',
     comedogenic: '1 / 5 (Bajo)',
     layering: 'Emulsión / Bálsamo Reparador',
     description: 'Lípido biomimético calmante que acelera la reepitelización cutánea, alivia la tirantez y fortalece la barrera lipídica.',
-    compatibleWith: ['Todos los activos, ideal en recuperación y modo SOS'],
+    compatibleWith: ['Todos los activos, ideal en fases de recuperación dérmica'],
     avoidWith: ['Ninguno'],
     badgeColor: 'bg-[#EFF5F1] text-[#4F6D60] border-[#7A9A8B]/30'
   },
@@ -103,56 +103,55 @@ const INGREDIENTS = [
 
 export default function IngredientesIndexPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#2B2A29]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
       <Navbar />
 
-      <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full space-y-10">
+      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-12">
         {/* Header Introduction */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 bg-[#EFF5F1] text-[#4F6D60] text-xs font-bold px-4 py-1 rounded-full border border-[#7A9A8B]/30 uppercase tracking-widest">
-            <BookOpen className="w-3.5 h-3.5 text-[#7A9A8B]" />
-            <span>Guía Botánica & Clínica Oficial CosIng UE</span>
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-serif font-bold text-[#2B2A29] tracking-tight">
-            Biblioteca de <span className="text-[#7A9A8B]">Activos Cosméticos</span>
+        <div className="text-center max-w-2xl mx-auto space-y-2.5">
+          <span className="text-[10px] font-bold text-[#6B8B7B] uppercase tracking-widest bg-[#EEF4F0] px-3 py-0.5 rounded-full inline-block">
+            Inventario CosIng UE & PubMed NCBI
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#1C1B1A] tracking-tight">
+            Biblioteca de <span className="text-[#6B8B7B]">Activos Cosméticos</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#6E6A66] leading-relaxed max-w-2xl mx-auto">
-            Fichas científicas de compatibilidad, pH de formulación y nivel de evidencia médica en ensayos clínicos de PubMed (NCBI).
+          <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed max-w-xl mx-auto">
+            Fichas científicas de compatibilidad molecular, pH óptimo de formulación y nivel de evidencia médica en ensayos clínicos.
           </p>
         </div>
 
         {/* Ingredients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {INGREDIENTS.map((ing) => (
             <Link
               key={ing.slug}
               href={`/ingrediente/${ing.slug}`}
-              className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#EFECE6] shadow-beauty hover:border-[#7A9A8B]/50 transition-all duration-300 flex flex-col justify-between space-y-4 group"
+              className="bg-[#FFFFFF] rounded-2xl p-6 border border-[#ECE6DC] shadow-editorial hover:border-[#6B8B7B]/50 transition-all duration-200 flex flex-col justify-between space-y-4 group"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold px-3 py-0.5 rounded-full border uppercase tracking-wider ${ing.badgeColor}`}>
+                  <span className="text-[10px] font-bold text-[#364B40] bg-[#EEF4F0] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     {ing.evidence}
                   </span>
-                  <span className="text-[10px] text-[#9C9790] font-semibold">
+                  <span className="text-[10px] text-[#99938B] font-semibold">
                     pH: {ing.ph}
                   </span>
                 </div>
 
-                <h2 className="text-lg sm:text-xl font-serif font-bold text-[#2B2A29] group-hover:text-[#4F6D60] transition-colors">
+                <h2 className="text-lg font-serif font-bold text-[#1C1B1A] group-hover:text-[#364B40] transition-colors">
                   {ing.name}
                 </h2>
                 
-                <p className="text-xs text-[#6E6A66] leading-relaxed line-clamp-3">
+                <p className="text-xs text-[#66615C] leading-relaxed line-clamp-3">
                   {ing.description}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-between text-xs">
-                <span className="text-[11px] text-[#9C9790] font-medium">
+              <div className="pt-3 border-t border-[#ECE6DC] flex items-center justify-between text-xs">
+                <span className="text-[11px] text-[#99938B]">
                   {ing.layering}
                 </span>
-                <span className="font-bold text-[#7A9A8B] group-hover:text-[#4F6D60] flex items-center gap-1">
+                <span className="font-semibold text-[#6B8B7B] group-hover:text-[#364B40] flex items-center gap-1">
                   <span>Ver Ficha</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
