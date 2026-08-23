@@ -1,104 +1,153 @@
 @import "tailwindcss";
 
 :root {
-  /* Canvas & Base (Off-white / Warm Linen) */
+  /* Canvas & Base (Crema neutro cálido mate) */
   --bg-canvas: #FAF8F5;
   --bg-canvas-subtle: #F4EFE6;
   
-  /* Surfaces */
-  --surface-base: #FFFFFF;
-  --surface-muted: #F7F4EE;
-  --surface-card: #FFFFFF;
-  --surface-dark: #1E2822;
+  /* Primary Brand Palette */
+  --sage-primary: #8FA89B;
+  --sage-primary-light: #EBF1EE;
+  --sage-primary-hover: #7D978A;
+  --sage-dark: #4A6B5B;
+  --sage-dark-hover: #3D5A4C;
+  --sand-card: #F2ECE4;
+  --sand-card-light: #F8F5F0;
   
-  /* Borders */
-  --border-subtle: #ECE6DC;
-  --border-muted: #E0D8CB;
-  --border-strong: #C8BEAF;
-  
-  /* Primary Sage (Botanical science) */
-  --primary-sage: #4F6D60;
-  --primary-sage-light: #EFF5F1;
-  --primary-sage-dark: #2D4A3E;
-  --primary-sage-hover: #3D5B4E;
-  
-  /* Warm Accents (Phase 0) */
-  --accent-warm: #C4A882;
-  --accent-warm-light: #F5EDE3;
-  --surface-hero: #E8DDD0;
-  --surface-card-warm: #F5EDE3;
-  
-  /* Warning & Attention (Soft Warm Blush) */
-  --accent-blush: #D97D75;
-  --accent-blush-soft: #FDF2F0;
-  --accent-blush-dark: #943C36;
-  
-  /* Taupe & Warm Accents */
-  --accent-taupe: #B89B7D;
-  --accent-taupe-light: #F9F5F0;
-  --accent-taupe-dark: #7A5E43;
-  
-  /* Scientific Navy & Institutional */
-  --scientific-navy: #1C2630;
-  --scientific-navy-soft: #EFF3F7;
-  --scientific-navy-dark: #0E151C;
+  /* Cycle Phase Accents */
+  --soft-rose: #D8A899;
+  --soft-rose-light: #FAF0ED;
+  --warm-almond: #DFCAAC;
+  --warm-almond-light: #FAF5EE;
   
   /* Typography Text Colors */
-  --text-charcoal: #1C1B1A;
-  --text-muted: #66615C;
-  --text-light: #99938B;
+  --text-primary: #2D2825;
+  --text-secondary: #7E756F;
+  --text-muted: #9D948B;
+  
+  /* Borders */
+  --border-subtle: #E8E1D7;
+  --border-sand: #E2D9CD;
+  --border-sage: #8FA89B;
+  
+  /* Radii & Shadows */
+  --radius-card: 20px;
+  --radius-pill: 9999px;
+  --shadow-diffuse: 0 4px 20px rgba(0, 0, 0, 0.04);
+  --shadow-diffuse-elevated: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
-  --color-background: var(--bg-canvas);
-  --color-foreground: var(--text-charcoal);
-  --font-sans: var(--font-plus-jakarta), var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --color-canvas: var(--bg-canvas);
+  --color-canvas-subtle: var(--bg-canvas-subtle);
+  --color-sage: var(--sage-primary);
+  --color-sage-light: var(--sage-primary-light);
+  --color-sage-dark: var(--sage-dark);
+  --color-sand: var(--sand-card);
+  --color-sand-light: var(--sand-card-light);
+  --color-rose: var(--soft-rose);
+  --color-rose-light: var(--soft-rose-light);
+  --color-almond: var(--warm-almond);
+  --color-almond-light: var(--warm-almond-light);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-sand: var(--border-sand);
+  
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: var(--font-playfair), "Cormorant Garamond", Georgia, serif;
 }
 
 body {
   background-color: var(--bg-canvas);
-  color: var(--text-charcoal);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Editorial Minimalist Shadows */
-.shadow-editorial {
-  box-shadow: 0 2px 14px -2px rgba(28, 27, 26, 0.03), 0 1px 4px -1px rgba(28, 27, 26, 0.02);
+/* Typography Utility Classes as per Design Specs */
+.font-display-h1 {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 600;
 }
 
-.shadow-editorial-elevated {
-  box-shadow: 0 12px 36px -6px rgba(28, 27, 26, 0.06), 0 4px 12px -2px rgba(28, 27, 26, 0.02);
+.font-title-h2 {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 500;
 }
 
-/* Legacy alias for backwards compatibility */
-.shadow-beauty {
-  box-shadow: 0 2px 14px -2px rgba(28, 27, 26, 0.03), 0 1px 4px -1px rgba(28, 27, 26, 0.02);
+.font-section-h3 {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.shadow-beauty-hover {
-  box-shadow: 0 10px 30px -4px rgba(28, 27, 26, 0.06), 0 4px 10px -2px rgba(28, 27, 26, 0.02);
+.font-body-regular {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
-/* Safe area for mobile bottom nav */
-.safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+.font-chip-meta {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
 }
 
-/* Touch target standard minimum 44px */
+/* Surfaces & Cards */
+.card-sand {
+  background-color: var(--sand-card);
+  border-radius: 20px;
+  border: 1px solid var(--border-sand);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.card-white {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.card-sage-subtle {
+  background-color: var(--sage-primary-light);
+  border-radius: 20px;
+  border: 1px solid #D5E2DB;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-diffuse {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-diffuse-elevated {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-diffuse-lg {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.09);
+}
+
+/* Touch & Mobile Ergonomics */
 .touch-target {
   min-height: 44px;
   min-width: 44px;
 }
 
-/* Smooth transitions globally */
-* {
-  -webkit-tap-highlight-color: transparent;
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
-/* Hide scrollbar for clean horizontal swipe */
+/* Hide scrollbar for smooth carousel */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -106,3 +155,39 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Scanning Pulse Animation */
+@keyframes scan-beam {
+  0% {
+    top: 5%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 85%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scan-beam {
+  animation: scan-beam 3s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.92;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s ease-in-out infinite;
+}
+
