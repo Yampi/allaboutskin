@@ -40,7 +40,7 @@ export default function BottomNavBar({ activeTab, onChangeTab }: BottomNavBarPro
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#FAF8F5] border-t border-[#E8E1D7] px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] safe-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#FAF8F5] border-t border-[#E8E1D7] px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] safe-bottom">
       <div className="max-w-md mx-auto h-full grid grid-cols-5 items-center">
         {tabs.map((tab) => {
           const Icon = tab.icon;

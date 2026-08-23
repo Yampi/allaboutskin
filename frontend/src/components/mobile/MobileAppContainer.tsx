@@ -102,129 +102,161 @@ export default function MobileAppContainer() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-[#2D2825] flex flex-col items-center justify-start selection:bg-[#8FA89B]/30 antialiased">
-      {/* Real Full Responsive App Shell (No Fake Phone Frames, No Fake Hardware Bezels) */}
-      <div className="w-full max-w-2xl min-h-screen flex flex-col bg-[#FAF8F5] relative sm:border-x sm:border-[#E8E1D7] sm:shadow-sm">
-        {/* 1. Global Top Bar */}
-        <TopBar
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenDiagnosis={() => setIsMicroscopyOpen(true)}
-        />
+    <div className="min-h-screen bg-[#FAF8F5] text-[#2D2825] flex flex-col selection:bg-[#8FA89B]/30 antialiased">
+      {/* 1. Global Responsive Top Bar (Sticky 72px-80px on Desktop, 56px on Mobile) */}
+      <TopBar
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        userProfile={userProfile}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenDiagnosis={() => setIsMicroscopyOpen(true)}
+      />
 
-        {/* 2. Dynamic Screens Container */}
-        <main className="flex-1 overflow-y-auto">
-          {activeTab === 'home' && (
-            <HomeScreen
-              userProfile={userProfile}
-              shelfItems={shelfItems}
-              onChangeTab={setActiveTab}
-              onOpenProfileModal={() => setIsProfileOpen(true)}
-              onOpenMicroscopyModal={() => setIsMicroscopyOpen(true)}
-              onSelectIngredient={(ing) => setSelectedIngredient(ing)}
-            />
-          )}
+      {/* 2. Dynamic Screens Container (max-w-7xl on desktop, full width on mobile) */}
+      <main className="flex-1 w-full pb-20 lg:pb-10">
+        {activeTab === 'home' && (
+          <HomeScreen
+            userProfile={userProfile}
+            shelfItems={shelfItems}
+            onChangeTab={setActiveTab}
+            onOpenProfileModal={() => setIsProfileOpen(true)}
+            onOpenMicroscopyModal={() => setIsMicroscopyOpen(true)}
+            onSelectIngredient={(ing) => setSelectedIngredient(ing)}
+          />
+        )}
 
-          {activeTab === 'scanner' && (
-            <ScannerScreen
-              onAddProductToShelf={handleAddProductToShelf}
-              onSelectIngredient={(ing) => setSelectedIngredient(ing)}
-            />
-          )}
+        {activeTab === 'scanner' && (
+          <ScannerScreen
+            onAddProductToShelf={handleAddProductToShelf}
+            onSelectIngredient={(ing) => setSelectedIngredient(ing)}
+          />
+        )}
 
-          {activeTab === 'cycle' && (
-            <CycleScreen
-              userProfile={userProfile}
-              onCompleteNight={handleCompleteNight}
-            />
-          )}
+        {activeTab === 'cycle' && (
+          <CycleScreen
+            userProfile={userProfile}
+            onCompleteNight={handleCompleteNight}
+          />
+        )}
 
-          {activeTab === 'library' && (
-            <LibraryScreen
-              onSelectIngredient={(ing) => setSelectedIngredient(ing)}
-            />
-          )}
+        {activeTab === 'library' && (
+          <LibraryScreen
+            onSelectIngredient={(ing) => setSelectedIngredient(ing)}
+          />
+        )}
 
-          {activeTab === 'profile' && (
-            <div className="px-4 py-4 max-w-md mx-auto space-y-4 animate-in fade-in pb-24">
-              <div className="card-sand p-4 border border-[#E2D9CD]">
-                <div className="flex items-center gap-3">
+        {activeTab === 'profile' && (
+          <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-in fade-in">
+            {/* Header Profile Card */}
+            <div className="card-sand p-6 border border-[#E2D9CD] rounded-[24px] shadow-diffuse flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
                   <img
                     src={userProfile.avatarUrl}
                     alt={userProfile.name}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white shadow-xs"
                   />
-                  <div>
-                    <h2 className="font-serif text-[20px] font-semibold text-[#2D2825]">
-                      {userProfile.name}
-                    </h2>
-                    <p className="text-[12px] text-[#7E756F]">
-                      {userProfile.skinType} • {userProfile.secondaryBiotype}
-                    </p>
-                    <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold">
-                      Racha: {userProfile.cycleStreakDays} Días Activos
-                    </span>
+                  <div
+                    className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#4A6B5B] rounded-full border-2 border-[#FAF8F5] flex items-center justify-center text-white text-[10px]"
+                    title="Validación Activa"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
                   </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-wider block">
+                    Expediente Dermatológico
+                  </span>
+                  <h2 className="font-serif text-[24px] sm:text-[28px] font-semibold text-[#2D2825] leading-tight">
+                    {userProfile.name}
+                  </h2>
+                  <p className="text-[13px] text-[#7E756F] mt-0.5">
+                    Biotipo: <strong className="text-[#2D2825]">{userProfile.skinType}</strong> • {userProfile.secondaryBiotype}
+                  </p>
                 </div>
               </div>
 
-              {/* Action Cards */}
+              <div className="flex gap-2">
+                <div className="px-4 py-2 rounded-[16px] bg-white border border-[#E2D9CD] text-center">
+                  <span className="text-[10px] uppercase font-bold text-[#7E756F] block">
+                    Racha de Ciclado
+                  </span>
+                  <span className="font-serif text-[18px] font-bold text-[#4A6B5B]">
+                    {userProfile.cycleStreakDays} Días
+                  </span>
+                </div>
+                <div className="px-4 py-2 rounded-[16px] bg-white border border-[#E2D9CD] text-center">
+                  <span className="text-[10px] uppercase font-bold text-[#7E756F] block">
+                    TEWL Cutáneo
+                  </span>
+                  <span className="font-serif text-[18px] font-bold text-[#4A6B5B]">
+                    {userProfile.tewlScore}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => setIsProfileOpen(true)}
-                className="w-full card-white p-3.5 border border-[#E8E1D7] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer text-left shadow-diffuse"
+                className="card-white p-5 border border-[#E8E1D7] rounded-[20px] flex items-center justify-between hover:border-[#8FA89B] hover:shadow-diffuse-elevated transition cursor-pointer text-left shadow-diffuse group"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#F2ECE4] flex items-center justify-center text-[#4A6B5B]">
-                    <SlidersHorizontal className="w-4 h-4" />
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-full bg-[#F2ECE4] group-hover:bg-[#EBF1EE] flex items-center justify-center text-[#4A6B5B] transition">
+                    <SlidersHorizontal className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-serif font-semibold text-[15px] text-[#2D2825] block">
+                    <span className="font-serif font-semibold text-[17px] text-[#2D2825] block">
                       Configuración de Biotipo
                     </span>
-                    <span className="text-[11.5px] text-[#7E756F]">
-                      Sensibilidades y tolerancia a retinoides
+                    <span className="text-[12px] text-[#7E756F]">
+                      Sensibilidades, alergias y tolerancia a retinoides
                     </span>
                   </div>
                 </div>
-                <span className="text-[#8FA89B] text-[13px] font-semibold">&gt;</span>
+                <span className="text-[#8FA89B] font-semibold text-[16px] group-hover:translate-x-1 transition">&gt;</span>
               </button>
 
               <button
                 onClick={() => setIsMicroscopyOpen(true)}
-                className="w-full card-white p-3.5 border border-[#E8E1D7] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer text-left shadow-diffuse"
+                className="card-white p-5 border border-[#E8E1D7] rounded-[20px] flex items-center justify-between hover:border-[#8FA89B] hover:shadow-diffuse-elevated transition cursor-pointer text-left shadow-diffuse group"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#EBF1EE] flex items-center justify-center text-[#4A6B5B]">
-                    <ShieldCheck className="w-4 h-4" />
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-full bg-[#EBF1EE] group-hover:bg-[#8FA89B]/20 flex items-center justify-center text-[#4A6B5B] transition">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-serif font-semibold text-[15px] text-[#2D2825] block">
+                    <span className="font-serif font-semibold text-[17px] text-[#2D2825] block">
                       Informe de Integridad Epidérmica
                     </span>
-                    <span className="text-[11.5px] text-[#7E756F]">
-                      TEWL {userProfile.tewlScore} • 94% Salud Lipídica
+                    <span className="text-[12px] text-[#7E756F]">
+                      Microscopía óptica y biomarcadores de barrera
                     </span>
                   </div>
                 </div>
-                <span className="text-[#8FA89B] text-[13px] font-semibold">&gt;</span>
+                <span className="text-[#8FA89B] font-semibold text-[16px] group-hover:translate-x-1 transition">&gt;</span>
               </button>
-
-              {/* Clinical Ethics Box */}
-              <div className="p-4 rounded-[20px] bg-[#EBF1EE] border border-[#8FA89B]/30 text-[12px] text-[#2D4A3E] space-y-1">
-                <span className="font-bold flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-[#4A6B5B]" />
-                  Compromiso Científico Allabout.skin
-                </span>
-                <p className="leading-relaxed">
-                  Tus datos dermatológicos son procesados en local y contrastados en tiempo real con literatura médica indexada de PubMed y CosIng.
-                </p>
-              </div>
             </div>
-          )}
-        </main>
 
-        {/* 3. Global Fixed Bottom Navigation Bar (64px) */}
-        <BottomNavBar activeTab={activeTab} onChangeTab={setActiveTab} />
-      </div>
+            {/* Clinical Ethics Box */}
+            <div className="p-5 rounded-[22px] bg-[#EBF1EE] border border-[#8FA89B]/30 text-[13px] text-[#2D4A3E] space-y-1.5 shadow-diffuse">
+              <span className="font-bold flex items-center gap-2 text-[14px]">
+                <Sparkles className="w-4 h-4 text-[#4A6B5B]" />
+                Compromiso de Privacidad y Rigor Científico
+              </span>
+              <p className="leading-relaxed text-[#4A433E]">
+                Tus datos de diagnóstico se almacenan de forma local en tu dispositivo y las fórmulas se evalúan en tiempo real contra los registros oficiales de CosIng (UE) y literatura indexada en PubMed (NCBI).
+              </p>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* 3. Global Fixed Bottom Navigation Bar (Hidden on Desktop via lg:hidden) */}
+      <BottomNavBar activeTab={activeTab} onChangeTab={setActiveTab} />
+
 
       {/* Global Toast Notification */}
       {successToast && (

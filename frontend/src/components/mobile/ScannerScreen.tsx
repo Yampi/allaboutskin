@@ -326,503 +326,523 @@ export default function ScannerScreen({
   const cautionIngredients = auditResult?.ingredients.filter((i) => i.trafficLight === 'CAUTION') || [];
 
   return (
-    <div className="flex flex-col gap-4 pb-24 pt-1 px-4 max-w-2xl mx-auto animate-in fade-in duration-300">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 animate-in fade-in duration-300">
       {/* 1. Header Editorial */}
-      <div className="text-center py-1">
+      <div className="text-center max-w-2xl mx-auto mb-6">
         <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-widest block">
           Auditor INCI y Visor AR
         </span>
-        <h1 className="font-serif text-[24px] sm:text-[26px] font-semibold text-[#2D2825] mt-0.5">
+        <h1 className="font-serif text-[26px] sm:text-[32px] lg:text-[36px] font-semibold text-[#2D2825] mt-1">
           Escáner de Ingredientes
         </h1>
-        <p className="text-[12.5px] font-sans text-[#7E756F] max-w-md mx-auto mt-0.5">
-          Apunta la cámara del dispositivo a la etiqueta o lista de ingredientes, sube una foto o ingresa el texto INCI para auditoría en tiempo real.
+        <p className="text-[13px] sm:text-[14px] font-sans text-[#7E756F] mt-1.5 leading-relaxed">
+          Apunta la cámara del dispositivo a la etiqueta o lista de ingredientes, sube una foto o ingresa el texto INCI para auditoría científica en tiempo real.
         </p>
-      </div>
-
-      {/* Mode Selector Tabs (Cámara Real / Subir Foto / Escribir INCI / Muestras) */}
-      <div className="grid grid-cols-4 gap-1.5 p-1 rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
-        <button
-          onClick={() => setScanMode('camera')}
-          className={`py-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            scanMode === 'camera'
-              ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
-              : 'text-[#7E756F] hover:text-[#2D2825]'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5" />
-          <span>Cámara</span>
-        </button>
-
-        <button
-          onClick={() => setScanMode('upload')}
-          className={`py-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            scanMode === 'upload'
-              ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
-              : 'text-[#7E756F] hover:text-[#2D2825]'
-          }`}
-        >
-          <Upload className="w-3.5 h-3.5" />
-          <span>Subir Foto</span>
-        </button>
-
-        <button
-          onClick={() => setScanMode('text')}
-          className={`py-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            scanMode === 'text'
-              ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
-              : 'text-[#7E756F] hover:text-[#2D2825]'
-          }`}
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-          <span>Pegar INCI</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setScanMode('preset');
-            setAuditResult(sampleScanPresets[selectedPresetIndex]);
-          }}
-          className={`py-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            scanMode === 'preset'
-              ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
-              : 'text-[#7E756F] hover:text-[#2D2825]'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Muestras</span>
-        </button>
       </div>
 
       {/* Hidden Canvas for Frame Capture */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* MODE 1: REAL CAMERA FEED VIEWPORT */}
-      {scanMode === 'camera' && (
-        <div className="space-y-3">
-          <div className="relative w-full h-[360px] sm:h-[400px] rounded-[24px] overflow-hidden bg-[#1E2822] border-2 border-[#8FA89B] shadow-diffuse-elevated flex items-center justify-center">
-            {/* Live Video Feed */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-
-            {/* If camera is not active / error */}
-            {!isCameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white bg-black/70 space-y-3">
-                <VideoOff className="w-10 h-10 text-[#8FA89B]" />
-                <p className="text-[13px] text-white/90 max-w-xs">
-                  {cameraError || 'Iniciando sensor de cámara óptica...'}
-                </p>
-                <button
-                  onClick={() => startCamera()}
-                  className="px-4 py-2 rounded-full bg-[#8FA89B] text-white text-[12px] font-medium cursor-pointer"
-                >
-                  Reintentar Acceso a Cámara
-                </button>
-              </div>
-            )}
-
-            {/* AR Reticle HUD Focus Corners (Sage Green #8FA89B) */}
-            <div className="absolute inset-5 pointer-events-none">
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-3 border-l-3 border-[#8FA89B] rounded-tl-[12px]" />
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-3 border-r-3 border-[#8FA89B] rounded-tr-[12px]" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-3 border-l-3 border-[#8FA89B] rounded-bl-[12px]" />
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-3 border-r-3 border-[#8FA89B] rounded-br-[12px]" />
-
-              {/* Center Animated Scanning Laser */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#8FA89B] to-transparent shadow-[0_0_12px_#8FA89B] animate-scan-beam" />
-              </div>
-            </div>
-
-            {/* Floating Live Controls on Camera */}
-            <div className="absolute top-3 left-4 right-4 flex items-center justify-between pointer-events-auto">
-              <span className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-[10.5px] font-mono flex items-center gap-1.5 border border-white/20">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Cámara en Vivo
-              </span>
-
-              <button
-                onClick={toggleCameraFacing}
-                className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 hover:bg-black/80 transition cursor-pointer"
-                title="Cambiar Cámara Frontal/Trasera"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Camera Capture Action CTA */}
-          <div className="flex gap-2">
+      {/* Responsive Grid: 2 Columns on Desktop (lg:grid-cols-12), 1 Column on Mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: Controls, Camera Viewport, Upload Dropzone or INCI Text Input (col-span-7) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* Mode Selector Tabs (Cámara Real / Subir Foto / Escribir INCI / Muestras) */}
+          <div className="grid grid-cols-4 gap-1.5 p-1 rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
             <button
-              onClick={handleCaptureSnapshot}
-              disabled={!isCameraActive || isProcessing}
-              className="flex-1 py-4 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] disabled:opacity-50 text-white font-sans font-semibold text-[14px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center justify-center gap-2 cursor-pointer"
+              onClick={() => setScanMode('camera')}
+              className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                scanMode === 'camera'
+                  ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
+                  : 'text-[#7E756F] hover:text-[#2D2825]'
+              }`}
             >
-              <Camera className="w-4 h-4 text-white" />
-              <span>{isProcessing ? 'Procesando Fórmula...' : 'Capturar & Auditar INCI'}</span>
+              <Camera className="w-4 h-4" />
+              <span>Cámara</span>
+            </button>
+
+            <button
+              onClick={() => setScanMode('upload')}
+              className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                scanMode === 'upload'
+                  ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
+                  : 'text-[#7E756F] hover:text-[#2D2825]'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span>Subir Foto</span>
+            </button>
+
+            <button
+              onClick={() => setScanMode('text')}
+              className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                scanMode === 'text'
+                  ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
+                  : 'text-[#7E756F] hover:text-[#2D2825]'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Pegar INCI</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setScanMode('preset');
+                setAuditResult(sampleScanPresets[selectedPresetIndex]);
+              }}
+              className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                scanMode === 'preset'
+                  ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
+                  : 'text-[#7E756F] hover:text-[#2D2825]'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Muestras</span>
             </button>
           </div>
-        </div>
-      )}
 
-      {/* MODE 2: UPLOAD IMAGE FROM GALLERY */}
-      {scanMode === 'upload' && (
-        <div className="card-white p-6 border-2 border-dashed border-[#8FA89B] rounded-[24px] text-center space-y-4 shadow-diffuse">
-          <div className="w-14 h-14 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 flex items-center justify-center text-[#4A6B5B] mx-auto">
-            <Upload className="w-7 h-7" />
-          </div>
+          {/* MODE 1: REAL CAMERA FEED VIEWPORT */}
+          {scanMode === 'camera' && (
+            <div className="space-y-3">
+              <div className="relative w-full h-[380px] sm:h-[420px] rounded-[24px] overflow-hidden bg-[#1E2822] border-2 border-[#8FA89B] shadow-diffuse-elevated flex items-center justify-center">
+                {/* Live Video Feed */}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
 
-          <div>
-            <h3 className="font-serif text-[18px] font-semibold text-[#2D2825]">
-              Selecciona una Foto de tu Galería
-            </h3>
-            <p className="text-[12px] text-[#7E756F] max-w-sm mx-auto mt-1">
-              Sube una fotografía nítida de la lista de ingredientes (INCI) de tu envase cosmético para análisis OCR automático.
-            </p>
-          </div>
+                {/* If camera is not active / error */}
+                {!isCameraActive && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white bg-black/75 space-y-3">
+                    <VideoOff className="w-12 h-12 text-[#8FA89B]" />
+                    <p className="text-[13.5px] text-white/90 max-w-sm">
+                      {cameraError || 'Iniciando sensor óptico de cámara...'}
+                    </p>
+                    <button
+                      onClick={() => startCamera()}
+                      className="px-5 py-2.5 rounded-full bg-[#8FA89B] text-white text-[13px] font-medium cursor-pointer shadow-xs hover:bg-[#7D978A] transition"
+                    >
+                      Reintentar Acceso a Cámara
+                    </button>
+                  </div>
+                )}
 
-          <label className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white font-medium text-[13px] shadow-diffuse transition cursor-pointer">
-            <Upload className="w-4 h-4" />
-            <span>Elegir Archivo / Foto</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
+                {/* AR Reticle HUD Focus Corners */}
+                <div className="absolute inset-6 pointer-events-none">
+                  <div className="absolute top-0 left-0 w-10 h-10 border-t-3 border-l-3 border-[#8FA89B] rounded-tl-[14px]" />
+                  <div className="absolute top-0 right-0 w-10 h-10 border-t-3 border-r-3 border-[#8FA89B] rounded-tr-[14px]" />
+                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-3 border-l-3 border-[#8FA89B] rounded-bl-[14px]" />
+                  <div className="absolute bottom-0 right-0 w-10 h-10 border-b-3 border-r-3 border-[#8FA89B] rounded-br-[14px]" />
 
-          {capturedImagePreview && (
-            <div className="mt-4 relative max-h-48 rounded-[16px] overflow-hidden border border-[#E2D9CD]">
-              <img
-                src={capturedImagePreview}
-                alt="Vista previa subida"
-                className="w-full h-full object-cover"
-              />
+                  {/* Animated Scanning Laser */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#8FA89B] to-transparent shadow-[0_0_12px_#8FA89B] animate-scan-beam" />
+                  </div>
+                </div>
+
+                {/* Live Controls on Camera */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-auto">
+                  <span className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-[11px] font-mono flex items-center gap-1.5 border border-white/20">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Cámara en Vivo
+                  </span>
+
+                  <button
+                    onClick={toggleCameraFacing}
+                    className="p-2.5 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 hover:bg-black/80 transition cursor-pointer"
+                    title="Cambiar Cámara Frontal/Trasera"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Capture CTA */}
+              <button
+                onClick={handleCaptureSnapshot}
+                disabled={!isCameraActive || isProcessing}
+                className="w-full py-4 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] disabled:opacity-50 text-white font-sans font-semibold text-[14.5px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Camera className="w-4 h-4 text-white" />
+                <span>{isProcessing ? 'Procesando Fórmula con IA...' : 'Capturar & Auditar Fórmula INCI'}</span>
+              </button>
+            </div>
+          )}
+
+          {/* MODE 2: UPLOAD IMAGE FROM GALLERY */}
+          {scanMode === 'upload' && (
+            <div className="card-white p-6 sm:p-8 border-2 border-dashed border-[#8FA89B] rounded-[24px] text-center space-y-4 shadow-diffuse">
+              <div className="w-16 h-16 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 flex items-center justify-center text-[#4A6B5B] mx-auto">
+                <Upload className="w-8 h-8" />
+              </div>
+
+              <div>
+                <h3 className="font-serif text-[20px] font-semibold text-[#2D2825]">
+                  Selecciona una Foto de tu Galería o Archivo
+                </h3>
+                <p className="text-[13px] font-sans text-[#7E756F] max-w-md mx-auto mt-1.5">
+                  Sube una fotografía de la lista de ingredientes (INCI) de tu envase para extracción óptica y análisis inmediato.
+                </p>
+              </div>
+
+              <label className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white font-semibold text-[14px] shadow-diffuse transition cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <span>Elegir Foto / Archivo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {capturedImagePreview && (
+                <div className="mt-4 relative max-h-56 rounded-[18px] overflow-hidden border border-[#E2D9CD]">
+                  <img
+                    src={capturedImagePreview}
+                    alt="Vista previa subida"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MODE 3: MANUAL INCI TEXT INPUT */}
+          {scanMode === 'text' && (
+            <div className="card-white p-5 sm:p-6 border border-[#E8E1D7] rounded-[24px] space-y-4 shadow-diffuse">
+              <div className="flex items-center gap-2 text-[#4A6B5B]">
+                <Edit3 className="w-5 h-5" />
+                <h3 className="font-serif text-[18px] font-semibold text-[#2D2825]">
+                  Ingreso Manual o Copiar y Pegar Fórmula
+                </h3>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={manualProductName}
+                    onChange={(e) => setManualProductName(e.target.value)}
+                    placeholder="Nombre del Producto (ej: Sérum Niacinamida 10%)"
+                    className="w-full px-4 py-3 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-[13px] text-[#2D2825] focus:outline-none focus:border-[#8FA89B]"
+                  />
+                  <input
+                    type="text"
+                    value={manualBrandName}
+                    onChange={(e) => setManualBrandName(e.target.value)}
+                    placeholder="Marca Comercial (ej: The Ordinary, CeraVe)"
+                    className="w-full px-4 py-3 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-[13px] text-[#2D2825] focus:outline-none focus:border-[#8FA89B]"
+                  />
+                </div>
+                <textarea
+                  rows={5}
+                  value={manualInciText}
+                  onChange={(e) => setManualInciText(e.target.value)}
+                  placeholder="Pega la lista de ingredientes separada por comas (ej: Aqua, Niacinamide, Zinc PCA, Glycerin, Phenoxyethanol, Ethylhexylglycerin...)"
+                  className="w-full p-4 rounded-[20px] bg-[#FAF8F5] border border-[#E8E1D7] text-[13px] font-mono text-[#2D2825] focus:outline-none focus:border-[#8FA89B] resize-none leading-relaxed"
+                />
+              </div>
+
+              <button
+                onClick={() => runApiInciAudit(manualInciText, manualProductName, manualBrandName)}
+                disabled={!manualInciText.trim() || isProcessing}
+                className="w-full py-3.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] disabled:opacity-50 text-white font-semibold text-[14px] shadow-diffuse transition cursor-pointer"
+              >
+                {isProcessing ? 'Auditando...' : 'Evaluar Fórmula INCI'}
+              </button>
+            </div>
+          )}
+
+          {/* MODE 4: QUICK PRESETS */}
+          {scanMode === 'preset' && (
+            <div className="space-y-3">
+              <span className="text-[11px] font-bold uppercase text-[#7E756F] tracking-wider block">
+                Selecciona una Fórmula Predefinida de Ejemplo:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {sampleScanPresets.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedPresetIndex(idx);
+                      setAuditResult(preset);
+                    }}
+                    className={`p-4 rounded-[20px] text-left transition cursor-pointer border ${
+                      selectedPresetIndex === idx
+                        ? 'bg-[#EBF1EE] border-[#8FA89B] shadow-xs'
+                        : 'bg-white border-[#E8E1D7] hover:border-[#8FA89B]'
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase text-[#7E756F] block">
+                      {preset.brand}
+                    </span>
+                    <h4 className="font-serif text-[16px] font-semibold text-[#2D2825] mt-0.5">
+                      {preset.productName}
+                    </h4>
+                    <span className="text-[11.5px] text-[#4A6B5B] font-medium block mt-1.5">
+                      Compatibilidad: {preset.compatibilityScore}% • {preset.ingredients.length} activos
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* OCR Processing Indicator */}
+          {isProcessing && (
+            <div className="card-white p-5 border border-[#8FA89B] rounded-[22px] shadow-diffuse space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span className="font-medium text-[#4A6B5B] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 animate-spin text-[#8FA89B]" />
+                  {ocrStatusText}
+                </span>
+                <span className="font-bold text-[#2D2825]">{ocrProgress}%</span>
+              </div>
+
+              <div className="w-full h-2.5 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] overflow-hidden">
+                <div
+                  className="h-full bg-[#8FA89B] transition-all duration-300 rounded-full"
+                  style={{ width: `${ocrProgress}%` }}
+                />
+              </div>
             </div>
           )}
         </div>
-      )}
 
-      {/* MODE 3: MANUAL INCI TEXT INPUT / PASTE */}
-      {scanMode === 'text' && (
-        <div className="card-white p-5 border border-[#E8E1D7] rounded-[24px] space-y-3 shadow-diffuse">
-          <div className="flex items-center gap-2 text-[#4A6B5B]">
-            <Edit3 className="w-4 h-4" />
-            <h3 className="font-serif text-[17px] font-semibold text-[#2D2825]">
-              Ingreso Manual de Fórmula
-            </h3>
-          </div>
+        {/* RIGHT COLUMN: Real-Time Traffic Light Audit Results & Scientific Factsheet (col-span-5) */}
+        <div className="lg:col-span-5 space-y-4">
+          {auditResult ? (
+            <div className="card-white p-5 sm:p-6 border border-[#8FA89B]/50 rounded-[24px] shadow-diffuse-elevated space-y-4 animate-in slide-in-from-bottom duration-300 sticky top-24">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-[#E8E1D7] pb-4">
+                <div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold uppercase tracking-wider">
+                    Auditoría Científica Completada
+                  </span>
+                  <h3 className="font-serif text-[20px] sm:text-[22px] font-semibold text-[#2D2825] mt-1">
+                    {auditResult.productName}
+                  </h3>
+                  <p className="text-[12px] font-sans text-[#7E756F]">
+                    {auditResult.brand} • {auditResult.category}
+                  </p>
+                </div>
 
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={manualProductName}
-              onChange={(e) => setManualProductName(e.target.value)}
-              placeholder="Nombre del Producto (ej: Sérum Niacinamida 10%)"
-              className="w-full px-3.5 py-2.5 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-[13px] text-[#2D2825] focus:outline-none focus:border-[#8FA89B]"
-            />
-            <input
-              type="text"
-              value={manualBrandName}
-              onChange={(e) => setManualBrandName(e.target.value)}
-              placeholder="Marca Comercial (ej: The Ordinary, CeraVe, Paula's Choice)"
-              className="w-full px-3.5 py-2.5 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-[13px] text-[#2D2825] focus:outline-none focus:border-[#8FA89B]"
-            />
-            <textarea
-              rows={4}
-              value={manualInciText}
-              onChange={(e) => setManualInciText(e.target.value)}
-              placeholder="Pega la lista de ingredientes separada por comas (ej: Aqua, Niacinamide, Zinc PCA, Glycerin, Phenoxyethanol...)"
-              className="w-full p-3.5 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7] text-[12.5px] font-mono text-[#2D2825] focus:outline-none focus:border-[#8FA89B] resize-none"
-            />
-          </div>
+                {/* Score */}
+                <div className="text-right">
+                  <span className="font-serif text-[26px] font-bold text-[#4A6B5B] block leading-none">
+                    {auditResult.compatibilityScore}/100
+                  </span>
+                  <span className="text-[9.5px] font-sans font-semibold text-[#8FA89B] uppercase">
+                    Apto Ciclado
+                  </span>
+                </div>
+              </div>
 
-          <button
-            onClick={() => runApiInciAudit(manualInciText, manualProductName, manualBrandName)}
-            disabled={!manualInciText.trim() || isProcessing}
-            className="w-full py-3.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] disabled:opacity-50 text-white font-semibold text-[13.5px] shadow-diffuse transition cursor-pointer"
-          >
-            {isProcessing ? 'Auditando...' : 'Evaluar Fórmula INCI'}
-          </button>
-        </div>
-      )}
+              {/* Formula Summary */}
+              <div className="p-3.5 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7] text-[12.5px] text-[#4A433E] leading-relaxed">
+                {auditResult.summary}
+              </div>
 
-      {/* MODE 4: QUICK SAMPLE PRESETS */}
-      {scanMode === 'preset' && (
-        <div className="space-y-2">
-          <span className="text-[11px] font-bold uppercase text-[#7E756F] tracking-wider block">
-            Selecciona una Fórmula Predefinida para Probar:
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {sampleScanPresets.map((preset, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setSelectedPresetIndex(idx);
-                  setAuditResult(preset);
-                }}
-                className={`p-3.5 rounded-[20px] text-left transition cursor-pointer border ${
-                  selectedPresetIndex === idx
-                    ? 'bg-[#EBF1EE] border-[#8FA89B] shadow-xs'
-                    : 'bg-white border-[#E8E1D7] hover:border-[#8FA89B]'
-                }`}
-              >
-                <span className="text-[10px] font-bold uppercase text-[#7E756F] block">
-                  {preset.brand}
+              {/* Recommended Night Phases */}
+              <div className="flex items-center justify-between p-3.5 rounded-[18px] bg-[#EBF1EE] border border-[#8FA89B]/30 text-[12.5px]">
+                <span className="font-medium text-[#2D4A3E]">
+                  Asignación en Skin Cycling:
                 </span>
-                <h4 className="font-serif text-[15px] font-semibold text-[#2D2825]">
-                  {preset.productName}
-                </h4>
-                <span className="text-[11px] text-[#4A6B5B] font-medium block mt-1">
-                  Compatibilidad: {preset.compatibilityScore}%
+                <div className="flex gap-1.5">
+                  {auditResult.cycleNightsRecommended.map((n) => (
+                    <span
+                      key={n}
+                      className="px-2.5 py-0.5 rounded-full bg-[#4A6B5B] text-white font-bold text-[11px]"
+                    >
+                      Noche {n}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Semáforo de Seguridad Científica */}
+              <div className="space-y-3 pt-1 max-h-[340px] overflow-y-auto pr-1">
+                <span className="text-[11px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                  Desglose INCI ({auditResult.ingredients.length} Ingredientes):
                 </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* OCR & Processing Indicator */}
-      {isProcessing && (
-        <div className="card-white p-5 border border-[#8FA89B] rounded-[22px] shadow-diffuse space-y-3 animate-in fade-in">
-          <div className="flex items-center justify-between text-[12px]">
-            <span className="font-medium text-[#4A6B5B] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 animate-spin text-[#8FA89B]" />
-              {ocrStatusText}
-            </span>
-            <span className="font-bold text-[#2D2825]">{ocrProgress}%</span>
-          </div>
+                {/* Group 1: Eficaz / Seguro */}
+                {safeIngredients.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#4A6B5B]">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#8FA89B]" />
+                      <span>🟢 EFICAZ / SEGURO ({safeIngredients.length})</span>
+                    </div>
+                    <div className="space-y-1">
+                      {safeIngredients.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedInciItem(item)}
+                          className="p-2.5 rounded-[14px] bg-[#FAF8F5] border border-[#E8E1D7] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer"
+                        >
+                          <div>
+                            <span className="font-semibold text-[13px] text-[#2D2825] block">
+                              {item.name}
+                            </span>
+                            <span className="text-[11px] text-[#7E756F] font-mono">
+                              {item.function}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold">
+                            {item.safetyScore}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-          <div className="w-full h-2 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] overflow-hidden">
-            <div
-              className="h-full bg-[#8FA89B] transition-all duration-300 rounded-full"
-              style={{ width: `${ocrProgress}%` }}
-            />
-          </div>
-        </div>
-      )}
+                {/* Group 2: Hidratante / Reparador */}
+                {hydratingIngredients.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#7A5E43]">
+                      <Droplets className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                      <span>💧 HIDRATANTE / REPARADOR ({hydratingIngredients.length})</span>
+                    </div>
+                    <div className="space-y-1">
+                      {hydratingIngredients.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedInciItem(item)}
+                          className="p-2.5 rounded-[14px] bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer"
+                        >
+                          <div>
+                            <span className="font-semibold text-[13px] text-[#2D2825] block">
+                              {item.name}
+                            </span>
+                            <span className="text-[11px] text-[#7E756F] font-mono">
+                              {item.function}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-white text-[#4A6B5B] text-[10px] font-bold">
+                            {item.safetyScore}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-      {/* 4. REAL AUDIT RESULTS DRAWER / BOTTOM SHEET */}
-      {auditResult && !isProcessing && (
-        <div className="card-white p-5 border border-[#8FA89B]/50 rounded-[24px] shadow-diffuse-elevated space-y-4 animate-in slide-in-from-bottom duration-300">
-          {/* Header */}
-          <div className="flex items-start justify-between border-b border-[#E8E1D7] pb-3.5">
-            <div>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold uppercase tracking-wider">
-                Auditoría Científica Completada
-              </span>
-              <h3 className="font-serif text-[20px] font-semibold text-[#2D2825] mt-1">
-                {auditResult.productName}
+                {/* Group 3: Precaución / Sensibilizante */}
+                {cautionIngredients.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#943C36]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#D8A899]" />
+                      <span>⚠️ PRECAUCIÓN EN PIEL REACTIVA ({cautionIngredients.length})</span>
+                    </div>
+                    <div className="space-y-1">
+                      {cautionIngredients.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedInciItem(item)}
+                          className="p-2.5 rounded-[14px] bg-[#FAF0ED] border border-[#D8A899]/50 flex items-center justify-between hover:border-[#D8A899] transition cursor-pointer"
+                        >
+                          <div>
+                            <span className="font-semibold text-[13px] text-[#2D2825] block">
+                              {item.name}
+                            </span>
+                            <span className="text-[11px] text-[#70332E]">
+                              {item.function}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-white text-[#943C36] text-[10px] font-bold">
+                            {item.safetyScore}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add to Shelf Button */}
+              <div className="pt-2">
+                <button
+                  onClick={handleSaveToShelf}
+                  disabled={addedSuccess}
+                  className={`w-full py-3.5 rounded-full font-sans font-medium text-[13.5px] shadow-diffuse transition flex items-center justify-center gap-2 cursor-pointer ${
+                    addedSuccess
+                      ? 'bg-[#4A6B5B] text-white'
+                      : 'bg-[#8FA89B] hover:bg-[#7D978A] text-white'
+                  }`}
+                >
+                  {addedSuccess ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                      <span>¡Añadido con Éxito a tus Activos Asignados!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Añadir a mi Estantería de Ciclado</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="card-sand p-8 rounded-[24px] border border-[#E2D9CD] text-center space-y-3 sticky top-24">
+              <div className="w-12 h-12 rounded-full bg-white border border-[#8FA89B] flex items-center justify-center text-[#4A6B5B] mx-auto shadow-xs">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif text-[18px] font-semibold text-[#2D2825]">
+                Panel de Auditoría en Tiempo Real
               </h3>
-              <p className="text-[12px] font-sans text-[#7E756F]">
-                {auditResult.brand} • {auditResult.category}
+              <p className="text-[12.5px] text-[#7E756F] leading-relaxed max-w-xs mx-auto">
+                Captura una etiqueta con la cámara o selecciona una muestra para ver el desglose científico clasificado por semáforo de seguridad.
               </p>
             </div>
-
-            {/* Score */}
-            <div className="text-right">
-              <span className="font-serif text-[24px] font-bold text-[#4A6B5B] block leading-none">
-                {auditResult.compatibilityScore}/100
-              </span>
-              <span className="text-[9.5px] font-sans font-semibold text-[#8FA89B] uppercase">
-                Apto para Ciclado
-              </span>
-            </div>
-          </div>
-
-          {/* Formula Summary */}
-          <div className="p-3.5 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7] text-[12.5px] text-[#4A433E] leading-relaxed">
-            {auditResult.summary}
-          </div>
-
-          {/* Recommended Night Phases */}
-          <div className="flex items-center justify-between p-3.5 rounded-[18px] bg-[#EBF1EE] border border-[#8FA89B]/30 text-[12.5px]">
-            <span className="font-medium text-[#2D4A3E]">
-              Asignación Recomendada en Ciclado:
-            </span>
-            <div className="flex gap-1.5">
-              {auditResult.cycleNightsRecommended.map((n) => (
-                <span
-                  key={n}
-                  className="px-2.5 py-0.5 rounded-full bg-[#4A6B5B] text-white font-bold text-[11px]"
-                >
-                  Noche {n}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Semáforo de Seguridad Científica */}
-          <div className="space-y-3 pt-1">
-            <span className="text-[11px] font-bold text-[#7E756F] uppercase tracking-wider block">
-              Desglose INCI ({auditResult.ingredients.length} Ingredientes):
-            </span>
-
-            {/* Group 1: Eficaz / Seguro */}
-            {safeIngredients.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#4A6B5B]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#8FA89B]" />
-                  <span>🟢 EFICAZ / SEGURO ({safeIngredients.length})</span>
-                </div>
-                <div className="space-y-1">
-                  {safeIngredients.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedInciItem(item)}
-                      className="p-2.5 rounded-[14px] bg-[#FAF8F5] border border-[#E8E1D7] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer"
-                    >
-                      <div>
-                        <span className="font-semibold text-[13px] text-[#2D2825] block">
-                          {item.name}
-                        </span>
-                        <span className="text-[11px] text-[#7E756F] font-mono">
-                          {item.function}
-                        </span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold">
-                        {item.safetyScore}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Group 2: Hidratante / Reparador */}
-            {hydratingIngredients.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#7A5E43]">
-                  <Droplets className="w-3.5 h-3.5 text-[#4A6B5B]" />
-                  <span>💧 HIDRATANTE / REPARADOR ({hydratingIngredients.length})</span>
-                </div>
-                <div className="space-y-1">
-                  {hydratingIngredients.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedInciItem(item)}
-                      className="p-2.5 rounded-[14px] bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-between hover:border-[#8FA89B] transition cursor-pointer"
-                    >
-                      <div>
-                        <span className="font-semibold text-[13px] text-[#2D2825] block">
-                          {item.name}
-                        </span>
-                        <span className="text-[11px] text-[#7E756F] font-mono">
-                          {item.function}
-                        </span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white text-[#4A6B5B] text-[10px] font-bold">
-                        {item.safetyScore}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Group 3: Precaución / Sensibilizante */}
-            {cautionIngredients.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#943C36]">
-                  <AlertTriangle className="w-3.5 h-3.5 text-[#D8A899]" />
-                  <span>⚠️ PRECAUCIÓN EN PIEL REACTIVA ({cautionIngredients.length})</span>
-                </div>
-                <div className="space-y-1">
-                  {cautionIngredients.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedInciItem(item)}
-                      className="p-2.5 rounded-[14px] bg-[#FAF0ED] border border-[#D8A899]/50 flex items-center justify-between hover:border-[#D8A899] transition cursor-pointer"
-                    >
-                      <div>
-                        <span className="font-semibold text-[13px] text-[#2D2825] block">
-                          {item.name}
-                        </span>
-                        <span className="text-[11px] text-[#70332E]">
-                          {item.function}
-                        </span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white text-[#943C36] text-[10px] font-bold">
-                        {item.safetyScore}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Add to Shelf Button */}
-          <div className="pt-2">
-            <button
-              onClick={handleSaveToShelf}
-              disabled={addedSuccess}
-              className={`w-full py-3.5 rounded-full font-sans font-medium text-[13.5px] shadow-diffuse transition flex items-center justify-center gap-2 cursor-pointer ${
-                addedSuccess
-                  ? 'bg-[#4A6B5B] text-white'
-                  : 'bg-[#8FA89B] hover:bg-[#7D978A] text-white'
-              }`}
-            >
-              {addedSuccess ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-white" />
-                  <span>¡Añadido con Éxito a tus Activos Asignados!</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Añadir a mi Estantería de Ciclado</span>
-                </>
-              )}
-            </button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Ingredient Detail Modal */}
       {selectedInciItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm bg-[#FAF8F5] rounded-[24px] border border-[#E8E1D7] p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-[#FAF8F5] rounded-[24px] border border-[#E8E1D7] p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
-                <span className="px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold">
                   {selectedInciItem.category}
                 </span>
-                <h4 className="font-serif text-[18px] font-semibold text-[#2D2825] mt-1">
+                <h4 className="font-serif text-[20px] font-semibold text-[#2D2825] mt-1.5">
                   {selectedInciItem.name}
                 </h4>
-                <p className="text-[11.5px] font-mono text-[#7E756F]">
+                <p className="text-[12px] font-mono text-[#7E756F]">
                   INCI: {selectedInciItem.inci}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedInciItem(null)}
-                className="p-1 rounded-full bg-[#F2ECE4] text-[#7E756F] cursor-pointer"
+                className="p-1.5 rounded-full bg-[#F2ECE4] text-[#7E756F] hover:text-[#2D2825] cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-[12.5px] text-[#4A433E] leading-relaxed">
+            <p className="text-[13px] text-[#4A433E] leading-relaxed">
               {selectedInciItem.description}
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-center text-[11px]">
-              <div className="bg-[#F2ECE4] p-2 rounded-[12px]">
-                <span className="text-[#7E756F] block">Comedogenicidad</span>
-                <span className="font-bold text-[#2D2825]">
+            <div className="grid grid-cols-2 gap-3 text-center text-[12px]">
+              <div className="bg-[#F2ECE4] p-3 rounded-[14px]">
+                <span className="text-[#7E756F] block text-[11px]">Comedogenicidad</span>
+                <span className="font-bold text-[#2D2825] text-[15px]">
                   {selectedInciItem.comedogenicRating} / 5
                 </span>
               </div>
-              <div className="bg-[#F2ECE4] p-2 rounded-[12px]">
-                <span className="text-[#7E756F] block">Citas PubMed</span>
-                <span className="font-bold text-[#4A6B5B]">
+              <div className="bg-[#F2ECE4] p-3 rounded-[14px]">
+                <span className="text-[#7E756F] block text-[11px]">Citas PubMed</span>
+                <span className="font-bold text-[#4A6B5B] text-[15px]">
                   {selectedInciItem.pubmedStudiesCount}+ papers
                 </span>
               </div>
@@ -830,9 +850,9 @@ export default function ScannerScreen({
 
             <button
               onClick={() => setSelectedInciItem(null)}
-              className="w-full py-2.5 rounded-full bg-[#8FA89B] text-white text-[12.5px] font-medium cursor-pointer"
+              className="w-full py-3 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white text-[13px] font-medium cursor-pointer"
             >
-              Cerrar
+              Cerrar Ficha
             </button>
           </div>
         </div>
