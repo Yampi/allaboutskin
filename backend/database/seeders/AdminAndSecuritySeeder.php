@@ -74,7 +74,7 @@ class AdminAndSecuritySeeder extends Seeder
             [
                 'key' => 'ai.primary_provider',
                 'group' => 'ai',
-                'value' => 'gemini-1.5-pro',
+                'value' => 'gemini-2.5-flash',
                 'type' => 'string',
                 'description' => 'Modelo de IA principal para copiloto dermatológico',
             ],

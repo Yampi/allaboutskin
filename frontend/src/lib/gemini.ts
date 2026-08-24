@@ -92,9 +92,14 @@ export interface RoutineAuditResult {
 }
 
 const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro'
+  'gemini-flash-latest',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash',
+  'gemini-pro-latest',
+  'gemini-2.5-pro',
+  'gemini-1.5-flash-latest',
 ];
 
 /**
@@ -163,9 +168,17 @@ export async function callGeminiApi(
     body.generationConfig.responseMimeType = 'application/json';
   }
 
+  // Determine candidate models, prioritizing configured GEMINI_MODEL if present
+  const configuredModel = process.env.GEMINI_MODEL?.trim();
+  const candidateModels = configuredModel
+    ? [configuredModel, ...GEMINI_MODELS.filter((m) => m !== configuredModel)]
+    : GEMINI_MODELS;
+
   // Attempt models with automatic fallback
   let lastError: any = null;
-  for (const model of GEMINI_MODELS) {
+  const errorDetails: string[] = [];
+
+  for (const model of candidateModels) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(endpoint, {
@@ -176,6 +189,7 @@ export async function callGeminiApi(
 
       if (!res.ok) {
         const errorText = await res.text();
+        errorDetails.push(`${model}: ${res.status}`);
         lastError = new Error(`Gemini API error (${model}): ${res.status} - ${errorText}`);
         continue;
       }
@@ -185,12 +199,13 @@ export async function callGeminiApi(
       if (textOutput) {
         return textOutput;
       }
-    } catch (err) {
+    } catch (err: any) {
+      errorDetails.push(`${model}: ${err?.message || 'Error'}`);
       lastError = err;
     }
   }
 
-  throw lastError || new Error('No se pudo obtener respuesta de Google Gemini.');
+  throw lastError || new Error(`No se pudo obtener respuesta de Google Gemini. Modelos intentados: ${candidateModels.join(', ')}`);
 }
 
 /**

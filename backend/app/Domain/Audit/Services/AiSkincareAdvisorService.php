@@ -265,13 +265,14 @@ class AiSkincareAdvisorService
             'friction_risk_level' => $frictionRisk,
             'is_rinse_off_required' => $rinseOff,
             'barrier_warning' => $barrierWarning,
-            'plain_language_summary' => $summary,
-            'contraindications' => $contraindications,
-            'quality_factors' => $qualityFactors,
-            'format_quality_score' => $qualityScore,
-            'when_to_use' => $whenToUse,
-            'how_to_use' => $howToUse,
-            'superior_alternatives' => $superiorAlternatives,
+            'physical_carrier' => $physicalCarrier,
+            'format_warning' => $formatWarning,
+            'requires_rinse' => $requiresRinse,
+            'friction_risk' => $frictionRisk,
+            'application_method' => $applicationMethod,
+            'is_miscellaneous' => $isMiscellaneous,
+            'sustainability_notes' => $sustainabilityNotes,
+            'marketing_claims_assessment' => $marketingClaimsAssessment,
             'source_type' => 'AI_GENERATED',
             'confidence_score' => 0.94,
         ];
@@ -287,7 +288,15 @@ class AiSkincareAdvisorService
         ?float $price,
         string $currency
     ): ?array {
-        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}";
+        $candidateModels = array_unique(array_filter([
+            $this->geminiModel,
+            'gemini-flash-latest',
+            'gemini-3.7-flash',
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-2.5-flash',
+            'gemini-pro-latest',
+        ]));
 
         $systemPrompt = <<<PROMPT
 Eres un dermatólogo y químico cosmético experto del motor científico Allabout.skin.
@@ -302,32 +311,36 @@ PROMPT;
 
         $userPrompt = "Producto: {$productName} | Marca: {$brandName} | Precio: {$price} {$currency} | Fórmula / Texto: {$rawInciText}";
 
-        try {
-            $response = Http::timeout(6)->post($endpoint, [
-                'contents' => [
-                    [
-                        'role' => 'user',
-                        'parts' => [
-                            ['text' => $systemPrompt . "\n\n" . $userPrompt]
-                        ]
-                    ]
-                ],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
-                    'temperature' => 0.1,
-                ]
-            ]);
+        foreach ($candidateModels as $model) {
+            $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$this->geminiApiKey}";
 
-            if ($response->successful()) {
-                $rawContent = $response->json('candidates.0.content.parts.0.text');
-                $parsed = json_decode($rawContent, true);
-                if (is_array($parsed) && isset($parsed['format_type'])) {
-                    $parsed['source_type'] = 'AI_GENERATED';
-                    return $parsed;
+            try {
+                $response = Http::timeout(6)->post($endpoint, [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [
+                                ['text' => $systemPrompt . "\n\n" . $userPrompt]
+                            ]
+                        ]
+                    ],
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                        'temperature' => 0.1,
+                    ]
+                ]);
+
+                if ($response->successful()) {
+                    $rawContent = $response->json('candidates.0.content.parts.0.text');
+                    $parsed = json_decode($rawContent, true);
+                    if (is_array($parsed) && isset($parsed['format_type'])) {
+                        $parsed['source_type'] = 'AI_GENERATED';
+                        return $parsed;
+                    }
                 }
+            } catch (\Throwable $e) {
+                Log::warning("Gemini API call failed for {$model}: " . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::warning("Gemini API call failed, falling back to rule engine: " . $e->getMessage());
         }
 
         return null;
