@@ -308,28 +308,13 @@ export default function ScannerScreen({
           setManualBrandName(detectedBrand);
           await runApiInciAudit(formulaToAudit, detectedName, detectedBrand);
         } else {
-          // If no cosmetic text is found on the image, classify as facial selfie diagnosis
-          setScanTypeResult('FACE');
-          setFaceSkinResult({
-            skinTypeEstimate: 'COMBINATION',
-            skinTypeLabel: 'Piel Mixta (Zona T Grasa / Mejillas Equilibradas)',
-            zoneTAnalysis: {
-              shineLevel: 'MODERATE',
-              poresVisible: true,
-              description: 'Nivel de oleosidad y textura en zona T evaluado referencialmente.',
-            },
-            cheeksAnalysis: {
-              hydrationState: 'BALANCED',
-              rednessPresent: false,
-              description: 'Nivel de hidratación y barrera en mejillas evaluado referencialmente.',
-            },
-            visibleConcerns: ['Control de brillo en zona T', 'Mantenimiento de barrera cutánea'],
-            suggestedFocus: ['Limpieza suave con Syndet', 'Sérum de Niacinamida + Zinc', 'Fotoprotección diaria SPF 50+'],
-            confidence: 0.88,
-            disclaimer: 'Diagnóstico referencial asistido por motor dermatológico heurístico.',
-          });
+          // If no cosmetic text is found on the image and vision failed, do NOT fake a face diagnosis
+          setScanTypeResult('INVALID');
+          setRejectionMessage(
+            'No fue posible verificar un rostro humano ni identificar una lista de ingredientes en la imagen. Por favor, asegúrate de tomar una selfie clara de tu rostro o enfocar la etiqueta de tu cosmético.'
+          );
           setOcrProgress(100);
-          setOcrStatusText('¡Diagnóstico facial completado!');
+          setOcrStatusText('Imagen no reconocida');
         }
       } catch (ocrErr: any) {
         setScanTypeResult('INVALID');

@@ -3,6 +3,25 @@
  * Allabout.skin Next.js Serverless & Client Utilities
  */
 
+import {
+  governAndClassifyBiomarkers,
+  ExtractedClinicalBiomarkers,
+  GovernedVisionResult,
+  ClinicalSkinEvaluationResult,
+  SkincareProductEvaluationResult,
+  RejectionEvaluationResult,
+  ClinicalRejectionCode,
+  CLINICAL_REJECTIONS_CATALOG,
+} from './clinicalVisionEngine';
+
+export type {
+  GovernedVisionResult,
+  ClinicalSkinEvaluationResult,
+  SkincareProductEvaluationResult,
+  RejectionEvaluationResult,
+  ClinicalRejectionCode,
+};
+
 export interface AiDiagnosisResult {
   headline: string;
   clinicalVerdict: string;
@@ -42,46 +61,9 @@ export interface ImageScanResult {
   notes: string[];
 }
 
-export interface FaceSkinAnalysis {
-  skinTypeEstimate: 'OILY' | 'DRY' | 'COMBINATION' | 'SENSITIVE' | 'NORMAL';
-  skinTypeLabel: string;
-  zoneTAnalysis: {
-    shineLevel: 'HIGH' | 'MODERATE' | 'LOW';
-    poresVisible: boolean;
-    description: string;
-  };
-  cheeksAnalysis: {
-    hydrationState: 'DRY' | 'NORMAL' | 'BALANCED';
-    rednessPresent: boolean;
-    description: string;
-  };
-  visibleConcerns: string[];
-  suggestedFocus: string[];
-  confidence: number;
-  disclaimer: string;
-}
+export type FaceSkinAnalysis = ClinicalSkinEvaluationResult['faceAnalysis'];
 
-export type VisionClassificationResult = 
-  | {
-      classification: 'SKINCARE_PRODUCT';
-      brand: string | null;
-      productName: string | null;
-      inciText: string;
-      rawDetectedText: string;
-      confidence: number;
-      notes: string[];
-    }
-  | {
-      classification: 'HUMAN_FACE';
-      faceAnalysis: FaceSkinAnalysis;
-      confidence: number;
-    }
-  | {
-      classification: 'INVALID';
-      rejectionReason: 'NOT_COSMETIC_OR_FACE' | 'POOR_LIGHTING' | 'BLURRY_UNREADABLE';
-      userFriendlyMessage: string;
-      confidence: number;
-    };
+export type VisionClassificationResult = GovernedVisionResult;
 
 export interface RoutineAuditResult {
   routineSafetyScore: number; // 0 - 100
@@ -307,50 +289,47 @@ ${question}`;
   }
 }
 
-function cleanJsonResponse(raw: string): string {
+function extractJsonFromText(raw: string): string {
   let cleaned = raw.trim();
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.slice(3);
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return cleaned.slice(firstBrace, lastBrace + 1);
   }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+  else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
   return cleaned.trim();
 }
 
 /**
- * Fallback generator for human facial diagnosis when offline or testing without API key.
+ * Fallback generator for referential evaluation when testing offline or without an active API key.
  */
 export function getFallbackFaceAnalysis(): VisionClassificationResult {
-  return {
-    classification: 'HUMAN_FACE',
-    confidence: 0.93,
-    faceAnalysis: {
-      skinTypeEstimate: 'COMBINATION',
-      skinTypeLabel: 'Piel Mixta (Zona T Grasa / Mejillas Equilibradas)',
-      zoneTAnalysis: {
-        shineLevel: 'MODERATE',
-        poresVisible: true,
-        description: 'Ligero brillo lipídico en zona T (frente, nariz y mentón) con poros visibles característicos.',
-      },
-      cheeksAnalysis: {
-        hydrationState: 'BALANCED',
-        rednessPresent: false,
-        description: 'Manto hidrolipídico conservado en mejillas, buena turgencia y elasticidad dérmica.',
-      },
-      visibleConcerns: ['Control de brillo en zona T', 'Prevención de poros dilatados', 'Mantenimiento de barrera cutánea'],
-      suggestedFocus: ['Limpieza suave con Syndet espumoso', 'Sérum de Niacinamida 5-10% + Zinc', 'Hidratante ligero en gel y Fotoprotector SPF 50+ toque seco'],
-      confidence: 0.90,
-      disclaimer: 'Diagnóstico referencial asistido por motor dermatológico. Para análisis visual en tiempo real con Gemini Vision, configura tu GEMINI_API_KEY en .env.local o Vercel.',
+  return governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.90,
+    landmarks: {
+      bilateralEyesVisible: true,
+      nasalDorsumVisible: true,
+      oralCommissureVisible: true,
+      malarCheeksVisible: true,
+      foreheadVisible: true,
     },
-  };
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'MODERATE',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'VISIBLE_T_ZONE',
+      erythemaMalarIndex: 'ABSENT',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 3,
+    },
+  });
 }
 
 /**
- * Classifies an uploaded photo into SKINCARE_PRODUCT, HUMAN_FACE, or INVALID,
- * executing the appropriate data extraction or visual diagnosis.
+ * Classifies an uploaded photo and extracts quantitative dermatological biomarkers,
+ * then applies the Allabout.skin Clinical Governance Engine (Baumann BSTI + Fitzpatrick).
  */
 export async function classifyAndProcessImage(
   base64Data: string,
@@ -358,59 +337,71 @@ export async function classifyAndProcessImage(
 ): Promise<VisionClassificationResult> {
   const apiKey = process.env.GEMINI_API_KEY || '';
 
-  const systemInstruction = `Eres el Sistema Central de Visión y Clasificación Dermatológica de Allabout.skin.
-Tu misión es inspeccionar minuciosamente la fotografía provista y clasificarla de forma precisa en UNA de 3 opciones:
+  const systemInstruction = `Eres el Sensor Óptico de Extracción de Biomarcadores Dermatológicos de Allabout.skin.
+Tu función es inspeccionar con rigor biométrico y clínico la fotografía provista y devolver EXCLUSIVAMENTE un objeto JSON con los biomarcadores visuales observados.
 
-1. "HUMAN_FACE": La imagen contiene un rostro humano, selfie, foto frontal, retrato, o un primer plano de piel facial (mejillas, frente, nariz, mentón, cuello) de una persona. Si ves piel humana facial o una selfie de cualquier ángulo o iluminación, clasifícala SIEMPRE como "HUMAN_FACE".
-2. "SKINCARE_PRODUCT": La imagen contiene un producto cosmético, frasco, tubo, bote, caja o etiqueta con lista de ingredientes (INCI) o marca de cuidado facial/corporal/solar.
-3. "INVALID": La imagen es un objeto completamente no relacionado (alimentos, mascotas, paisajes lejanos, muebles, capturas de pantalla de chats) o una foto 100% negra o corrupta.
+DEFINICIÓN RIGUROSA DE ANATOMÍA DETECTADA ("detectedAnatomy"):
+- "HUMAN_FACE": EXCLUSIVAMENTE cuando se observe un rostro humano real con sus rasgos faciales principales (ojos, nariz, boca y mejillas). NO clasifiques manos, brazos ni otras partes como HUMAN_FACE.
+- "HAND_OR_ARM": Mano humana, palma, dedos, nudillos, muñeca, antebrazo o brazo.
+- "FOOT_OR_LEG": Pie humano, dedos de pie, tobillo, pierna, rodilla o muslo.
+- "TORSO_OR_BACK": Espalda humana, hombros, pecho, abdomen, escote o cuello aislado.
+- "OCCLUDED_OR_INCOMPLETE_FACE": Rostro humano pero con oclusión severa (gafas de sol oscuras que tapan los ojos, mascarilla o barbijo que tapa boca/nariz, cabello cubriendo >50% o recorte extremo).
+- "COSMETIC_PRODUCT": Envase cosmético, frasco, botella, tubo, tarro, caja o etiqueta con lista de ingredientes INCI.
+- "ANIMAL_OR_PET": Mascota, animal, dibujo, ilustración o avatar no humano.
+- "NON_BIOLOGICAL_OBJECT": Muebles, comida, pantallas, ropa, paredes, vehículos u objetos inanimados.
+- "UNREADABLE_OR_POOR_QUALITY": Foto extremadamente oscura (<15 lux), sobreexpuesta por flash directo o desenfoque de movimiento severo.
 
-REGLAS DE RESPUESTA EN FORMATO JSON ESTRICTO (sin texto adicional ni markdown fuera del JSON):
+DEFINICIÓN DE BIOMARCADORES ÓPTICOS (Solo cuando detectedAnatomy es "HUMAN_FACE"):
+1. tZoneSebumReflectance & cheeksSebumReflectance:
+   - "NONE": Acabado mate total, sin reflejo especular lipídico (típico de piel seca).
+   - "LOW": Manto lipídico equilibrado, brillo fisiológico sutil y homogéneo.
+   - "MODERATE": Brillo especular lipídico apreciable (graso ligero a medio).
+   - "HIGH": Brillo especular lipídico intenso, reflejo continuo de luz en la piel.
+2. follicularOstiaPores (Ostia folicular / poros):
+   - "MINIMAL_INCONSPICUOUS": Poros casi invisibles / cerrados (típico piel seca o eudérmica).
+   - "VISIBLE_T_ZONE": Poros visibles dilatados localizados principalmente en nariz, frente y barbilla.
+   - "DIFFUSE_WIDE": Poros dilatados extendidos ampliamente tanto en zona T como en mejillas.
+3. erythemaMalarIndex (Eritema / rojez vascular en pómulos/alas nasales):
+   - "ABSENT": Tono uniforme sin rojeces vasculares.
+   - "LOCALIZED_MILD": Leve rubor o eritema puntual transitorio.
+   - "DIFFUSE_MODERATE": Rojez vascular evidente y difusa en mejillas / alas nasales.
+   - "ACUTE_SEVERE": Eritema marcado, telangiectasias visibles o signos de flushing/rosácea.
+4. stratumCorneumDesquamation (Xerosis / Descamación):
+   - "NONE": Piel lisa sin signos de descamación.
+   - "MILD_LOCALIZED": Pequeñas zonas de textura áspera o descamación fina.
+   - "MARKED_GENERALIZED": Descamación visible marcada / tirantez evidente.
+5. fitzpatrickPhototypeEstimate: Número entero del 1 al 6 según la escala Fitzpatrick (I a VI).
 
-Si es "HUMAN_FACE":
+ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
 {
-  "classification": "HUMAN_FACE",
-  "faceAnalysis": {
-    "skinTypeEstimate": "OILY" | "DRY" | "COMBINATION" | "SENSITIVE" | "NORMAL",
-    "skinTypeLabel": "Piel Grasa / Piel Seca / Piel Mixta / Piel Sensible / Piel Normal",
-    "zoneTAnalysis": {
-      "shineLevel": "HIGH" | "MODERATE" | "LOW",
-      "poresVisible": true,
-      "description": "Evaluación visual de brillo y poros en frente, nariz y mentón"
-    },
-    "cheeksAnalysis": {
-      "hydrationState": "DRY" | "NORMAL" | "BALANCED",
-      "rednessPresent": false,
-      "description": "Evaluación visual de tirantez o rojez en mejillas"
-    },
-    "visibleConcerns": ["Brillo en zona T", "Brotes visibles", "Rojeces", "Deshidratación"],
-    "suggestedFocus": ["Control de oleosidad", "Hidratación ligera en gel", "Fotoprotector toque seco"],
-    "confidence": 0.90,
-    "disclaimer": "Este análisis visual es una estimación referencial basada en IA y no sustituye una consulta médica dermatológica profesional."
-  },
-  "confidence": 0.92
-}
-
-Si es "SKINCARE_PRODUCT":
-{
-  "classification": "SKINCARE_PRODUCT",
-  "brand": "Nombre de la marca si es visible o null",
-  "productName": "Nombre del producto si es visible o null",
-  "inciText": "Lista de ingredientes INCI detectados separados por comas (ej. Aqua, Niacinamide, Glycerin...)",
-  "rawDetectedText": "Texto crudo completo visible en el envase",
+  "detectedAnatomy": "HUMAN_FACE" | "HAND_OR_ARM" | "FOOT_OR_LEG" | "TORSO_OR_BACK" | "OCCLUDED_OR_INCOMPLETE_FACE" | "COSMETIC_PRODUCT" | "ANIMAL_OR_PET" | "NON_BIOLOGICAL_OBJECT" | "UNREADABLE_OR_POOR_QUALITY",
   "confidence": 0.95,
-  "notes": ["Notas de legibilidad o advertencias"]
-}
-
-Si es "INVALID":
-{
-  "classification": "INVALID",
-  "rejectionReason": "NOT_COSMETIC_OR_FACE",
-  "userFriendlyMessage": "No detectamos un producto de skincare ni el rostro de una persona en la foto. Por favor enfoca la etiqueta de tu cosmético o tómate una selfie con buena luz natural.",
-  "confidence": 0.98
+  "landmarks": {
+    "bilateralEyesVisible": true | false,
+    "nasalDorsumVisible": true | false,
+    "oralCommissureVisible": true | false,
+    "malarCheeksVisible": true | false,
+    "foreheadVisible": true | false
+  },
+  "opticalBiomarkers": {
+    "tZoneSebumReflectance": "NONE" | "LOW" | "MODERATE" | "HIGH",
+    "cheeksSebumReflectance": "NONE" | "LOW" | "MODERATE" | "HIGH",
+    "follicularOstiaPores": "MINIMAL_INCONSPICUOUS" | "VISIBLE_T_ZONE" | "DIFFUSE_WIDE",
+    "erythemaMalarIndex": "ABSENT" | "LOCALIZED_MILD" | "DIFFUSE_MODERATE" | "ACUTE_SEVERE",
+    "stratumCorneumDesquamation": "NONE" | "MILD_LOCALIZED" | "MARKED_GENERALIZED",
+    "fitzpatrickPhototypeEstimate": 1 | 2 | 3 | 4 | 5 | 6,
+    "visibleEtiologies": ["brillo zona T", "poros visibles", "eritema malar"]
+  },
+  "productData": {
+    "brand": "Nombre de marca si es producto o null",
+    "productName": "Nombre de producto o null",
+    "inciText": "Lista de ingredientes INCI si es producto",
+    "rawDetectedText": "Texto visible",
+    "notes": []
+  }
 }`;
 
-  const prompt = `Inspecciona esta fotografía. Si muestra una persona, rostro, selfie o piel humana, devuélvela como "HUMAN_FACE". Si muestra un cosmético o envase, devuélvela como "SKINCARE_PRODUCT". De lo contrario como "INVALID". Responde solo en JSON.`;
+  const prompt = `Analiza biométricamente y dermatológicamente esta fotografía conforme a las definiciones operacionales. Devuelve el JSON con detectedAnatomy, landmarks y opticalBiomarkers o productData.`;
 
   // Strip base64 data url prefix and remove whitespace
   const cleanBase64 = base64Data
@@ -424,59 +415,24 @@ Si es "INVALID":
 
   try {
     const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true);
-    const cleanedJson = cleanJsonResponse(rawJson);
-    const parsed = JSON.parse(cleanedJson);
+    const cleanedJson = extractJsonFromText(rawJson);
+    const parsed: ExtractedClinicalBiomarkers = JSON.parse(cleanedJson);
 
-    // Normalization checks
-    if (parsed.classification !== 'SKINCARE_PRODUCT' && parsed.classification !== 'HUMAN_FACE' && parsed.classification !== 'INVALID') {
-      if (parsed.faceAnalysis || parsed.skinTypeEstimate || parsed.zoneTAnalysis) {
-        parsed.classification = 'HUMAN_FACE';
-      } else if (parsed.inciText || parsed.productName) {
-        parsed.classification = 'SKINCARE_PRODUCT';
-      } else {
-        parsed.classification = 'HUMAN_FACE';
-      }
-    }
-
-    if (parsed.classification === 'HUMAN_FACE') {
-      const fa = parsed.faceAnalysis || {};
-      const est = fa.skinTypeEstimate || parsed.skinTypeEstimate || 'COMBINATION';
-      const labelMap: Record<string, string> = {
-        OILY: 'Piel Grasa (Exceso de sebo generalizado)',
-        DRY: 'Piel Seca (Déficit lipídico y tirantez)',
-        COMBINATION: 'Piel Mixta (Zona T Grasa / Mejillas Equilibradas)',
-        SENSITIVE: 'Piel Sensible (Propensa a reactividad y eritema)',
-        NORMAL: 'Piel Normal (Equilibrio hidrolipídico óptimo)',
-      };
-
-      parsed.faceAnalysis = {
-        skinTypeEstimate: est,
-        skinTypeLabel: fa.skinTypeLabel || labelMap[est] || 'Piel Mixta',
-        zoneTAnalysis: {
-          shineLevel: fa.zoneTAnalysis?.shineLevel || 'MODERATE',
-          poresVisible: typeof fa.zoneTAnalysis?.poresVisible === 'boolean' ? fa.zoneTAnalysis.poresVisible : true,
-          description: fa.zoneTAnalysis?.description || 'Nivel de brillo y visibilidad de poros evaluados.',
-        },
-        cheeksAnalysis: {
-          hydrationState: fa.cheeksAnalysis?.hydrationState || 'BALANCED',
-          rednessPresent: typeof fa.cheeksAnalysis?.rednessPresent === 'boolean' ? fa.cheeksAnalysis.rednessPresent : false,
-          description: fa.cheeksAnalysis?.description || 'Estado de hidratación y barrera en mejillas evaluado.',
-        },
-        visibleConcerns: Array.isArray(fa.visibleConcerns) && fa.visibleConcerns.length > 0
-          ? fa.visibleConcerns
-          : ['Equilibrio de zona T', 'Mantenimiento de barrera cutánea'],
-        suggestedFocus: Array.isArray(fa.suggestedFocus) && fa.suggestedFocus.length > 0
-          ? fa.suggestedFocus
-          : ['Hidratación ligera equilibrada', 'Fotoprotección diaria SPF 50+'],
-        confidence: typeof fa.confidence === 'number' ? fa.confidence : 0.90,
-        disclaimer: fa.disclaimer || 'Este análisis visual es una estimación referencial basada en IA y no sustituye una consulta médica dermatológica profesional.',
-      };
-    }
-
-    return parsed as VisionClassificationResult;
+    // Run Allabout.skin Application Governance & Gating Engine
+    return governAndClassifyBiomarkers(parsed);
   } catch (err: any) {
-    console.warn('Error parsing Gemini vision classification, fallback to diagnostic analysis:', err);
-    return getFallbackFaceAnalysis();
+    console.warn('Error en extracción de visión por IA, evaluando rechazo seguro:', err);
+    return governAndClassifyBiomarkers({
+      detectedAnatomy: 'UNREADABLE_OR_POOR_QUALITY',
+      confidence: 0.8,
+      landmarks: {
+        bilateralEyesVisible: false,
+        nasalDorsumVisible: false,
+        oralCommissureVisible: false,
+        malarCheeksVisible: false,
+        foreheadVisible: false,
+      },
+    });
   }
 }
 
