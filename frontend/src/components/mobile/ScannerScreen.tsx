@@ -308,17 +308,20 @@ export default function ScannerScreen({
           setManualBrandName(detectedBrand);
           await runApiInciAudit(formulaToAudit, detectedName, detectedBrand);
         } else {
-          // If no cosmetic text is found on the image and vision failed, do NOT fake a face diagnosis
+          // If no cosmetic text is found on the image and vision failed
           setScanTypeResult('INVALID');
+          const isNetworkOrApiError = err?.message && (err.message.includes('API') || err.message.includes('Gemini') || err.message.includes('fetch') || err.message.includes('límite') || err.message.includes('servidor') || err.message.includes('Error'));
           setRejectionMessage(
-            'No fue posible verificar un rostro humano ni identificar una lista de ingredientes en la imagen. Por favor, asegúrate de tomar una selfie clara de tu rostro o enfocar la etiqueta de tu cosmético.'
+            isNetworkOrApiError
+              ? `No se pudo conectar con el servicio de visión por IA (${err.message}). Por favor reintenta en unos momentos o ingresa los datos manualmente.`
+              : 'No pudimos clasificar automáticamente si la foto es un rostro o un cosmético. Por favor, asegúrate de tomar una selfie frontal de tu rostro o enfocar la etiqueta de ingredientes de tu producto.'
           );
           setOcrProgress(100);
-          setOcrStatusText('Imagen no reconocida');
+          setOcrStatusText(isNetworkOrApiError ? 'Error de servicio' : 'Imagen no reconocida');
         }
       } catch (ocrErr: any) {
         setScanTypeResult('INVALID');
-        setRejectionMessage('No fue posible procesar la imagen. Intenta con una foto más iluminada o ingresa el texto de los ingredientes.');
+        setRejectionMessage('No fue posible procesar la imagen. Intenta de nuevo o ingresa el texto de los ingredientes.');
       } finally {
         setIsProcessing(false);
         setOcrProgress(100);

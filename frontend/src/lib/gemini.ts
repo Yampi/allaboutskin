@@ -11,7 +11,6 @@ import {
   SkincareProductEvaluationResult,
   RejectionEvaluationResult,
   ClinicalRejectionCode,
-  CLINICAL_REJECTIONS_CATALOG,
 } from './clinicalVisionEngine';
 
 export type {
@@ -99,6 +98,17 @@ const GEMINI_MODELS = [
 ];
 
 /**
+ * Checks if the provided Gemini API key is valid and not a placeholder or empty string.
+ */
+export function isValidGeminiApiKey(key: string | undefined): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  if (trimmed.length < 15) return false;
+  if (trimmed.includes('YourGeminiApiKeyHere') || trimmed.includes('YOUR_API_KEY') || trimmed.includes('AIzaSyYour')) return false;
+  return true;
+}
+
+/**
  * Executes a structured request against Google Gemini REST API.
  */
 export async function callGeminiApi(
@@ -109,8 +119,8 @@ export async function callGeminiApi(
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || '';
 
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY no configurada.');
+  if (!isValidGeminiApiKey(apiKey)) {
+    throw new Error('GEMINI_API_KEY no configurada o clave inválida.');
   }
 
   const parts: any[] = [];
@@ -136,10 +146,10 @@ export async function callGeminiApi(
       topP: 0.95,
     },
     safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
     ],
   };
 
@@ -228,7 +238,7 @@ Preocupaciones cutáneas: ${concerns.length ? concerns.join(', ') : 'Mantenimien
 Lista de ingredientes INCI:
 ${inciText}`;
 
-  if (!apiKey) {
+  if (!isValidGeminiApiKey(apiKey)) {
     // Deterministic fallback if API key is not yet set
     return getFallbackDiagnosis(inciText, skinType, productName);
   }
@@ -272,7 +282,7 @@ Directrices:
 3. No inventes ingredientes que no estén en la fórmula, pero puedes contrastar con otros activos que el usuario mencione.
 4. Mantén las respuestas estructuradas con viñetas cuando sea apropiado.`;
 
-  if (!apiKey) {
+  if (!isValidGeminiApiKey(apiKey)) {
     return `Como copiloto dermatológico, he analizado la fórmula de **${productName}**. Contiene activos funcionales compatibles con piel ${skinType.toLowerCase()}. Para responder a tu pregunta sobre "${question}": recomendamos aplicar los productos de menor a mayor densidad, usar protector solar en el día (AM) y distanciar activos exfoliantes o retinoides en noches alternas. *(Para respuestas personalizadas en tiempo real con Gemini, configura tu GEMINI_API_KEY en Vercel).*`;
   }
 
@@ -341,15 +351,15 @@ export async function classifyAndProcessImage(
 Tu función es inspeccionar con rigor biométrico y clínico la fotografía provista y devolver EXCLUSIVAMENTE un objeto JSON con los biomarcadores visuales observados.
 
 DEFINICIÓN RIGUROSA DE ANATOMÍA DETECTADA ("detectedAnatomy"):
-- "HUMAN_FACE": EXCLUSIVAMENTE cuando se observe un rostro humano real con sus rasgos faciales principales (ojos, nariz, boca y mejillas). NO clasifiques manos, brazos ni otras partes como HUMAN_FACE.
+- "HUMAN_FACE": EXCLUSIVAMENTE cuando se observe un rostro humano real (selfie o retrato de frente/semilateral). IMPORTANTE: La presencia de barba, bigote, vello facial, sonrisa, expresiones faciales, peinados o gafas ópticas graduadas es completamente normal y NO anula la clasificación de rostro; clasifícalo SIEMPRE como "HUMAN_FACE".
 - "HAND_OR_ARM": Mano humana, palma, dedos, nudillos, muñeca, antebrazo o brazo.
 - "FOOT_OR_LEG": Pie humano, dedos de pie, tobillo, pierna, rodilla o muslo.
 - "TORSO_OR_BACK": Espalda humana, hombros, pecho, abdomen, escote o cuello aislado.
-- "OCCLUDED_OR_INCOMPLETE_FACE": Rostro humano pero con oclusión severa (gafas de sol oscuras que tapan los ojos, mascarilla o barbijo que tapa boca/nariz, cabello cubriendo >50% o recorte extremo).
+- "OCCLUDED_OR_INCOMPLETE_FACE": Rostro humano donde más del 60% de los rasgos clave están bloqueados u ocultos deliberadamente (ej. pasamontañas, mascarilla quirúrgica completa, vendas o recorte extremo fuera de cámara).
 - "COSMETIC_PRODUCT": Envase cosmético, frasco, botella, tubo, tarro, caja o etiqueta con lista de ingredientes INCI.
 - "ANIMAL_OR_PET": Mascota, animal, dibujo, ilustración o avatar no humano.
 - "NON_BIOLOGICAL_OBJECT": Muebles, comida, pantallas, ropa, paredes, vehículos u objetos inanimados.
-- "UNREADABLE_OR_POOR_QUALITY": Foto extremadamente oscura (<15 lux), sobreexpuesta por flash directo o desenfoque de movimiento severo.
+- "UNREADABLE_OR_POOR_QUALITY": Fotografía con oscuridad prácticamente total (<15 lux), saturación blanca absoluta o desenfoque extremo de movimiento que imposibilite ver las facciones.
 
 DEFINICIÓN DE BIOMARCADORES ÓPTICOS (Solo cuando detectedAnatomy es "HUMAN_FACE"):
 1. tZoneSebumReflectance & cheeksSebumReflectance:
@@ -408,8 +418,8 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
     .replace(/^data:[^;]+;base64,/, '')
     .replace(/\s+/g, '');
 
-  if (!apiKey) {
-    console.warn('GEMINI_API_KEY no configurada en variables de entorno. Activando diagnóstico referencial.');
+  if (!isValidGeminiApiKey(apiKey)) {
+    console.warn('GEMINI_API_KEY no configurada o es un placeholder. Activando diagnóstico referencial.');
     return getFallbackFaceAnalysis();
   }
 
@@ -421,18 +431,10 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
     // Run Allabout.skin Application Governance & Gating Engine
     return governAndClassifyBiomarkers(parsed);
   } catch (err: any) {
-    console.warn('Error en extracción de visión por IA, evaluando rechazo seguro:', err);
-    return governAndClassifyBiomarkers({
-      detectedAnatomy: 'UNREADABLE_OR_POOR_QUALITY',
-      confidence: 0.8,
-      landmarks: {
-        bilateralEyesVisible: false,
-        nasalDorsumVisible: false,
-        oralCommissureVisible: false,
-        malarCheeksVisible: false,
-        foreheadVisible: false,
-      },
-    });
+    console.error('Error en extracción de visión por IA:', err);
+    throw new Error(
+      `Error al procesar la imagen con Gemini Vision (${err?.message || 'Error de servicio'}).`
+    );
   }
 }
 
@@ -516,7 +518,7 @@ Responde SIEMPRE en formato JSON válido:
   const prompt = `Productos en la rutina del usuario (Tipo de piel: ${skinType}):
 ${JSON.stringify(products, null, 2)}`;
 
-  if (!apiKey) {
+  if (!isValidGeminiApiKey(apiKey)) {
     return {
       routineSafetyScore: 82,
       verdict: `Rutina estructurada para piel ${skinType.toLowerCase()} con buen equilibrio funcional.`,

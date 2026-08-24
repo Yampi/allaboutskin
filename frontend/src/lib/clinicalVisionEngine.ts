@@ -254,12 +254,24 @@ export function governAndClassifyBiomarkers(
 
   // If claimed to be HUMAN_FACE, verify mandatory facial landmarks
   if (detectedAnatomy === 'HUMAN_FACE') {
+    const visibleCount = landmarks
+      ? [
+          landmarks.bilateralEyesVisible,
+          landmarks.nasalDorsumVisible,
+          landmarks.oralCommissureVisible,
+          landmarks.malarCheeksVisible,
+          landmarks.foreheadVisible,
+        ].filter(Boolean).length
+      : 0;
+
     const hasMandatoryFeatures =
       landmarks &&
-      landmarks.bilateralEyesVisible &&
-      landmarks.nasalDorsumVisible &&
-      landmarks.oralCommissureVisible &&
-      landmarks.malarCheeksVisible;
+      (
+        // Primary: Both eyes and nasal bridge are visible
+        (landmarks.bilateralEyesVisible && landmarks.nasalDorsumVisible) ||
+        // Secondary: At least 3 of the 5 key facial landmarks are visible (supports beards, mustaches, smiling, hair fringes)
+        visibleCount >= 3
+      );
 
     if (!hasMandatoryFeatures) {
       return createRejection('INVALID_ANATOMY_OCCLUDED_FACE', confidence);
