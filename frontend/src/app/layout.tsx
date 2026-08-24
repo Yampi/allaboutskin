@@ -18,8 +18,34 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Allabout.skin — Mobile App & Auditoría Científica de Skincare",
+  metadataBase: new URL('https://allaboutskin.vercel.app'),
+  title: {
+    default: "Allabout.skin — Mobile App & Auditoría Científica de Skincare",
+    template: "%s | Allabout.skin",
+  },
   description: "Plataforma de bienestar y formulación cosmética. Guía de ingredientes, análisis de fórmulas y seguimiento personalizado de Skin Cycling.",
+  openGraph: {
+    title: "Allabout.skin — Mobile App & Auditoría Científica de Skincare",
+    description: "Plataforma de bienestar y formulación cosmética. Guía de ingredientes, análisis de fórmulas y seguimiento personalizado de Skin Cycling.",
+    url: "https://allaboutskin.vercel.app",
+    siteName: "Allabout.skin",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Allabout.skin — Auditoría Científica de Skincare & Skin Cycling",
+      },
+    ],
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Allabout.skin — Mobile App & Auditoría Científica de Skincare",
+    description: "Plataforma de bienestar y formulación cosmética. Guía de ingredientes, análisis de fórmulas y seguimiento personalizado de Skin Cycling.",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export const viewport: Viewport = {

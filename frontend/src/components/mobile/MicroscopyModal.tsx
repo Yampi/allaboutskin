@@ -52,7 +52,7 @@ export default function MicroscopyModal({ isOpen, onClose, userProfile }: Micros
           {/* Microscope High-Res Canvas */}
           <div className="relative w-full h-56 rounded-[22px] overflow-hidden border border-[#8FA89B]/40 bg-[#1E2822] shadow-inner">
             <img
-              src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=700&q=80"
+              src="/stratum-corneum-microscopy.jpg"
               alt="Microscopía de Barrera Lipídica"
               className="w-full h-full object-cover opacity-90"
             />
