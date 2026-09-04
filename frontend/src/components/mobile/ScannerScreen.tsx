@@ -30,6 +30,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  ExternalLink,
+  Award,
 } from 'lucide-react';
 import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfItem, UserProfile } from './types';
 import { sampleScanPresets } from './skincareData';
@@ -37,6 +39,226 @@ import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/
 import { scanImageWithGeminiVision } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
+
+export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  night: number;
+  nightName: string;
+  matchScore: number;
+  activeTag: string;
+  image: string;
+  price: string;
+  affiliateUrl: string;
+}>> = {
+  COMBINATION: [
+    {
+      id: 'curated-comb-1',
+      name: 'Gel Limpiador Espumoso con Niacinamida',
+      brand: 'CeraVe',
+      category: 'Limpieza Fisiológica',
+      night: 1,
+      nightName: 'Noche 1 - 4 (Limpieza)',
+      matchScore: 98,
+      activeTag: 'Niacinamida + Ceramidas',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
+      price: '$16.50',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-comb-2',
+      name: 'Niacinamide 10% + Zinc 1% High-Strength',
+      brand: 'The Ordinary',
+      category: 'Sérum Seborregulador',
+      night: 2,
+      nightName: 'Noche 2: Tratamiento',
+      matchScore: 99,
+      activeTag: 'Niacinamida 10% + Zinc PCA',
+      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
+      price: '$8.20',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-comb-3',
+      name: 'Toleriane Dermallergo Fluido Ligero',
+      brand: 'La Roche-Posay',
+      category: 'Hidratante Barrera',
+      night: 3,
+      nightName: 'Noches 3 & 4: Recuperación',
+      matchScore: 97,
+      activeTag: 'Neurosensina + Esfingobioma',
+      image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
+      price: '$24.90',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+  ],
+  OILY: [
+    {
+      id: 'curated-oily-1',
+      name: 'Effaclar Gel Purificante Micro-Exfoliante',
+      brand: 'La Roche-Posay',
+      category: 'Limpieza Profunda Purificante',
+      night: 1,
+      nightName: 'Noche 1 - 4 (Limpieza)',
+      matchScore: 99,
+      activeTag: 'Zinc PCA + LHA Purificante',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
+      price: '$18.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-oily-2',
+      name: 'Skin Perfecting 2% BHA Liquid Exfoliant',
+      brand: "Paula's Choice",
+      category: 'Exfoliante Químico BHA',
+      night: 1,
+      nightName: 'Noche 1: Exfoliación',
+      matchScore: 99,
+      activeTag: 'Ácido Salicílico 2% + Té Verde',
+      image: 'https://images.unsplash.com/photo-1570554886111-e80fcca6a029?auto=format&fit=crop&w=400&q=80',
+      price: '$36.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-oily-3',
+      name: 'Hydro Boost Water Gel Oil-Free',
+      brand: 'Neutrogena',
+      category: 'Gel de Hidratación Ligero',
+      night: 3,
+      nightName: 'Noches 3 & 4: Recuperación',
+      matchScore: 96,
+      activeTag: 'Ácido Hialurónico Purificado',
+      image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
+      price: '$15.90',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+  ],
+  DRY: [
+    {
+      id: 'curated-dry-1',
+      name: 'Limpiadora Hidratante Loción Cremosa',
+      brand: 'CeraVe',
+      category: 'Limpieza sin Espuma',
+      night: 1,
+      nightName: 'Noche 1 - 4 (Limpieza)',
+      matchScore: 99,
+      activeTag: 'Tecnología MVE + 3 Ceramidas',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
+      price: '$14.50',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-dry-2',
+      name: 'Hyalu B5 Serum Concentrado Reparador',
+      brand: 'La Roche-Posay',
+      category: 'Sérum Reparador Hidratante',
+      night: 3,
+      nightName: 'Noches 3 & 4: Recuperación',
+      matchScore: 98,
+      activeTag: 'Ácido Hialurónico + Pantenol 5%',
+      image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
+      price: '$42.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-dry-3',
+      name: 'Cicaplast Baume B5+ Ultra-Reparador',
+      brand: 'La Roche-Posay',
+      category: 'Bálsamo Calmante Multirreparador',
+      night: 4,
+      nightName: 'Noche 4: Sellado de Barrera',
+      matchScore: 99,
+      activeTag: 'Madecassoside + Tribioma',
+      image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
+      price: '$17.50',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+  ],
+  SENSITIVE: [
+    {
+      id: 'curated-sens-1',
+      name: 'Sensibio H2O Gel Moussant Calmante',
+      brand: 'Bioderma',
+      category: 'Limpieza Micelar Suave',
+      night: 1,
+      nightName: 'Noche 1 - 4 (Limpieza)',
+      matchScore: 99,
+      activeTag: 'Patente D.A.F. + Coco-Glucoside',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
+      price: '$15.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-sens-2',
+      name: 'Tolérance Control Bálsamo Calmante',
+      brand: 'Avène',
+      category: 'Crema Restauradora Alta Tolerancia',
+      night: 3,
+      nightName: 'Noches 3 & 4: Recuperación',
+      matchScore: 98,
+      activeTag: 'D-Sensinose™ Postbiótico',
+      image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
+      price: '$23.50',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-sens-3',
+      name: 'Mineral 89 Booster Fortificante',
+      brand: 'Vichy',
+      category: 'Concentrado Fortalecedor Diario',
+      night: 2,
+      nightName: 'Noche 2: Preparación',
+      matchScore: 97,
+      activeTag: '89% Agua Volcánica + Hialurónico',
+      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
+      price: '$26.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+  ],
+  NORMAL: [
+    {
+      id: 'curated-norm-1',
+      name: 'Hydrating Facial Cleanser Balance',
+      brand: 'CeraVe',
+      category: 'Limpieza Equilibrante',
+      night: 1,
+      nightName: 'Noche 1 - 4 (Limpieza)',
+      matchScore: 98,
+      activeTag: 'Ceramidas + Ácido Hialurónico',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
+      price: '$15.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-norm-2',
+      name: 'Retinol 0.3% Anti-Aging Serum',
+      brand: 'SkinCeuticals',
+      category: 'Sérum Renovador Celular',
+      night: 2,
+      nightName: 'Noche 2: Retinoides',
+      matchScore: 97,
+      activeTag: 'Retinol Puro 0.3% + Bisabolol',
+      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
+      price: '$78.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+    {
+      id: 'curated-norm-3',
+      name: 'Ultra Facial Cream 24h Barrier Hydration',
+      brand: "Kiehl's",
+      category: 'Hidratación Barrera Lamelar',
+      night: 3,
+      nightName: 'Noches 3 & 4: Recuperación',
+      matchScore: 98,
+      activeTag: 'Escualano Vegetal + Glicoproteína Glacial',
+      image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
+      price: '$38.00',
+      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
+    },
+  ],
+};
 
 interface ScannerScreenProps {
   onAddProductToShelf: (product: ProductShelfItem) => void;
@@ -709,10 +931,10 @@ export default function ScannerScreen({
                                 : 'border-2 border-dashed border-amber-300/80 bg-amber-300/15 hover:bg-amber-300/25'
                             } rounded-[22px] flex flex-col items-center justify-start p-2`}
                             style={{
-                              top: '12%',
-                              left: '26%',
-                              width: '48%',
-                              height: '46%',
+                              top: '20%',
+                              left: '30%',
+                              width: '40%',
+                              height: '38%',
                             }}
                           >
                             <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-300/60 shadow-lg text-white flex items-center gap-1.5 animate-pulse-subtle">
@@ -740,10 +962,10 @@ export default function ScannerScreen({
                                   : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
                               } rounded-[20px] flex items-center justify-center`}
                               style={{
-                                top: '44%',
-                                left: '8%',
-                                width: '24%',
-                                height: '28%',
+                                top: '48%',
+                                left: '17%',
+                                width: '20%',
+                                height: '22%',
                               }}
                             >
                               <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/30" />
@@ -758,10 +980,10 @@ export default function ScannerScreen({
                                   : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
                               } rounded-[20px] flex items-center justify-center`}
                               style={{
-                                top: '44%',
-                                right: '8%',
-                                width: '24%',
-                                height: '28%',
+                                top: '48%',
+                                right: '17%',
+                                width: '20%',
+                                height: '22%',
                               }}
                             >
                               <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/30" />
@@ -967,6 +1189,116 @@ export default function ScannerScreen({
                       </div>
                     </div>
                   )}
+
+                  {/* PRESCRIPCIÓN CURADA PARA TU BIOTIPO (MONETIZACIÓN Y MARCAS AFILIADAS) */}
+                  {(() => {
+                    const skinKey = faceSkinResult.skinTypeEstimate || 'COMBINATION';
+                    const products = CURATED_BIOTYPE_PRODUCTS[skinKey] || CURATED_BIOTYPE_PRODUCTS.COMBINATION;
+
+                    return (
+                      <div className="pt-3 border-t border-[#E8E1D7] space-y-3.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase text-[#7E756F] tracking-wider block">
+                              Prescripción Personalizada
+                            </span>
+                            <h4 className="font-serif text-[18px] sm:text-[20px] font-semibold text-[#2D2825]">
+                              Prescripción Curada para tu Biotipo
+                            </h4>
+                          </div>
+                          <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold flex items-center gap-1.5 border border-[#8FA89B]/30 shadow-2xs">
+                            <Award className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                            <span>Partner Dermatológico Verificado</span>
+                          </span>
+                        </div>
+
+                        <p className="text-[12px] text-[#7E756F] leading-relaxed">
+                          Fórmulas seleccionadas bajo estricta compatibilidad con tu biotipo y reguladas para tu ciclo de Skin Cycling.
+                        </p>
+
+                        {/* Product Cards Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {products.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-3.5 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7] hover:border-[#8FA89B] transition flex flex-col justify-between space-y-3 group shadow-2xs"
+                            >
+                              <div className="space-y-2">
+                                <div className="relative w-full aspect-square rounded-[14px] overflow-hidden bg-white border border-[#E8E1D7]">
+                                  <img
+                                    src={item.image}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                  />
+                                  <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs px-2 py-0.5 rounded-full text-white text-[9.5px] font-bold">
+                                    {item.nightName}
+                                  </div>
+                                  <div className="absolute bottom-2 right-2 bg-[#EBF1EE] px-2 py-0.5 rounded-full text-[#4A6B5B] text-[9.5px] font-bold border border-[#8FA89B]/40">
+                                    {item.matchScore}% Match
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <span className="text-[9.5px] font-bold uppercase text-[#7E756F] block">
+                                    {item.brand}
+                                  </span>
+                                  <h5 className="font-serif text-[13.5px] font-semibold text-[#2D2825] leading-snug line-clamp-2 mt-0.5">
+                                    {item.name}
+                                  </h5>
+                                  <span className="inline-block mt-1 text-[10px] bg-white text-[#4A6B5B] border border-[#8FA89B]/30 px-2 py-0.5 rounded-md font-medium">
+                                    {item.activeTag}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 pt-2 border-t border-[#E8E1D7]">
+                                <div className="flex items-center justify-between text-[11.5px]">
+                                  <span className="text-[#7E756F]">Precio aprox:</span>
+                                  <span className="font-bold text-[#2D2825]">{item.price}</span>
+                                </div>
+
+                                {/* Affiliate Purchase Button */}
+                                <a
+                                  href={item.affiliateUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full py-2 px-2.5 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white text-[11.5px] font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
+                                >
+                                  <span>Adquirir en Tienda Oficial</span>
+                                  <ExternalLink className="w-3 h-3 text-white/80" />
+                                </a>
+
+                                {/* Add to Shelf Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onAddProductToShelf({
+                                      id: `shelf-${Date.now()}-${item.id}`,
+                                      name: item.name,
+                                      brand: item.brand,
+                                      category: item.category,
+                                      volume: '50 ml',
+                                      paoMonths: 12,
+                                      inciScore: item.matchScore,
+                                      primaryActives: [item.activeTag],
+                                      assignedPhase: item.night,
+                                      assignedPhaseName: item.nightName,
+                                      image: item.image,
+                                      textureNote: 'Prescripción oficial de Allabout.skin',
+                                    });
+                                  }}
+                                  className="w-full py-1.5 px-2 rounded-full bg-white hover:bg-[#F2ECE4] border border-[#E2D9CD] text-[#2D2825] text-[11px] font-medium flex items-center justify-center gap-1 transition cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3 text-[#4A6B5B]" />
+                                  <span>Añadir a mi Estantería</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Medical Disclaimer */}
                   <div className="p-3.5 bg-[#FFF8E6] border border-[#E6C673]/40 rounded-[16px] flex items-start gap-2.5 text-[11.5px] text-[#8C6B1F] leading-relaxed">
