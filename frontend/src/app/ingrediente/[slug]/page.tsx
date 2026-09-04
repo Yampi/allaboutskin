@@ -14,8 +14,6 @@ import {
   Zap,
   Activity
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -205,14 +203,11 @@ export default async function IngredientPage({ params }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-8 animate-in fade-in">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Navbar />
-
-      <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 text-xs font-semibold text-[#99938B]">
           <Link href="/" className="hover:text-[#2D4A3E]">Inicio</Link>
@@ -380,9 +375,6 @@ export default async function IngredientPage({ params }: Props) {
             Evaluar fórmula ahora →
           </Link>
         </div>
-      </main>
-
-      <Footer />
     </div>
   );
 }

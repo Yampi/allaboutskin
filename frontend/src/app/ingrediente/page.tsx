@@ -12,8 +12,6 @@ import {
   CheckCircle2,
   AlertTriangle
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Biblioteca de Activos Cosméticos & Dermatología | Allabout.skin',
@@ -103,79 +101,64 @@ const INGREDIENTS = [
 
 export default function IngredientesIndexPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
-      <Navbar />
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10 animate-in fade-in">
+      {/* Header Introduction */}
+      <div className="text-center max-w-2xl mx-auto space-y-2 pb-2">
+        <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-wider bg-[#EBF1EE] px-3 py-1 rounded-full inline-block">
+          Inventario CosIng UE & PubMed NCBI
+        </span>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold text-[#2D2825] tracking-tight">
+          Biblioteca de <span className="text-[#4A6B5B]">Activos Cosméticos</span>
+        </h1>
+        <p className="text-[13.5px] sm:text-[14.5px] text-[#7E756F] leading-relaxed max-w-xl mx-auto">
+          Fichas técnicas y evidencia clínica de las principales moléculas utilizadas en formulación dermocosmética.
+        </p>
+      </div>
 
-      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-12">
-        {/* Header Introduction */}
-        <div className="text-center max-w-2xl mx-auto space-y-2.5 pb-6">
-          <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest bg-[#EFF5F1] px-3 py-0.5 rounded-full inline-block">
-            Inventario CosIng UE & PubMed NCBI
-          </span>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#1C1B1A] tracking-tight">
-            Biblioteca de <span className="text-[#4F6D60]">Activos Cosméticos</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed max-w-xl mx-auto mb-6">
-            Fichas científicas de compatibilidad molecular, pH óptimo de formulación y nivel de evidencia médica en ensayos clínicos.
-          </p>
-          <div className="relative max-w-md mx-auto mt-6">
-            <Search className="w-4 h-4 text-[#99938B] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar activo (ej: Niacinamida, Retinol)..."
-              className="w-full bg-[#FFFFFF] border border-[#ECE6DC] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#1C1B1A] placeholder-[#99938B] focus:outline-none focus:border-[#4F6D60] shadow-sm transition"
-              readOnly
-            />
-          </div>
-        </div>
+      {/* Grid of Ingredients */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {INGREDIENTS.map((ing) => (
+          <Link
+            key={ing.slug}
+            href={`/ingrediente/${ing.slug}`}
+            className="group card-white p-6 rounded-[22px] border border-[#E8E1D7] hover:border-[#8FA89B] hover:shadow-diffuse-elevated transition flex flex-col justify-between"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full border ${ing.badgeColor}`}>
+                  {ing.evidence}
+                </span>
+                <span className="text-xs font-mono text-[#7E756F]">
+                  pH: {ing.ph}
+                </span>
+              </div>
 
-        {/* Ingredients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {INGREDIENTS.map((ing) => (
-            <Link
-              key={ing.slug}
-              href={`/ingrediente/${ing.slug}`}
-              className="bg-[#FFFFFF] rounded-2xl p-8 border border-[#ECE6DC] shadow-editorial hover:border-[#4F6D60]/50 transition-all duration-200 flex flex-col justify-between space-y-4 group"
-            >
-              <div className="space-y-4">
-                {/* Placeholder Image Area */}
-                <div className="h-32 rounded-xl bg-[#F5EDE3] mb-4 flex items-center justify-center">
-                  <Droplets className="w-8 h-8 text-[#4F6D60]" />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#2D4A3E] bg-[#EFF5F1] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    {ing.evidence}
-                  </span>
-                  <span className="text-[10px] text-[#99938B] font-semibold">
-                    pH: {ing.ph}
-                  </span>
-                </div>
-
-                <h2 className="text-xl md:text-2xl font-serif font-bold text-[#1C1B1A] group-hover:text-[#2D4A3E] transition-colors">
+              <div>
+                <h3 className="text-xl font-serif font-semibold text-[#2D2825] group-hover:text-[#4A6B5B] transition">
                   {ing.name}
-                </h2>
-                
-                <p className="text-sm text-[#66615C] leading-relaxed line-clamp-3">
-                  {ing.description}
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-[#ECE6DC] flex items-center justify-between text-sm mt-4">
-                <span className="text-xs text-[#99938B]">
-                  {ing.layering}
-                </span>
-                <span className="font-semibold text-[#4F6D60] group-hover:text-[#2D4A3E] flex items-center gap-1">
-                  <span>Ver Ficha</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </h3>
+                <span className="text-xs font-medium text-[#7E756F] block mt-0.5">
+                  {ing.category}
                 </span>
               </div>
-            </Link>
-          ))}
-        </div>
-      </main>
 
-      <Footer />
+              <p className="text-[13px] text-[#4A433E] line-clamp-3 leading-relaxed">
+                {ing.description}
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-[#E8E1D7] flex items-center justify-between text-sm mt-4">
+              <span className="text-xs text-[#7E756F]">
+                {ing.layering}
+              </span>
+              <span className="font-semibold text-[#4A6B5B] group-hover:text-[#3D5A4C] flex items-center gap-1">
+                <span>Ver Ficha Clínica</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

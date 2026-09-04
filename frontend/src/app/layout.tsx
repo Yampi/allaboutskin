@@ -48,12 +48,14 @@ export const metadata: Metadata = {
   },
 };
 
+import AppLayoutClient from "@/components/navigation/AppLayoutClient";
+
 export const viewport: Viewport = {
   themeColor: "#FAF8F5",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({
@@ -67,7 +69,7 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#FAF8F5] text-[#2D2825]">
-        {children}
+        <AppLayoutClient>{children}</AppLayoutClient>
         <Analytics />
       </body>
     </html>

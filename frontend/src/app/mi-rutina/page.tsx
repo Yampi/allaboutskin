@@ -23,11 +23,8 @@ import {
   Activity,
   Bot,
   Clock,
-  ShieldAlert,
-  Compass
+  ShieldAlert
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import {
   getCurrentUser,
   getSavedCustomProtocol,
@@ -205,10 +202,7 @@ export default function MyRoutineDashboardPage() {
   const currentMonthYear = today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
-      <Navbar />
-
-      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-12">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-10 animate-in fade-in">
         
         {/* Header Editorial */}
         <div className="border-b border-[#ECE6DC] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -475,8 +469,6 @@ export default function MyRoutineDashboardPage() {
           </div>
         </div>
 
-      </main>
-
       {/* MODAL: AÑADIR PRODUCTO */}
       {isAddProductOpen && (
         <div className="fixed inset-0 z-50 bg-[#1C1B1A]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
@@ -559,8 +551,6 @@ export default function MyRoutineDashboardPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }

@@ -1,6 +1,4 @@
 import { Metadata } from 'next';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import SkinCyclingWizard from '@/components/SkinCyclingWizard';
 import { Sparkles } from 'lucide-react';
 
@@ -11,28 +9,22 @@ export const metadata: Metadata = {
 
 export default function SkinCyclingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
-      <Navbar />
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-10 animate-in fade-in">
+      {/* Header Introduction */}
+      <div className="text-center max-w-2xl mx-auto space-y-2">
+        <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-wider bg-[#EBF1EE] px-3 py-1 rounded-full inline-block">
+          Metodología Dermatológica & Algoritmo Adaptativo
+        </span>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-semibold text-[#2D2825] tracking-tight">
+          Protocolo Científico de <span className="text-[#4A6B5B]">Skin Cycling</span>
+        </h1>
+        <p className="text-[13px] sm:text-[14px] text-[#7E756F] leading-relaxed max-w-xl mx-auto">
+          Estrategia de ciclado nocturno para optimizar la renovación celular y proteger la barrera cutánea. Obtén los máximos beneficios sin comprometer tu piel.
+        </p>
+      </div>
 
-      <main className="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
-        {/* Header Introduction */}
-        <div className="text-center max-w-2xl mx-auto space-y-2.5">
-          <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest bg-[#EFF5F1] px-3 py-0.5 rounded-full inline-block">
-            Metodología Dermatológica & Algoritmo Adaptativo
-          </span>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#1C1B1A] tracking-tight">
-            Protocolo Científico de <span className="text-[#4F6D60]">Skin Cycling</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed max-w-xl mx-auto">
-            Estrategia de ciclado nocturno para optimizar la renovación celular y proteger la barrera cutánea. Obtén los máximos beneficios sin comprometer tu piel.
-          </p>
-        </div>
-
-        {/* Interactive Diagnostic Wizard */}
-        <SkinCyclingWizard />
-      </main>
-
-      <Footer />
+      {/* Interactive Diagnostic Wizard */}
+      <SkinCyclingWizard />
     </div>
   );
 }

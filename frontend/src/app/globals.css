@@ -14,11 +14,14 @@
   --sand-card: #F2ECE4;
   --sand-card-light: #F8F5F0;
   
-  /* Cycle Phase Accents */
+  /* Cycle Phase Accents Canónicos */
   --soft-rose: #D8A899;
   --soft-rose-light: #FAF0ED;
   --warm-almond: #DFCAAC;
   --warm-almond-light: #FAF5EE;
+  --phase-exfoliation: #C28E6A;
+  --phase-retinoid: #5B4B75;
+  --phase-recovery: #4A6B5B;
   
   /* Typography Text Colors */
   --text-primary: #2D2825;
@@ -35,6 +38,7 @@
   --radius-pill: 9999px;
   --shadow-diffuse: 0 4px 20px rgba(0, 0, 0, 0.04);
   --shadow-diffuse-elevated: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow-luxury: 0 12px 36px rgba(45, 40, 37, 0.05);
 }
 
 @theme inline {
