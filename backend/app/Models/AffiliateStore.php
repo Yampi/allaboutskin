@@ -16,7 +16,13 @@ class AffiliateStore extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_independent' => 'boolean',
         ];
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(StoreBranch::class, 'store_id');
     }
 
     public function productOffers(): HasMany

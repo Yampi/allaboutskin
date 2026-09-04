@@ -6,6 +6,7 @@ import GlobalNavbar from './GlobalNavbar';
 import MobileDock from './MobileDock';
 import ProfileModal from '@/components/mobile/ProfileModal';
 import MicroscopyModal from '@/components/mobile/MicroscopyModal';
+import InStoreNotificationBanner from '@/components/InStoreNotificationBanner';
 
 function LayoutInner({ children }: { children: React.ReactNode }) {
   const { userProfile, updateProfile } = useSkincare();
@@ -27,6 +28,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* 3. Universal Mobile Bottom Dock (Hidden on >= lg) */}
       <MobileDock />
+
+      {/* 3.5. Transparent In-Store Shopping Notification */}
+      <InStoreNotificationBanner />
 
       {/* 4. Global Modals */}
       <ProfileModal

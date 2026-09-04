@@ -241,6 +241,35 @@ export function runClinicalVisionGovernanceTests(): { passed: number; failed: nu
   }) as ClinicalSkinEvaluationResult;
   assert(r13.classification === 'HUMAN_FACE', 'Normal classified as HUMAN_FACE');
   assert(r13.faceAnalysis.skinTypeEstimate === 'NORMAL', 'Biotipo is NORMAL');
+  assert(!!r13.faceAnalysis.faceRegions, 'faceRegions is defined');
+  assert(typeof r13.faceAnalysis.faceRegions.zoneTBox.top === 'number', 'zoneTBox has top coordinate');
+  assert(typeof r13.faceAnalysis.faceRegions.leftCheekBox.left === 'number', 'leftCheekBox has left coordinate');
+  assert(typeof r13.faceAnalysis.faceRegions.rightCheekBox.left === 'number', 'rightCheekBox has right coordinate');
+
+  // Case 17: Explicit face coordinates preserved
+  const r14 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.98,
+    landmarks: validLandmarks,
+    faceRegions: {
+      faceBox: { top: 10, left: 15, width: 70, height: 75 },
+      zoneTBox: { top: 14, left: 32, width: 36, height: 38 },
+      leftCheekBox: { top: 44, left: 18, width: 22, height: 24 },
+      rightCheekBox: { top: 44, left: 60, width: 22, height: 24 },
+    },
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'HIGH',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'VISIBLE_T_ZONE',
+      erythemaMalarIndex: 'ABSENT',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 3,
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r14.faceAnalysis.faceRegions.faceBox.top === 10, 'Preserves explicit faceBox.top');
+  assert(r14.faceAnalysis.faceRegions.zoneTBox.top === 14, 'Preserves explicit zoneTBox.top');
+  assert(r14.faceAnalysis.faceRegions.leftCheekBox.left === 18, 'Preserves explicit leftCheekBox.left');
+  assert(r14.faceAnalysis.faceRegions.rightCheekBox.left === 60, 'Preserves explicit rightCheekBox.left');
 
   return { passed, failed };
 }

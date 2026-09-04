@@ -397,6 +397,13 @@ DEFINICIÓN DE BIOMARCADORES ÓPTICOS (Solo cuando detectedAnatomy es "HUMAN_FAC
    - "MARKED_GENERALIZED": Descamación visible marcada / tirantez evidente.
 5. fitzpatrickPhototypeEstimate: Número entero del 1 al 6 según la escala Fitzpatrick (I a VI).
 
+COORDENADAS ANATÓMICAS FACIALES (Porcentajes normalizados de 0 a 100 respecto a las dimensiones de la imagen):
+Solo cuando detectedAnatomy es "HUMAN_FACE", proporciona las coordenadas de las zonas dérmicas sobre el rostro del sujeto en la foto:
+- "faceBox": Bounding box de la cara completa { "top": número 0-100, "left": número 0-100, "width": número 0-100, "height": número 0-100 }
+- "zoneTBox": Región que cubre la frente y puente nasal (Zona T) { "top": número, "left": número, "width": número, "height": número }
+- "leftCheekBox": Región malar (pómulo/mejilla visible en la mitad izquierda de la imagen) { "top": número, "left": número, "width": número, "height": número }
+- "rightCheekBox": Región malar (pómulo/mejilla visible en la mitad derecha de la imagen) { "top": número, "left": número, "width": número, "height": número }
+
 ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
 {
   "detectedAnatomy": "HUMAN_FACE" | "HAND_OR_ARM" | "FOOT_OR_LEG" | "TORSO_OR_BACK" | "OCCLUDED_OR_INCOMPLETE_FACE" | "COSMETIC_PRODUCT" | "ANIMAL_OR_PET" | "NON_BIOLOGICAL_OBJECT" | "UNREADABLE_OR_POOR_QUALITY",
@@ -407,6 +414,12 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
     "oralCommissureVisible": true | false,
     "malarCheeksVisible": true | false,
     "foreheadVisible": true | false
+  },
+  "faceRegions": {
+    "faceBox": { "top": 12, "left": 20, "width": 60, "height": 70 },
+    "zoneTBox": { "top": 16, "left": 36, "width": 28, "height": 35 },
+    "leftCheekBox": { "top": 40, "left": 22, "width": 20, "height": 22 },
+    "rightCheekBox": { "top": 40, "left": 58, "width": 20, "height": 22 }
   },
   "opticalBiomarkers": {
     "tZoneSebumReflectance": "NONE" | "LOW" | "MODERATE" | "HIGH",
@@ -426,7 +439,7 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
   }
 }`;
 
-  const prompt = `Analiza biométricamente y dermatológicamente esta fotografía conforme a las definiciones operacionales. Devuelve el JSON con detectedAnatomy, landmarks y opticalBiomarkers o productData.`;
+  const prompt = `Analiza biométricamente y dermatológicamente esta fotografía conforme a las definiciones operacionales. Devuelve el JSON con detectedAnatomy, landmarks, faceRegions (si es rostro) y opticalBiomarkers o productData.`;
 
   // Strip base64 data url prefix and remove whitespace
   const cleanBase64 = base64Data

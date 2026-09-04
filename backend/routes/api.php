@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\LifecycleController;
 use App\Http\Controllers\Api\RoutineController;
 use App\Http\Controllers\Api\SkinProfileController;
+use App\Http\Controllers\Api\StoreDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +46,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/products', [CatalogController::class, 'products']);
         Route::get('/products/{slug}', [CatalogController::class, 'productDetail']);
         Route::get('/brands', [CatalogController::class, 'brands']);
+    });
+
+    // 3.5. Local Stores, Branches & In-Store Shopping (Public)
+    Route::prefix('stores')->group(function () {
+        Route::get('/nearby', [StoreDirectoryController::class, 'nearby']);
+        Route::get('/cities', [StoreDirectoryController::class, 'cities']);
+        Route::get('/branches/{identifier}/products', [StoreDirectoryController::class, 'branchProducts']);
+        Route::post('/suggest', [StoreDirectoryController::class, 'suggest']);
     });
 
     // 4. Authenticated User Profile, Routines & Lifecycle

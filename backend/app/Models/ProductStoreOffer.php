@@ -16,6 +16,7 @@ class ProductStoreOffer extends Model
     {
         return [
             'price' => 'float',
+            'price_ves' => 'float',
             'in_stock' => 'boolean',
             'last_checked_at' => 'datetime',
         ];
@@ -29,5 +30,10 @@ class ProductStoreOffer extends Model
     public function store(): BelongsTo
     {
         return $this->belongsTo(AffiliateStore::class, 'store_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(StoreBranch::class, 'branch_id');
     }
 }

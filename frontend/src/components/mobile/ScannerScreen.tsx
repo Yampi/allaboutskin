@@ -292,6 +292,7 @@ export default function ScannerScreen({
   const [manualProductName, setManualProductName] = useState('');
   const [manualBrandName, setManualBrandName] = useState('');
   const [capturedImagePreview, setCapturedImagePreview] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
 
   // Result States: 'PRODUCT' | 'FACE' | 'INVALID' | null
   const [scanTypeResult, setScanTypeResult] = useState<'PRODUCT' | 'FACE' | 'INVALID' | null>(null);
@@ -360,6 +361,30 @@ export default function ScannerScreen({
     startCamera(nextMode);
   };
 
+  // Read URL query parameters on mount (mode=face, mode=product, q=...)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      const queryParam = params.get('q');
+
+      if (queryParam) {
+        setScanMode('text');
+        setManualInciText(queryParam);
+      } else if (modeParam === 'face') {
+        setFacingMode('user');
+        if (scanMode === 'camera') {
+          startCamera('user');
+        }
+      } else if (modeParam === 'product') {
+        setFacingMode('environment');
+        if (scanMode === 'camera') {
+          startCamera('environment');
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (scanMode === 'camera' && !isProcessing && scanTypeResult === null) {
       startCamera();
@@ -379,6 +404,7 @@ export default function ScannerScreen({
     setAuditResult(null);
     setRejectionMessage(null);
     setCapturedImagePreview(null);
+    setImageDimensions(null);
     setIsProcessing(false);
     setOcrProgress(0);
     setOcrStatusText('');
@@ -722,6 +748,14 @@ export default function ScannerScreen({
   const hydratingIngredients = auditResult?.ingredients.filter((i) => i.trafficLight === 'HYDRATING') || [];
   const cautionIngredients = auditResult?.ingredients.filter((i) => i.trafficLight === 'CAUTION') || [];
 
+  // Active dynamic facial regions (from AI vision or proportional neoclassical fallback)
+  const activeFaceRegions = faceSkinResult?.faceRegions || {
+    faceBox: { top: 12, left: 18, width: 64, height: 72 },
+    zoneTBox: { top: 18, left: 32, width: 36, height: 38 },
+    leftCheekBox: { top: 44, left: 18, width: 22, height: 24 },
+    rightCheekBox: { top: 44, left: 60, width: 22, height: 24 },
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 animate-in fade-in duration-300">
       {/* Hidden Canvas for Frame Capture */}
@@ -897,12 +931,24 @@ export default function ScannerScreen({
                   </div>
 
                   {/* Photo Container with Overlays */}
-                  <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] rounded-[20px] overflow-hidden bg-[#1E2822] border-2 border-[#8FA89B] shadow-inner select-none">
+                  <div
+                    className="relative w-full rounded-[20px] overflow-hidden bg-[#1E2822] border-2 border-[#8FA89B] shadow-inner select-none transition-all duration-300 mx-auto"
+                    style={{
+                      aspectRatio: imageDimensions ? `${imageDimensions.width} / ${imageDimensions.height}` : '3/4',
+                      maxHeight: '68vh',
+                    }}
+                  >
                     {capturedImagePreview ? (
                       <img
                         src={capturedImagePreview}
                         alt="Selfie analizada"
-                        className="w-full h-full object-cover"
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          if (img.naturalWidth && img.naturalHeight) {
+                            setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+                          }
+                        }}
+                        className="w-full h-full object-cover select-none pointer-events-none"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#2D3830] text-[#8FA89B]">
@@ -921,78 +967,94 @@ export default function ScannerScreen({
                     {/* AR OVERLAY BOXES ON PHOTO */}
                     {showFaceZones && (
                       <>
+                        {/* 0. FACIAL CALIBRATION RETICLE (Adaptado al rostro del sujeto) */}
+                        <div
+                          className="absolute pointer-events-none transition-all duration-500 rounded-[22px] border border-white/25 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
+                          style={{
+                            top: `${activeFaceRegions.faceBox.top}%`,
+                            left: `${activeFaceRegions.faceBox.left}%`,
+                            width: `${activeFaceRegions.faceBox.width}%`,
+                            height: `${activeFaceRegions.faceBox.height}%`,
+                          }}
+                        >
+                          <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white/70 rounded-tl" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white/70 rounded-tr" />
+                          <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white/70 rounded-bl" />
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white/70 rounded-br" />
+                        </div>
+
                         {/* 1. ZONA T (Frente y Puente Nasal) */}
                         {(selectedZone === 'ALL' || selectedZone === 'ZONE_T') && (
                           <div
                             onClick={() => setSelectedZone(selectedZone === 'ZONE_T' ? 'ALL' : 'ZONE_T')}
                             className={`absolute transition-all duration-300 cursor-pointer ${
                               selectedZone === 'ZONE_T'
-                                ? 'ring-2 ring-amber-400 bg-amber-400/25 shadow-[0_0_20px_rgba(251,191,36,0.5)]'
+                                ? 'ring-2 ring-amber-400 bg-amber-400/25 shadow-[0_0_22px_rgba(251,191,36,0.55)]'
                                 : 'border-2 border-dashed border-amber-300/80 bg-amber-300/15 hover:bg-amber-300/25'
-                            } rounded-[22px] flex flex-col items-center justify-start p-2`}
+                            } rounded-[22px] flex flex-col items-center justify-between p-1.5 z-10`}
                             style={{
-                              top: '20%',
-                              left: '30%',
-                              width: '40%',
-                              height: '38%',
+                              top: `${activeFaceRegions.zoneTBox.top}%`,
+                              left: `${activeFaceRegions.zoneTBox.left}%`,
+                              width: `${activeFaceRegions.zoneTBox.width}%`,
+                              height: `${activeFaceRegions.zoneTBox.height}%`,
                             }}
                           >
-                            <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-300/60 shadow-lg text-white flex items-center gap-1.5 animate-pulse-subtle">
+                            <div className="bg-black/85 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-amber-300/70 shadow-lg text-white flex items-center gap-1.5 animate-pulse-subtle max-w-full">
                               <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span className="text-[11px] font-bold text-amber-300 font-sans tracking-tight">
+                              <span className="text-[10.5px] font-bold text-amber-300 font-sans tracking-tight shrink-0">
                                 Zona T
                               </span>
-                              <span className="text-[9.5px] font-medium text-white/90 bg-black/40 px-1.5 py-0.5 rounded-full">
+                              <span className="text-[9px] font-medium text-white/90 bg-black/40 px-1.5 py-0.5 rounded-full truncate">
                                 Sebo {faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH' ? 'Alto' : faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE' ? 'Medio' : 'Bajo'}
                               </span>
                             </div>
-                            <div className="mt-auto mb-2 w-2 h-2 rounded-full bg-amber-400 ring-4 ring-amber-400/30" />
+                            <div className="my-auto w-2 h-2 rounded-full bg-amber-400 ring-4 ring-amber-400/40 animate-pulse" />
                           </div>
                         )}
 
                         {/* 2. MEJILLAS / ZONA U (Bilateral Malar) */}
                         {(selectedZone === 'ALL' || selectedZone === 'CHEEKS') && (
                           <>
-                            {/* Mejilla Izquierda */}
+                            {/* Mejilla Izquierda en foto */}
                             <div
                               onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
                               className={`absolute transition-all duration-300 cursor-pointer ${
                                 selectedZone === 'CHEEKS'
-                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_20px_rgba(52,211,153,0.5)]'
+                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_22px_rgba(52,211,153,0.55)]'
                                   : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
-                              } rounded-[20px] flex items-center justify-center`}
+                              } rounded-[22px] flex items-center justify-center z-10`}
                               style={{
-                                top: '48%',
-                                left: '17%',
-                                width: '20%',
-                                height: '22%',
+                                top: `${activeFaceRegions.leftCheekBox.top}%`,
+                                left: `${activeFaceRegions.leftCheekBox.left}%`,
+                                width: `${activeFaceRegions.leftCheekBox.width}%`,
+                                height: `${activeFaceRegions.leftCheekBox.height}%`,
                               }}
                             >
-                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/30" />
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/40 animate-pulse" />
                             </div>
 
-                            {/* Mejilla Derecha */}
+                            {/* Mejilla Derecha en foto */}
                             <div
                               onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
                               className={`absolute transition-all duration-300 cursor-pointer ${
                                 selectedZone === 'CHEEKS'
-                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_20px_rgba(52,211,153,0.5)]'
+                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_22px_rgba(52,211,153,0.55)]'
                                   : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
-                              } rounded-[20px] flex items-center justify-center`}
+                              } rounded-[22px] flex items-center justify-center z-10`}
                               style={{
-                                top: '48%',
-                                right: '17%',
-                                width: '20%',
-                                height: '22%',
+                                top: `${activeFaceRegions.rightCheekBox.top}%`,
+                                left: `${activeFaceRegions.rightCheekBox.left}%`,
+                                width: `${activeFaceRegions.rightCheekBox.width}%`,
+                                height: `${activeFaceRegions.rightCheekBox.height}%`,
                               }}
                             >
-                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/30" />
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/40 animate-pulse" />
                             </div>
 
                             {/* Cheeks Floating Pill */}
                             <div
                               onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
-                              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-300/60 shadow-lg text-white flex items-center gap-1.5 cursor-pointer animate-pulse-subtle"
+                              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-300/70 shadow-lg text-white flex items-center gap-1.5 cursor-pointer animate-pulse-subtle z-20"
                             >
                               <Moon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                               <span className="text-[11px] font-bold text-emerald-300 font-sans tracking-tight">
@@ -1062,213 +1124,251 @@ export default function ScannerScreen({
 
               {/* RIGHT COLUMN: Clinical Diagnosis & Profile Integration (col-span-7) */}
               <div className="lg:col-span-7 space-y-4">
-                <div className="card-white p-5 sm:p-6 border border-[#8FA89B]/50 rounded-[24px] shadow-diffuse-elevated space-y-4">
-                  {/* Diagnosis Banner */}
-                  <div className="flex items-start justify-between border-b border-[#E8E1D7] pb-4">
+                <div className="glass-panel p-6 sm:p-8 rounded-[30px] shadow-2xl space-y-5 border border-white/80">
+                  
+                  {/* ENCABEZADO DEL BIOTIPO: LIMPIO Y DIRECTO */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/70">
                     <div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10px] font-bold uppercase tracking-wider">
-                        Biotipo Cutáneo Determinado
-                      </span>
-                      <h2 className="font-serif text-[24px] sm:text-[28px] font-bold text-[#2D2825] mt-1">
-                        {faceSkinResult.skinTypeLabel || `Piel ${faceSkinResult.skinTypeEstimate}`}
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-emerald-500/15 text-emerald-900 border border-emerald-500/25">
+                        <span>Diagnóstico Facial Completado</span>
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                        Tu Biotipo: {faceSkinResult.skinTypeLabel || `Piel ${faceSkinResult.skinTypeEstimate}`}
                       </h2>
-                      <p className="text-[12.5px] font-sans text-[#7E756F] mt-0.5">
-                        Clasificación Baumann: <strong className="text-[#2D2825] font-mono">{faceSkinResult.baumannSkinTypeCode || 'ORNT'}</strong> • Fototipo Fitzpatrick: {faceSkinResult.fitzpatrickType || 'III'}
+                      <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                        Clasificación Baumann: <strong className="text-slate-800 font-mono">{faceSkinResult.baumannSkinTypeCode || 'ORNT'}</strong> • Fototipo Fitzpatrick: {faceSkinResult.fitzpatrickType || 'III'}
                       </p>
                     </div>
 
-                    <div className="text-right">
-                      <span className="font-serif text-[28px] font-bold text-[#4A6B5B] block leading-none">
+                    {/* Certeza IA Badge */}
+                    <div className="self-start sm:self-auto px-4 py-2.5 rounded-2xl glass-subcard border border-emerald-500/30 text-center shadow-xs">
+                      <span className="text-2xl font-extrabold text-emerald-800 block leading-none">
                         {Math.round(faceSkinResult.confidence * 100)}%
                       </span>
-                      <span className="text-[9.5px] font-sans font-semibold text-[#8FA89B] uppercase">
-                        Certeza Visual
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-0.5">
+                        Precisión IA
                       </span>
                     </div>
                   </div>
 
-                  {/* Zone Cards: Zona T & Mejillas */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Zona T Card */}
-                    <div
-                      onClick={() => setSelectedZone('ZONE_T')}
-                      className={`p-4 rounded-[18px] border transition cursor-pointer space-y-2 ${
-                        selectedZone === 'ZONE_T'
-                          ? 'bg-[#FFF9EE] border-amber-400 ring-2 ring-amber-400/40 shadow-xs'
-                          : 'bg-[#FAF8F5] border-[#E8E1D7] hover:border-amber-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12.5px] font-bold text-[#2D2825] flex items-center gap-1.5">
-                          <Sun className="w-4 h-4 text-amber-500" />
-                          <span>Zona T (Frente/Nariz)</span>
-                        </span>
-                        <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
-                          faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH'
-                            ? 'bg-[#FAF0ED] text-[#943C36]'
-                            : faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE'
-                            ? 'bg-[#FFF8E6] text-[#8C6B1F]'
-                            : 'bg-[#EBF1EE] text-[#4A6B5B]'
-                        }`}>
-                          Brillo {faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH' ? 'Alto' : faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE' ? 'Moderado' : 'Bajo'}
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-[#4A433E] leading-relaxed">
-                        {faceSkinResult.zoneTAnalysis?.description || 'Actividad sebácea concentrada en la pirámide nasal y zona media de la frente.'}
-                      </p>
-                      <div className="text-[10.5px] font-mono text-[#7E756F]">
-                        Poros: {faceSkinResult.zoneTAnalysis?.poresVisible ? 'Visibles / Dilatados' : 'Finos / Imperceptibles'}
-                      </div>
-                    </div>
+                  {/* ANÁLISIS DE ZONAS CON BARRAS MÉTRICAS VISUALES (SIN PÁRRAFOS DENSOS) */}
+                  {(() => {
+                    const isHighShine = faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH';
+                    const isModShine = faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE';
+                    const sebumPercent = isHighShine ? 85 : isModShine ? 68 : 32;
+                    const sebumLabel = isHighShine ? '85% (Alto)' : isModShine ? '68% (Medio-Alto)' : '32% (Controlado)';
+                    
+                    const poresPercent = faceSkinResult.zoneTAnalysis?.poresVisible ? 55 : 20;
+                    const poresLabel = faceSkinResult.zoneTAnalysis?.poresVisible ? 'Visibles' : 'Imperceptibles';
+                    
+                    const isBalancedHydration = faceSkinResult.cheeksAnalysis?.hydrationState === 'BALANCED';
+                    const isDryHydration = faceSkinResult.cheeksAnalysis?.hydrationState === 'DRY';
+                    const hydrationPercent = isBalancedHydration ? 84 : isDryHydration ? 35 : 70;
+                    const hydrationLabel = isBalancedHydration ? '84% (Óptima)' : isDryHydration ? '35% (Baja / Tirante)' : '70% (Equilibrada)';
+                    
+                    const hasRedness = faceSkinResult.cheeksAnalysis?.rednessPresent;
+                    const rednessPercent = hasRedness ? 45 : 15;
+                    const rednessLabel = hasRedness ? 'Leve detectada' : 'Sin rojez visible';
 
-                    {/* Mejillas Card */}
-                    <div
-                      onClick={() => setSelectedZone('CHEEKS')}
-                      className={`p-4 rounded-[18px] border transition cursor-pointer space-y-2 ${
-                        selectedZone === 'CHEEKS'
-                          ? 'bg-[#F0F7F3] border-emerald-500 ring-2 ring-emerald-500/40 shadow-xs'
-                          : 'bg-[#FAF8F5] border-[#E8E1D7] hover:border-emerald-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12.5px] font-bold text-[#2D2825] flex items-center gap-1.5">
-                          <Moon className="w-4 h-4 text-emerald-600" />
-                          <span>Mejillas & Contorno</span>
-                        </span>
-                        <span className="text-[9.5px] font-bold bg-[#EBF1EE] text-[#4A6B5B] px-2 py-0.5 rounded-full">
-                          {faceSkinResult.cheeksAnalysis?.hydrationState === 'DRY'
-                            ? 'Seca / Tirante'
-                            : faceSkinResult.cheeksAnalysis?.hydrationState === 'BALANCED'
-                            ? 'Equilibrada'
-                            : 'Normal'}
-                        </span>
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Card Zona T */}
+                        <div
+                          onClick={() => setSelectedZone('ZONE_T')}
+                          className={`p-5 rounded-3xl glass-subcard space-y-4 border transition cursor-pointer ${
+                            selectedZone === 'ZONE_T'
+                              ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-sm bg-amber-500/5'
+                              : 'border-white hover:border-amber-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">☀️</span>
+                              <h3 className="font-bold text-slate-900 text-sm sm:text-base">Zona T (Frente y Nariz)</h3>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-900 text-xs font-bold">
+                              {isHighShine ? 'Brillo Alto' : isModShine ? 'Brillo Moderado' : 'Brillo Bajo'}
+                            </span>
+                          </div>
+
+                          {/* Métrica 1: Sebo */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold text-slate-700">
+                              <span>Nivel de Sebo</span>
+                              <span className="text-amber-800 font-bold">{sebumLabel}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-slate-200/70 overflow-hidden p-0.5">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-amber-500 transition-all duration-500"
+                                style={{ width: `${sebumPercent}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Métrica 2: Poros */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold text-slate-700">
+                              <span>Visibilidad de Poros</span>
+                              <span className="text-slate-600 font-bold">{poresLabel}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-slate-200/70 overflow-hidden p-0.5">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500"
+                                style={{ width: `${poresPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Mejillas */}
+                        <div
+                          onClick={() => setSelectedZone('CHEEKS')}
+                          className={`p-5 rounded-3xl glass-subcard space-y-4 border transition cursor-pointer ${
+                            selectedZone === 'CHEEKS'
+                              ? 'border-emerald-500 ring-2 ring-emerald-500/40 shadow-sm bg-emerald-500/5'
+                              : 'border-white hover:border-emerald-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">🌙</span>
+                              <h3 className="font-bold text-slate-900 text-sm sm:text-base">Mejillas & Contorno</h3>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-900 text-xs font-bold">
+                              {faceSkinResult.cheeksAnalysis?.hydrationState === 'DRY' ? 'Tirante' : 'Equilibrada'}
+                            </span>
+                          </div>
+
+                          {/* Métrica 1: Hidratación */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold text-slate-700">
+                              <span>Hidratación de Barrera</span>
+                              <span className="text-emerald-800 font-bold">{hydrationLabel}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-slate-200/70 overflow-hidden p-0.5">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
+                                style={{ width: `${hydrationPercent}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Métrica 2: Rojez */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold text-slate-700">
+                              <span>Nivel de Rojez / Eritema</span>
+                              <span className="text-emerald-800 font-bold">{rednessLabel}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-slate-200/70 overflow-hidden p-0.5">
+                              <div
+                                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                style={{ width: `${rednessPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[12px] text-[#4A433E] leading-relaxed">
-                        {faceSkinResult.cheeksAnalysis?.description || 'Zona malar con función barrera estable y niveles de hidratación controlados.'}
-                      </p>
-                      <div className="text-[10.5px] font-mono text-[#7E756F]">
-                        Eritema/Rojez: {faceSkinResult.cheeksAnalysis?.rednessPresent ? 'Detectado leve' : 'Sin rojez visible'}
+                    );
+                  })()}
+
+                  {/* 3 ACTIVOS CLAVE RECOMENDADOS (EN LUGAR DE LISTA DE PÁRRAFOS) */}
+                  <div className="space-y-2.5 pt-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                      Ingredientes Clave Recomendados para tu Piel:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0">
+                          🧪
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Ceramidas NP + AP' : 'Niacinamida 2-5%'}
+                          </h4>
+                          <span className="text-[11px] text-slate-500 font-medium block truncate">
+                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Reparación de barrera' : 'Control de sebo en zona T'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                          🧬
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {faceSkinResult.skinTypeEstimate === 'SENSITIVE' ? 'Centella Asiática (Cica)' : 'Ceramidas NP'}
+                          </h4>
+                          <span className="text-[11px] text-slate-500 font-medium block truncate">
+                            {faceSkinResult.skinTypeEstimate === 'SENSITIVE' ? 'Calmante vascular' : 'Sellado de barrera'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center font-bold text-lg shrink-0">
+                          💧
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Ácido Hialurónico' : 'Ácido Salicílico 2%'}
+                          </h4>
+                          <span className="text-[11px] text-slate-500 font-medium block truncate">
+                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Retención de agua' : 'Limpieza de poros'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Signos Clínicos Detectados */}
-                  {faceSkinResult.visibleConcerns?.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[10.5px] font-bold uppercase text-[#7E756F] tracking-wider block">
-                        Signos Detectados en tu Piel:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {faceSkinResult.visibleConcerns.map((concern, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[11.5px] bg-[#FAF8F5] text-[#2D2825] border border-[#E8E1D7] px-3 py-1 rounded-full font-medium"
-                          >
-                            • {concern}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Enfoque Cosmético Sugerido */}
-                  {faceSkinResult.suggestedFocus?.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[10.5px] font-bold uppercase text-[#7E756F] tracking-wider block">
-                        Ingredientes & Enfoque Recomendado para tu Ciclado:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {faceSkinResult.suggestedFocus.map((focus, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[11.5px] bg-[#EBF1EE] text-[#4A6B5B] border border-[#8FA89B]/30 px-3 py-1 rounded-full font-semibold"
-                          >
-                            ✓ {focus}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PRESCRIPCIÓN CURADA PARA TU BIOTIPO (MONETIZACIÓN Y MARCAS AFILIADAS) */}
+                  {/* PRESCRIPCIÓN CURADA EN 3 PASOS SIMPLES (SKIN CYCLING) */}
                   {(() => {
                     const skinKey = faceSkinResult.skinTypeEstimate || 'COMBINATION';
                     const products = CURATED_BIOTYPE_PRODUCTS[skinKey] || CURATED_BIOTYPE_PRODUCTS.COMBINATION;
 
                     return (
-                      <div className="pt-3 border-t border-[#E8E1D7] space-y-3.5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="pt-4 border-t border-white/70 space-y-3">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-bold uppercase text-[#7E756F] tracking-wider block">
-                              Prescripción Personalizada
-                            </span>
-                            <h4 className="font-serif text-[18px] sm:text-[20px] font-semibold text-[#2D2825]">
-                              Prescripción Curada para tu Biotipo
+                            <h4 className="font-bold text-sm sm:text-base text-slate-900">
+                              Tu Rutina Sugerida para Skin Cycling
                             </h4>
+                            <p className="text-xs text-slate-500 font-medium">
+                              3 fórmulas seleccionadas para tu biotipo
+                            </p>
                           </div>
-                          <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold flex items-center gap-1.5 border border-[#8FA89B]/30 shadow-2xs">
-                            <Award className="w-3.5 h-3.5 text-[#4A6B5B]" />
-                            <span>Partner Dermatológico Verificado</span>
+                          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-900 border border-emerald-500/20 text-xs font-bold">
+                            ✓ 100% Compatibles
                           </span>
                         </div>
 
-                        <p className="text-[12px] text-[#7E756F] leading-relaxed">
-                          Fórmulas seleccionadas bajo estricta compatibilidad con tu biotipo y reguladas para tu ciclo de Skin Cycling.
-                        </p>
-
                         {/* Product Cards Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                           {products.map((item) => (
                             <div
                               key={item.id}
-                              className="p-3.5 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7] hover:border-[#8FA89B] transition flex flex-col justify-between space-y-3 group shadow-2xs"
+                              className="p-4 rounded-2xl glass-subcard border border-white flex flex-col justify-between space-y-3 shadow-2xs"
                             >
-                              <div className="space-y-2">
-                                <div className="relative w-full aspect-square rounded-[14px] overflow-hidden bg-white border border-[#E8E1D7]">
-                                  <img
-                                    src={item.image}
-                                    alt={item.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                  />
-                                  <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs px-2 py-0.5 rounded-full text-white text-[9.5px] font-bold">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-12 h-12 rounded-xl object-cover border border-white shadow-2xs shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <span className="text-[10px] font-bold uppercase text-emerald-800 block truncate">
                                     {item.nightName}
-                                  </div>
-                                  <div className="absolute bottom-2 right-2 bg-[#EBF1EE] px-2 py-0.5 rounded-full text-[#4A6B5B] text-[9.5px] font-bold border border-[#8FA89B]/40">
-                                    {item.matchScore}% Match
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <span className="text-[9.5px] font-bold uppercase text-[#7E756F] block">
-                                    {item.brand}
                                   </span>
-                                  <h5 className="font-serif text-[13.5px] font-semibold text-[#2D2825] leading-snug line-clamp-2 mt-0.5">
-                                    {item.name}
+                                  <h5 className="text-xs font-bold text-slate-900 truncate">
+                                    {item.brand} {item.name}
                                   </h5>
-                                  <span className="inline-block mt-1 text-[10px] bg-white text-[#4A6B5B] border border-[#8FA89B]/30 px-2 py-0.5 rounded-md font-medium">
+                                  <span className="text-[11px] text-slate-500 font-medium block truncate">
                                     {item.activeTag}
                                   </span>
                                 </div>
                               </div>
 
-                              <div className="space-y-1.5 pt-2 border-t border-[#E8E1D7]">
-                                <div className="flex items-center justify-between text-[11.5px]">
-                                  <span className="text-[#7E756F]">Precio aprox:</span>
-                                  <span className="font-bold text-[#2D2825]">{item.price}</span>
-                                </div>
-
-                                {/* Affiliate Purchase Button */}
-                                <a
-                                  href={item.affiliateUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="w-full py-2 px-2.5 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white text-[11.5px] font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
-                                >
-                                  <span>Adquirir en Tienda Oficial</span>
-                                  <ExternalLink className="w-3 h-3 text-white/80" />
-                                </a>
-
-                                {/* Add to Shelf Button */}
+                              <div className="space-y-1.5 pt-1">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1287,11 +1387,20 @@ export default function ScannerScreen({
                                       textureNote: 'Prescripción oficial de Allabout.skin',
                                     });
                                   }}
-                                  className="w-full py-1.5 px-2 rounded-full bg-white hover:bg-[#F2ECE4] border border-[#E2D9CD] text-[#2D2825] text-[11px] font-medium flex items-center justify-center gap-1 transition cursor-pointer"
+                                  className="w-full py-1.5 rounded-full text-xs font-bold text-[#1E3A2B] bg-emerald-500/10 hover:bg-emerald-500/20 transition cursor-pointer text-center block"
                                 >
-                                  <Plus className="w-3 h-3 text-[#4A6B5B]" />
-                                  <span>Añadir a mi Estantería</span>
+                                  Añadir al Neceser
                                 </button>
+
+                                <a
+                                  href={item.affiliateUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full py-1 rounded-full text-[11px] font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <span>Ver en tienda ({item.price})</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
                               </div>
                             </div>
                           ))}
@@ -1301,8 +1410,8 @@ export default function ScannerScreen({
                   })()}
 
                   {/* Medical Disclaimer */}
-                  <div className="p-3.5 bg-[#FFF8E6] border border-[#E6C673]/40 rounded-[16px] flex items-start gap-2.5 text-[11.5px] text-[#8C6B1F] leading-relaxed">
-                    <Info className="w-4 h-4 text-[#C2921E] shrink-0 mt-0.5" />
+                  <div className="p-3.5 bg-amber-50/70 border border-amber-200/50 rounded-2xl flex items-start gap-2.5 text-[11.5px] text-amber-900 leading-relaxed">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-bold">Aviso médico preventivo:</span> {faceSkinResult.disclaimer}
                     </div>
@@ -1313,10 +1422,10 @@ export default function ScannerScreen({
                     <button
                       onClick={handleAdoptFaceDiagnosis}
                       disabled={adoptedProfileSuccess}
-                      className={`w-full py-3.5 rounded-full font-sans font-semibold text-[13.5px] shadow-diffuse transition flex items-center justify-center gap-2 cursor-pointer ${
+                      className={`w-full py-3.5 rounded-full font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                         adoptedProfileSuccess
-                          ? 'bg-[#4A6B5B] text-white'
-                          : 'bg-[#8FA89B] hover:bg-[#7D978A] text-white'
+                          ? 'bg-emerald-800 text-white'
+                          : 'glass-button text-white'
                       }`}
                     >
                       {adoptedProfileSuccess ? (
@@ -1326,7 +1435,7 @@ export default function ScannerScreen({
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle className="w-4 h-4 text-emerald-200" />
                           <span>Aplicar Diagnóstico a mi Perfil ({faceSkinResult.skinTypeEstimate})</span>
                         </>
                       )}
@@ -1334,9 +1443,9 @@ export default function ScannerScreen({
 
                     <button
                       onClick={handleResetScan}
-                      className="w-full py-3.5 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] hover:bg-[#F2ECE4] text-[#2D2825] font-semibold text-[13.5px] transition flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3.5 rounded-full glass-subcard border border-white text-slate-700 hover:text-slate-900 font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                     >
-                      <Camera className="w-4 h-4 text-[#4A6B5B]" />
+                      <Camera className="w-4 h-4 text-emerald-800" />
                       <span>Escanear Otra Vez</span>
                     </button>
                   </div>

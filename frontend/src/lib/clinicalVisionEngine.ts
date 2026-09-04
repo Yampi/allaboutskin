@@ -35,6 +35,20 @@ export type DesquamationLevel = 'NONE' | 'MILD_LOCALIZED' | 'MARKED_GENERALIZED'
 export type SkinHydrationState = 'DRY' | 'NORMAL' | 'BALANCED' | 'DEHYDRATED';
 export type FitzpatrickScale = 1 | 2 | 3 | 4 | 5 | 6;
 
+export interface NormalizedBoundingBox {
+  top: number; // percentage 0 - 100
+  left: number; // percentage 0 - 100
+  width: number; // percentage 0 - 100
+  height: number; // percentage 0 - 100
+}
+
+export interface FaceRegionsCoordinates {
+  faceBox: NormalizedBoundingBox;
+  zoneTBox: NormalizedBoundingBox;
+  leftCheekBox: NormalizedBoundingBox;
+  rightCheekBox: NormalizedBoundingBox;
+}
+
 export interface ExtractedClinicalBiomarkers {
   detectedAnatomy: AnatomicalClassificationType;
   confidence: number;
@@ -45,6 +59,7 @@ export interface ExtractedClinicalBiomarkers {
     malarCheeksVisible: boolean;
     foreheadVisible: boolean;
   };
+  faceRegions?: Partial<FaceRegionsCoordinates>;
   opticalBiomarkers?: {
     tZoneSebumReflectance: SebumReflectanceLevel;
     cheeksSebumReflectance: SebumReflectanceLevel;
@@ -72,6 +87,7 @@ export interface ClinicalSkinEvaluationResult {
     skinTypeLabel: string;
     baumannSkinTypeCode: string; // e.g. OSPW, ORNT, DSNW, DRNT, etc.
     fitzpatrickType: FitzpatrickScale;
+    faceRegions: FaceRegionsCoordinates;
     zoneTAnalysis: {
       shineLevel: 'HIGH' | 'MODERATE' | 'LOW';
       poresVisible: boolean;
@@ -207,6 +223,82 @@ export const CLINICAL_REJECTIONS_CATALOG: Record<
 };
 
 /**
+ * Derives and normalizes facial anatomical zones (Zone T, Malar Cheeks)
+ * with Da Vinci / Farkas neoclassical facial third proportions.
+ */
+export function deriveFaceRegions(
+  extractedRegions?: Partial<FaceRegionsCoordinates>
+): FaceRegionsCoordinates {
+  const defaultFace: NormalizedBoundingBox = { top: 12, left: 18, width: 64, height: 72 };
+  const rawFace = extractedRegions?.faceBox;
+
+  const faceBox: NormalizedBoundingBox =
+    rawFace && typeof rawFace.width === 'number' && rawFace.width > 5 && rawFace.height > 5
+      ? {
+          top: Math.max(0, Math.min(90, Math.round(rawFace.top))),
+          left: Math.max(0, Math.min(90, Math.round(rawFace.left))),
+          width: Math.max(15, Math.min(100, Math.round(rawFace.width))),
+          height: Math.max(15, Math.min(100, Math.round(rawFace.height))),
+        }
+      : defaultFace;
+
+  // Proportional anatomical derivations based on faceBox:
+  // Zone T spans upper third (forehead) and central bridge (nasal dorsum)
+  const derivedZoneT: NormalizedBoundingBox = {
+    top: Math.max(0, Math.round(faceBox.top + faceBox.height * 0.04)),
+    left: Math.max(0, Math.round(faceBox.left + faceBox.width * 0.26)),
+    width: Math.min(100, Math.round(faceBox.width * 0.48)),
+    height: Math.min(100, Math.round(faceBox.height * 0.50)),
+  };
+
+  // Left cheek in image (viewer's left side)
+  const derivedLeftCheek: NormalizedBoundingBox = {
+    top: Math.max(0, Math.round(faceBox.top + faceBox.height * 0.38)),
+    left: Math.max(0, Math.round(faceBox.left + faceBox.width * 0.06)),
+    width: Math.min(100, Math.round(faceBox.width * 0.30)),
+    height: Math.min(100, Math.round(faceBox.height * 0.28)),
+  };
+
+  // Right cheek in image (viewer's right side)
+  const derivedRightCheek: NormalizedBoundingBox = {
+    top: Math.max(0, Math.round(faceBox.top + faceBox.height * 0.38)),
+    left: Math.max(0, Math.round(faceBox.left + faceBox.width * 0.64)),
+    width: Math.min(100, Math.round(faceBox.width * 0.30)),
+    height: Math.min(100, Math.round(faceBox.height * 0.28)),
+  };
+
+  const sanitizeBox = (
+    box?: NormalizedBoundingBox,
+    fallback?: NormalizedBoundingBox
+  ): NormalizedBoundingBox => {
+    if (
+      !box ||
+      typeof box.top !== 'number' ||
+      typeof box.left !== 'number' ||
+      typeof box.width !== 'number' ||
+      typeof box.height !== 'number' ||
+      box.width < 4 ||
+      box.height < 4
+    ) {
+      return fallback!;
+    }
+    return {
+      top: Math.max(0, Math.min(95, Math.round(box.top))),
+      left: Math.max(0, Math.min(95, Math.round(box.left))),
+      width: Math.max(5, Math.min(100, Math.round(box.width))),
+      height: Math.max(5, Math.min(100, Math.round(box.height))),
+    };
+  };
+
+  return {
+    faceBox,
+    zoneTBox: sanitizeBox(extractedRegions?.zoneTBox, derivedZoneT),
+    leftCheekBox: sanitizeBox(extractedRegions?.leftCheekBox, derivedLeftCheek),
+    rightCheekBox: sanitizeBox(extractedRegions?.rightCheekBox, derivedRightCheek),
+  };
+}
+
+/**
  * Deterministic Governance Pipeline:
  * Evaluates extracted clinical biomarkers according to Baumann Skin Typing (BSTI)
  * and Fitzpatrick phototyping guidelines, enforcing strict anatomical gating.
@@ -214,7 +306,7 @@ export const CLINICAL_REJECTIONS_CATALOG: Record<
 export function governAndClassifyBiomarkers(
   extracted: ExtractedClinicalBiomarkers
 ): GovernedVisionResult {
-  const { detectedAnatomy, landmarks, opticalBiomarkers, productData, confidence } = extracted;
+  const { detectedAnatomy, landmarks, faceRegions, opticalBiomarkers, productData, confidence } = extracted;
 
   // 1. PRODUCT ROUTE
   if (detectedAnatomy === 'COSMETIC_PRODUCT') {
@@ -431,6 +523,8 @@ export function governAndClassifyBiomarkers(
   const ageChar = 'T'; // Default Tight / Standard
   const fullBaumannCode = `${baumannCodePrefix === 'C' ? 'O' : baumannCodePrefix}${sensitiveChar}${pigmentChar}${ageChar}`;
 
+  const resolvedFaceRegions = deriveFaceRegions(faceRegions);
+
   return {
     classification: 'HUMAN_FACE',
     confidence: Math.max(0.75, confidence || 0.92),
@@ -439,6 +533,7 @@ export function governAndClassifyBiomarkers(
       skinTypeLabel,
       baumannSkinTypeCode: fullBaumannCode,
       fitzpatrickType: fitzpatrick as FitzpatrickScale,
+      faceRegions: resolvedFaceRegions,
       zoneTAnalysis: {
         shineLevel: zoneTShine,
         poresVisible: zoneTPoresVisible,

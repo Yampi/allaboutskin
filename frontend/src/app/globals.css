@@ -59,8 +59,8 @@
   --color-border-subtle: var(--border-subtle);
   --color-border-sand: var(--border-sand);
   
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: var(--font-playfair), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-outfit), var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-outfit), var(--font-playfair), Georgia, serif;
 }
 
 body {
@@ -194,4 +194,68 @@ body {
 .animate-pulse-subtle {
   animation: pulse-subtle 2.5s ease-in-out infinite;
 }
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 20px 50px rgba(30, 58, 43, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+}
+
+.glass-subcard {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.glass-action-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px -5px rgba(30, 58, 43, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-action-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 38px -4px rgba(30, 58, 43, 0.12), inset 0 1px 1px rgba(255, 255, 255, 1);
+}
+
+.glass-button {
+  background: linear-gradient(135deg, rgba(30, 58, 43, 0.92) 0%, rgba(46, 85, 65, 0.88) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 24px -4px rgba(30, 58, 43, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.glass-button:hover {
+  background: linear-gradient(135deg, rgba(30, 58, 43, 0.98) 0%, rgba(56, 102, 78, 0.94) 100%);
+  box-shadow: 0 12px 30px -4px rgba(30, 58, 43, 0.35);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+@keyframes blob-float {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(30px, -40px) scale(1.1); }
+  100% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+.animate-blob-float {
+  animation: blob-float 14s infinite alternate ease-in-out;
+}
+
 
