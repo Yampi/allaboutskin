@@ -92,14 +92,23 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
               </span>
             </button>
 
-            {/* CTA Píldora "Escanear Cosmético" */}
-            <Link
-              href="/escaner"
-              className="px-5 py-2.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white font-sans font-semibold text-[13px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center gap-2 cursor-pointer"
-            >
-              <Scan className="w-4 h-4 text-white" />
-              <span>Escanear Cosmético</span>
-            </Link>
+            {/* CTA Píldora: si ya estamos en /escaner, muestra Volver al Inicio */}
+            {pathname.startsWith('/escaner') ? (
+              <Link
+                href="/"
+                className="px-5 py-2.5 rounded-full bg-white hover:bg-[#F2ECE4] border border-[#E2D9CD] text-[#2D2825] font-sans font-semibold text-[13px] shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>← Volver al Inicio</span>
+              </Link>
+            ) : (
+              <Link
+                href="/escaner"
+                className="px-5 py-2.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white font-sans font-semibold text-[13px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center gap-2 cursor-pointer"
+              >
+                <Scan className="w-4 h-4 text-white" />
+                <span>Escanear Cosmético</span>
+              </Link>
+            )}
 
             {/* User Profile Avatar */}
             <button
@@ -133,14 +142,23 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
 
         {/* MOBILE TOP BAR (< 1024px / 56px de altura) */}
         <div className="flex lg:hidden items-center justify-between h-14">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-center text-[#4A6B5B]">
-              <Microscope className="w-4 h-4" />
-            </div>
-            <span className="font-serif text-[20px] font-semibold text-[#2D2825] tracking-tight leading-none">
-              Allabout<span className="text-[#4A6B5B]">.skin</span>
-            </span>
-          </Link>
+          {pathname.startsWith('/escaner') ? (
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E2D9CD] text-[#2D2825] text-[12px] font-semibold hover:bg-[#F2ECE4] transition shadow-2xs"
+            >
+              <span>← Volver al Inicio</span>
+            </Link>
+          ) : (
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-center text-[#4A6B5B]">
+                <Microscope className="w-4 h-4" />
+              </div>
+              <span className="font-serif text-[20px] font-semibold text-[#2D2825] tracking-tight leading-none">
+                Allabout<span className="text-[#4A6B5B]">.skin</span>
+              </span>
+            </Link>
+          )}
 
           <div className="flex items-center gap-2">
             <button

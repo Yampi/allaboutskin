@@ -8,6 +8,11 @@ import { Home, Scan, Calendar, BookOpen, GitCompare } from 'lucide-react';
 export default function MobileDock() {
   const pathname = usePathname();
 
+  // En la pantalla del escáner ocultamos el dock inferior para dar foco total a la cámara y al disparador
+  if (pathname.startsWith('/escaner')) {
+    return null;
+  }
+
   const dockItems = [
     { href: '/', label: 'Inicio', icon: Home },
     { href: '/calendario', label: 'Mi Ciclo', icon: Calendar },

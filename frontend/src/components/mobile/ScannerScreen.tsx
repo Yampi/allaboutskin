@@ -609,14 +609,14 @@ export default function ScannerScreen({
                 </div>
               </div>
 
-              {/* Capture CTA */}
+              {/* Capture CTA Shutter Button */}
               <button
                 onClick={handleCaptureSnapshot}
                 disabled={!isCameraActive || isProcessing}
-                className="w-full py-4 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] disabled:opacity-50 text-white font-sans font-semibold text-[14.5px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-4 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] disabled:opacity-50 text-white font-sans font-bold text-[15px] shadow-diffuse hover:shadow-diffuse-elevated transition flex items-center justify-center gap-2.5 cursor-pointer ring-4 ring-[#8FA89B]/25"
               >
-                <Camera className="w-4 h-4 text-white" />
-                <span>{isProcessing ? 'Analizando con Visión Dermatológica IA...' : 'Capturar & Diagnosticar con IA'}</span>
+                <Camera className="w-5 h-5 text-[#DFCAAC]" />
+                <span>{isProcessing ? 'Analizando con Visión Dermatológica IA...' : 'Capturar Foto & Diagnosticar'}</span>
               </button>
             </div>
           )}
