@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Users,
   ShieldCheck,
@@ -52,8 +53,29 @@ import {
   SecurityAuditLogItem,
 } from '@/lib/api';
 
-export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'users' | 'security' | 'settings' | 'stores'>('stores');
+function AdminDashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<'users' | 'security' | 'settings' | 'stores'>(() => {
+    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores') {
+      return tabParam;
+    }
+    return 'stores';
+  });
+
+  useEffect(() => {
+    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores') {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'users' | 'security' | 'settings' | 'stores') => {
+    setActiveTab(tab);
+    router.replace(`/admin?tab=${tab}`, { scroll: false });
+  };
+
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -320,10 +342,16 @@ export default function AdminDashboardPage() {
             <span>Consola de Control Central</span>
           </div>
           <h1 className="text-3xl font-black tracking-tight text-white">
-            Administración & Seguridad RBAC
+            {activeTab === 'stores' && 'Supervisión de Tiendas & Comercios'}
+            {activeTab === 'users' && 'Gestión de Usuarios & Roles (RBAC)'}
+            {activeTab === 'security' && 'Auditoría & Logs de Seguridad'}
+            {activeTab === 'settings' && 'Configuraciones Globales del Sistema'}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Gestión de privilegios, salvaguarda de perfiles de usuario y monitoreo anti-intrusión.
+            {activeTab === 'stores' && 'Validación de farmacias y tiendas cosméticas aliadas, asignación de tiers y supervisión de sedes.'}
+            {activeTab === 'users' && 'Gestión de privilegios, salvaguarda de perfiles de usuario y asignación de roles.'}
+            {activeTab === 'security' && 'Monitoreo en tiempo real de intentos de acceso, bloqueos por fuerza bruta y auditoría de eventos.'}
+            {activeTab === 'settings' && 'Variables maestras del sistema, tasas de cambio, parámetros de IA dérmica y salud de microservicios.'}
           </p>
         </div>
 
@@ -345,43 +373,7 @@ export default function AdminDashboardPage() {
       {/* Tabs Bar */}
       <div className="flex items-center gap-3 border-b border-slate-800 pb-px">
         <button
-          onClick={() => setActiveTab('users')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'users'
-              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Usuarios & Niveles ({users.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'security'
-              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>Auditoría & Logs de Seguridad</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'settings'
-              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          <span>Configuraciones & Infraestructura</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('stores')}
+          onClick={() => handleTabChange('stores')}
           className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition relative ${
             activeTab === 'stores'
               ? 'border-teal-500 text-teal-400 bg-teal-500/5'
@@ -395,6 +387,42 @@ export default function AdminDashboardPage() {
               {storeSummary.pending_review} por verificar
             </span>
           )}
+        </button>
+
+        <button
+          onClick={() => handleTabChange('users')}
+          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
+            activeTab === 'users'
+              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Usuarios & Niveles ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('security')}
+          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
+            activeTab === 'security'
+              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4" />
+          <span>Auditoría & Logs de Seguridad</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('settings')}
+          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
+            activeTab === 'settings'
+              ? 'border-teal-500 text-teal-400 bg-teal-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          <span>Configuraciones & Infraestructura</span>
         </button>
       </div>
 
@@ -1451,3 +1479,19 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+export default function AdminDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+          <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-400">Cargando consola de administración...</p>
+        </div>
+      }
+    >
+      <AdminDashboardContent />
+    </Suspense>
+  );
+}
+

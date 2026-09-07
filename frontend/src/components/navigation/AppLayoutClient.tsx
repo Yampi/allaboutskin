@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { SkincareProvider, useSkincare } from '@/context/SkincareContext';
 import GlobalNavbar from './GlobalNavbar';
 import MobileDock from './MobileDock';
@@ -9,9 +10,20 @@ import MicroscopyModal from '@/components/mobile/MicroscopyModal';
 import InStoreNotificationBanner from '@/components/InStoreNotificationBanner';
 
 function LayoutInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { userProfile, updateProfile } = useSkincare();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
+
+  const isSystemArea = pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/login');
+
+  if (isSystemArea) {
+    return (
+      <div className="min-h-screen bg-[#090D16] text-slate-100 selection:bg-teal-500 selection:text-white">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#2D2825] selection:bg-[#8FA89B]/30 antialiased">

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Store,
   MapPin,
@@ -51,8 +52,29 @@ import {
   BusinessAnalyticsData,
 } from '@/lib/api';
 
-export default function BusinessDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'catalog' | 'branches' | 'profile'>('analytics');
+function BusinessDashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<'analytics' | 'catalog' | 'branches' | 'profile'>(() => {
+    if (tabParam === 'analytics' || tabParam === 'catalog' || tabParam === 'branches' || tabParam === 'profile') {
+      return tabParam;
+    }
+    return 'analytics';
+  });
+
+  useEffect(() => {
+    if (tabParam === 'analytics' || tabParam === 'catalog' || tabParam === 'branches' || tabParam === 'profile') {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'analytics' | 'catalog' | 'branches' | 'profile') => {
+    setActiveTab(tab);
+    router.replace(`/dashboard/empresa?tab=${tab}`, { scroll: false });
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -686,7 +708,7 @@ export default function BusinessDashboardPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleTabChange(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap ${
                 isActive
                   ? 'border-teal-500 text-teal-400 bg-teal-500/5'
@@ -1604,5 +1626,20 @@ export default function BusinessDashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BusinessDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+          <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-400">Cargando portal comercial...</p>
+        </div>
+      }
+    >
+      <BusinessDashboardContent />
+    </Suspense>
   );
 }

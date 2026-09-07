@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import AdminGuard from '@/components/AdminGuard';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import SystemLayout from '@/components/system/SystemLayout';
 
 export const metadata = {
-  title: 'Panel de Administración & Seguridad | All About Skin',
-  description: 'Gestión de roles de usuario, permisos, configuraciones del sistema y monitoreo de seguridad.',
+  title: 'Consola de Administración & Seguridad | Allabout.skin',
+  description: 'Gestión de roles de usuario, permisos, configuraciones del sistema, comercios y monitoreo de seguridad.',
 };
 
 export default function AdminLayout({
@@ -15,13 +14,17 @@ export default function AdminLayout({
 }) {
   return (
     <AdminGuard>
-      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-teal-500 selection:text-white">
-        <Navbar />
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#090D16] flex items-center justify-center text-white">
+            <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <SystemLayout>
           {children}
-        </main>
-        <Footer />
-      </div>
+        </SystemLayout>
+      </Suspense>
     </AdminGuard>
   );
 }
