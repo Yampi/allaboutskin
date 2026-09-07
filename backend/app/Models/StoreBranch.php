@@ -33,6 +33,11 @@ class StoreBranch extends Model
         return $this->hasMany(ProductStoreOffer::class, 'branch_id');
     }
 
+    public function leadInteractions(): HasMany
+    {
+        return $this->hasMany(StoreLeadInteraction::class, 'branch_id');
+    }
+
     /**
      * Calcula la distancia en metros entre dos coordenadas usando Haversine.
      */

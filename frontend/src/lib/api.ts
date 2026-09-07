@@ -1,6 +1,6 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
-export type UserRoleType = 'super_admin' | 'admin' | 'scientific_editor' | 'premium_user' | 'standard_user';
+export type UserRoleType = 'super_admin' | 'admin' | 'scientific_editor' | 'business_owner' | 'premium_user' | 'standard_user';
 
 export interface StoredUser {
   id?: number;
@@ -213,6 +213,11 @@ export function setCurrentUser(user: StoredUser | null) {
 export function isUserAdmin(user: StoredUser | null): boolean {
   if (!user || !user.role) return false;
   return user.role === 'admin' || user.role === 'super_admin';
+}
+
+export function isUserBusiness(user: StoredUser | null): boolean {
+  if (!user || !user.role) return false;
+  return user.role === 'business_owner' || user.role === 'admin' || user.role === 'super_admin';
 }
 
 export function getSavedCustomProtocol() {
@@ -454,6 +459,131 @@ export async function fetchAdminSystemHealth() {
   return res.json();
 }
 
+// Admin Store Management Endpoints
+export interface AdminStoreItem {
+  id: number;
+  owner_id: number | null;
+  name: string;
+  slug: string;
+  website_url?: string | null;
+  logo_url?: string | null;
+  store_type: 'ONLINE' | 'PHYSICAL' | 'HYBRID';
+  country_code: string;
+  instagram_handle?: string | null;
+  whatsapp_contact?: string | null;
+  is_independent: boolean;
+  verification_status: 'VERIFIED' | 'PENDING_REVIEW' | 'REJECTED';
+  subscription_tier: 'FREE' | 'PRO_LOCAL' | 'ENTERPRISE';
+  subscription_expires_at?: string | null;
+  is_featured: boolean;
+  verified_at?: string | null;
+  rejected_reason?: string | null;
+  submitted_by_email?: string | null;
+  community_notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  branches_count?: number;
+  product_offers_count?: number;
+  lead_interactions_count?: number;
+  owner?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    role?: string;
+  };
+  branches?: Array<{
+    id: number;
+    name: string;
+    city: string;
+    state: string;
+    is_active: boolean;
+    slug: string;
+    address?: string;
+    phone?: string;
+    whatsapp?: string;
+  }>;
+}
+
+export interface AdminStoresResponse {
+  status: string;
+  summary: {
+    pending_review: number;
+    total_verified: number;
+    total_stores: number;
+  };
+  stores: {
+    current_page: number;
+    data: AdminStoreItem[];
+    last_page: number;
+    total: number;
+  };
+}
+
+export async function fetchAdminStores(params?: {
+  page?: number;
+  search?: string;
+  verification_status?: string;
+  subscription_tier?: string;
+}): Promise<AdminStoresResponse> {
+  const query = new URLSearchParams();
+  if (params?.page) query.append('page', params.page.toString());
+  if (params?.search) query.append('search', params.search);
+  if (params?.verification_status) query.append('verification_status', params.verification_status);
+  if (params?.subscription_tier) query.append('subscription_tier', params.subscription_tier);
+
+  const res = await fetch(`${API_BASE_URL}/admin/stores?${query.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al cargar tiendas');
+  return res.json();
+}
+
+export async function fetchAdminStoreDetail(id: number): Promise<{ status: string; store: AdminStoreItem }> {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al cargar detalle de tienda');
+  return res.json();
+}
+
+export async function updateAdminStoreVerification(id: number, data: {
+  verification_status: 'VERIFIED' | 'REJECTED' | 'PENDING_REVIEW';
+  rejected_reason?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}/verification`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Error al actualizar verificación de tienda');
+  return res.json();
+}
+
+export async function updateAdminStoreSubscription(id: number, data: {
+  subscription_tier: 'FREE' | 'PRO_LOCAL' | 'ENTERPRISE';
+  is_featured?: boolean;
+  subscription_expires_at?: string | null;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}/subscription`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Error al actualizar suscripción de tienda');
+  return res.json();
+}
+
+export async function toggleAdminStoreStatus(id: number) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}/toggle-status`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Error al cambiar estado de la tienda');
+  return res.json();
+}
+
 // AI Skincare Endpoints
 export async function fetchAiDiagnosis(params: {
   inci_text: string;
@@ -523,5 +653,370 @@ export async function auditFullRoutineAi(products: any[], skinType: string = 'CO
   if (!res.ok) throw new Error('Error al auditar rutina completa');
   const json = await res.json();
   return json.data;
+}
+
+// ==========================================
+// Business Portal & Merchant Store API Types
+// ==========================================
+
+export interface BusinessStoreProfile {
+  id: number;
+  name: string;
+  slug: string;
+  website_url?: string | null;
+  logo_url?: string | null;
+  store_type: 'ONLINE' | 'PHYSICAL' | 'HYBRID';
+  country_code: string;
+  instagram_handle?: string | null;
+  whatsapp_contact?: string | null;
+  is_independent: boolean;
+  verification_status: 'VERIFIED' | 'PENDING_REVIEW' | 'REJECTED';
+  is_active: boolean;
+  subscription_tier: 'FREE' | 'PRO_LOCAL' | 'ENTERPRISE';
+  subscription_tier_label: string;
+  subscription_expires_at?: string | null;
+  is_featured: boolean;
+  branches_count: number;
+  offers_count: number;
+  leads_this_month: number;
+}
+
+export interface BusinessBranchItem {
+  id: number;
+  store_id: number;
+  name: string;
+  slug: string;
+  state: string;
+  city: string;
+  address: string;
+  reference_point?: string | null;
+  latitude: number;
+  longitude: number;
+  geofence_radius_meters: number;
+  phone?: string | null;
+  whatsapp?: string | null;
+  opening_hours?: string | null;
+  is_active: boolean;
+  offers_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessOfferItem {
+  id: number;
+  store_id: number;
+  product_id: number;
+  branch_id?: number | null;
+  price: number;
+  price_ves?: number | null;
+  currency: string;
+  in_stock: boolean;
+  product_url?: string | null;
+  last_checked_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  product: {
+    id: number;
+    name: string;
+    slug: string;
+    barcode_ean?: string | null;
+    category?: string | null;
+    image_url?: string | null;
+    brand?: {
+      id: number;
+      name: string;
+      slug: string;
+    } | null;
+  };
+  branch?: {
+    id: number;
+    name: string;
+    slug: string;
+    city: string;
+  } | null;
+}
+
+export interface BusinessAnalyticsData {
+  status: string;
+  store_id: number;
+  plan: {
+    tier: string;
+    is_featured: boolean;
+  };
+  inventory: {
+    total_offers: number;
+    in_stock_offers: number;
+    out_of_stock_offers: number;
+    average_price_usd: number;
+    total_branches: number;
+  };
+  leads_summary_30d: {
+    total_leads: number;
+    whatsapp_clicks: number;
+    phone_clicks: number;
+    in_store_views: number;
+  };
+  branches_performance: Array<{
+    id: number;
+    name: string;
+    city: string;
+    offers_count: number;
+    leads_count: number;
+  }>;
+}
+
+// Business Portal API Functions
+
+export async function fetchBusinessStoreProfile(): Promise<{ status: string; has_store: boolean; store?: BusinessStoreProfile; message?: string }> {
+  const res = await fetch(`${API_BASE_URL}/business/store`, {
+    headers: getAuthHeaders(),
+  });
+  if (res.status === 404) {
+    return { status: 'not_found', has_store: false };
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Error al obtener datos de la tienda');
+  }
+  return res.json();
+}
+
+export async function registerBusinessStore(payload: {
+  store_name: string;
+  website_url?: string;
+  instagram_handle?: string;
+  whatsapp: string;
+  address: string;
+  city: string;
+  state: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  opening_hours?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/store/register`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al registrar tienda');
+  }
+  return res.json();
+}
+
+export async function updateBusinessStoreProfile(payload: {
+  name?: string;
+  website_url?: string | null;
+  logo_url?: string | null;
+  instagram_handle?: string | null;
+  whatsapp_contact?: string | null;
+  community_notes?: string | null;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/store`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al actualizar perfil del comercio');
+  }
+  return res.json();
+}
+
+export async function fetchBusinessBranches(): Promise<{
+  status: string;
+  store_id: number;
+  total: number;
+  max_allowed: number;
+  branches: BusinessBranchItem[];
+}> {
+  const res = await fetch(`${API_BASE_URL}/business/branches`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al cargar sucursales');
+  }
+  return res.json();
+}
+
+export async function createBusinessBranch(payload: {
+  name: string;
+  state: string;
+  city: string;
+  address: string;
+  reference_point?: string;
+  latitude: number;
+  longitude: number;
+  geofence_radius_meters?: number;
+  phone?: string;
+  whatsapp?: string;
+  opening_hours?: string;
+  is_active?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/branches`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al crear sucursal');
+  }
+  return res.json();
+}
+
+export async function updateBusinessBranch(branchId: number, payload: Partial<BusinessBranchItem>): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/branches/${branchId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al actualizar sucursal');
+  }
+  return res.json();
+}
+
+export async function deleteBusinessBranch(branchId: number): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/branches/${branchId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al eliminar sucursal');
+  }
+  return res.json();
+}
+
+export async function fetchBusinessOffers(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  branch_id?: number | string;
+  in_stock?: boolean | string;
+}): Promise<{
+  status: string;
+  store_id: number;
+  offers: {
+    current_page: number;
+    data: BusinessOfferItem[];
+    last_page: number;
+    total: number;
+  };
+}> {
+  const query = new URLSearchParams();
+  if (params?.page) query.append('page', params.page.toString());
+  if (params?.per_page) query.append('per_page', params.per_page.toString());
+  if (params?.search) query.append('search', params.search);
+  if (params?.branch_id) query.append('branch_id', params.branch_id.toString());
+  if (params?.in_stock !== undefined && params?.in_stock !== '') {
+    query.append('in_stock', params.in_stock.toString());
+  }
+
+  const res = await fetch(`${API_BASE_URL}/business/offers?${query.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al cargar ofertas');
+  }
+  return res.json();
+}
+
+export async function createBusinessOffer(payload: {
+  product_id: number;
+  branch_id?: number | null;
+  price: number;
+  price_ves?: number | null;
+  in_stock?: boolean;
+  product_url?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/offers`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al crear oferta');
+  }
+  return res.json();
+}
+
+export async function updateBusinessOffer(offerId: number, payload: {
+  branch_id?: number | null;
+  price?: number;
+  price_ves?: number | null;
+  in_stock?: boolean;
+  product_url?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/offers/${offerId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al actualizar oferta');
+  }
+  return res.json();
+}
+
+export async function deleteBusinessOffer(offerId: number): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/offers/${offerId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al eliminar oferta');
+  }
+  return res.json();
+}
+
+export async function bulkUpdateBusinessOffers(payload: {
+  exchange_rate?: number;
+  offers?: Array<{
+    id: number;
+    price?: number;
+    price_ves?: number;
+    in_stock?: boolean;
+  }>;
+}): Promise<{ status: string; message: string; updated_count: number }> {
+  const res = await fetch(`${API_BASE_URL}/business/offers/bulk-update`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al recalcular ofertas');
+  }
+  return res.json();
+}
+
+export async function fetchBusinessAnalytics(): Promise<BusinessAnalyticsData> {
+  const res = await fetch(`${API_BASE_URL}/business/analytics`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al consultar analíticas comerciales');
+  }
+  return res.json();
+}
+
+export async function searchCatalogProducts(query: string): Promise<any[]> {
+  if (!query.trim()) return [];
+  const res = await fetch(`${API_BASE_URL}/catalog/products?q=${encodeURIComponent(query)}&per_page=10`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.data || [];
 }
 

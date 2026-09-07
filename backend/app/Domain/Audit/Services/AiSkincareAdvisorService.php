@@ -13,8 +13,8 @@ class AiSkincareAdvisorService
 
     public function __construct()
     {
-        $this->geminiApiKey = config('services.gemini.api_key', env('GEMINI_API_KEY', ''));
-        $this->geminiModel = config('services.gemini.model', env('GEMINI_MODEL', 'gemini-1.5-flash'));
+        $this->geminiApiKey = (string) (config('services.gemini.api_key') ?? env('GEMINI_API_KEY', ''));
+        $this->geminiModel = (string) (config('services.gemini.model') ?? env('GEMINI_MODEL', 'gemini-1.5-flash'));
     }
 
     /**
@@ -265,15 +265,14 @@ class AiSkincareAdvisorService
             'friction_risk_level' => $frictionRisk,
             'is_rinse_off_required' => $rinseOff,
             'barrier_warning' => $barrierWarning,
-            'physical_carrier' => $physicalCarrier,
-            'format_warning' => $formatWarning,
-            'requires_rinse' => $requiresRinse,
-            'friction_risk' => $frictionRisk,
-            'application_method' => $applicationMethod,
-            'is_miscellaneous' => $isMiscellaneous,
-            'sustainability_notes' => $sustainabilityNotes,
-            'marketing_claims_assessment' => $marketingClaimsAssessment,
-            'source_type' => 'AI_GENERATED',
+            'plain_language_summary' => $summary,
+            'contraindications' => $contraindications,
+            'quality_factors' => $qualityFactors,
+            'format_quality_score' => $qualityScore,
+            'when_to_use' => $whenToUse,
+            'how_to_use' => $howToUse,
+            'superior_alternatives' => $superiorAlternatives,
+            'source_type' => 'DETERMINISTIC_CACHE',
             'confidence_score' => 0.94,
         ];
     }

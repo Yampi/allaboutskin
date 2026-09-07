@@ -29,6 +29,8 @@ export default function Footer() {
               <li><Link href="/rutinas/skin-cycling" className="hover:text-white transition-colors">Protocolo Skin Cycling</Link></li>
               <li><Link href="/ingrediente" className="hover:text-white transition-colors">Biblioteca de Activos</Link></li>
               <li><Link href="/ofertas" className="hover:text-white transition-colors">Catálogo Curado</Link></li>
+              <li className="pt-1.5 border-t border-[#2D3C33]/60"><Link href="/dashboard/empresa" className="text-teal-400 hover:text-teal-300 font-semibold transition-colors flex items-center gap-1"><span>Portal Comercios & Vitrinas</span></Link></li>
+              <li><Link href="/admin" className="text-slate-400 hover:text-white text-[11px] transition-colors">Administración Central</Link></li>
             </ul>
           </div>
 

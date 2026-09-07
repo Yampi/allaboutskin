@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminSecurityLogsController;
+use App\Http\Controllers\Api\Admin\AdminStoreController;
 use App\Http\Controllers\Api\Admin\AdminSystemSettingsController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AuditController;
+use App\Http\Controllers\Api\Business\BusinessAnalyticsController;
+use App\Http\Controllers\Api\Business\BusinessBranchController;
+use App\Http\Controllers\Api\Business\BusinessOfferController;
+use App\Http\Controllers\Api\Business\BusinessStoreController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\LifecycleController;
 use App\Http\Controllers\Api\RoutineController;
@@ -54,6 +59,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/cities', [StoreDirectoryController::class, 'cities']);
         Route::get('/branches/{identifier}/products', [StoreDirectoryController::class, 'branchProducts']);
         Route::post('/suggest', [StoreDirectoryController::class, 'suggest']);
+        Route::post('/interactions', [StoreDirectoryController::class, 'recordInteraction']);
     });
 
     // 4. Authenticated User Profile, Routines & Lifecycle
@@ -74,6 +80,40 @@ Route::prefix('v1')->group(function () {
         // Lifecycle, PAO & Replenishment Monitor
         Route::prefix('lifecycle')->group(function () {
             Route::get('/items', [LifecycleController::class, 'items']);
+        });
+    });
+
+    // 4.5. Business Portal & Merchant Store Management
+    Route::prefix('business')->middleware('auth:sanctum')->group(function () {
+        // Registro de nueva tienda comercial (disponible para cualquier usuario autenticado)
+        Route::post('/store/register', [BusinessStoreController::class, 'register']);
+
+        // Rutas protegidas para dueños de comercio y administradores
+        Route::middleware('role:business_owner,admin,super_admin')->group(function () {
+            // Perfil de la tienda
+            Route::get('/store', [BusinessStoreController::class, 'show']);
+            Route::put('/store', [BusinessStoreController::class, 'update']);
+
+            // Gestión de Sucursales
+            Route::prefix('branches')->group(function () {
+                Route::get('/', [BusinessBranchController::class, 'index']);
+                Route::post('/', [BusinessBranchController::class, 'store']);
+                Route::get('/{id}', [BusinessBranchController::class, 'show']);
+                Route::put('/{id}', [BusinessBranchController::class, 'update']);
+                Route::delete('/{id}', [BusinessBranchController::class, 'destroy']);
+            });
+
+            // Gestión de Ofertas e Inventario
+            Route::prefix('offers')->group(function () {
+                Route::get('/', [BusinessOfferController::class, 'index']);
+                Route::post('/', [BusinessOfferController::class, 'store']);
+                Route::put('/{id}', [BusinessOfferController::class, 'update']);
+                Route::delete('/{id}', [BusinessOfferController::class, 'destroy']);
+                Route::post('/bulk-update', [BusinessOfferController::class, 'bulkUpdatePrices']);
+            });
+
+            // Analíticas de Rendimiento y Leads
+            Route::get('/analytics', [BusinessAnalyticsController::class, 'summary']);
         });
     });
 
@@ -99,6 +139,15 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [AdminSystemSettingsController::class, 'index']);
             Route::post('/', [AdminSystemSettingsController::class, 'update']);
             Route::get('/health', [AdminSystemSettingsController::class, 'systemHealth']);
+        });
+
+        // Stores & Directory Supervision
+        Route::prefix('stores')->group(function () {
+            Route::get('/', [AdminStoreController::class, 'index']);
+            Route::get('/{id}', [AdminStoreController::class, 'show']);
+            Route::patch('/{id}/verification', [AdminStoreController::class, 'updateVerification']);
+            Route::patch('/{id}/subscription', [AdminStoreController::class, 'updateSubscription']);
+            Route::patch('/{id}/toggle-status', [AdminStoreController::class, 'toggleStatus']);
         });
     });
 });

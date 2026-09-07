@@ -13,7 +13,29 @@ class AdminAndSecuritySeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Super Admin Account
+        // 1. Primary Super Admin Account (Brian Baloa)
+        $brianAdmin = User::firstOrCreate(
+            ['email' => 'brian.baloa@gmail.com'],
+            [
+                'name' => 'Brian Baloa',
+                'password' => Hash::make('Baloa$Admin*2026!Skin'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $brianAdmin->role = UserRole::SUPER_ADMIN;
+        $brianAdmin->is_active = true;
+        $brianAdmin->password = Hash::make('Baloa$Admin*2026!Skin');
+        $brianAdmin->save();
+
+        if (!$brianAdmin->skinProfile) {
+            UserSkinProfile::create([
+                'user_id' => $brianAdmin->id,
+                'skin_type' => 'COMBINATION',
+                'barrier_status' => 'HEALTHY',
+            ]);
+        }
+
+        // 1.1 Legacy Super Admin Account
         $admin = User::firstOrCreate(
             ['email' => 'admin@allaboutskin.com'],
             [

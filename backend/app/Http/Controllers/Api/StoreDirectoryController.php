@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AffiliateStore;
 use App\Models\ProductStoreOffer;
 use App\Models\StoreBranch;
+use App\Models\StoreLeadInteraction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -73,6 +74,8 @@ class StoreDirectoryController extends Controller
                     'distance_meters' => round($distance),
                     'geofence_radius_meters' => $branch->geofence_radius_meters,
                     'is_inside' => $isInside,
+                    'is_featured' => $branch->store?->isFeaturedActive() ?? false,
+                    'subscription_tier' => $branch->store?->subscription_tier?->value ?? 'FREE',
                 ];
 
                 $nearbyBranches[] = $branchData;
@@ -83,8 +86,13 @@ class StoreDirectoryController extends Controller
             }
         }
 
-        // Ordenar las sucursales por cercanía
-        usort($nearbyBranches, fn ($a, $b) => $a['distance_meters'] <=> $b['distance_meters']);
+        // Ordenar: primero las sucursales destacadas/PRO_LOCAL si están en rango razonable, luego por distancia
+        usort($nearbyBranches, function ($a, $b) {
+            if ($a['is_featured'] !== $b['is_featured']) {
+                return $b['is_featured'] <=> $a['is_featured'];
+            }
+            return $a['distance_meters'] <=> $b['distance_meters'];
+        });
 
         // Si el usuario está físicamente dentro de una tienda, contar cuántos productos tiene
         $inStoreCatalogCount = 0;
@@ -311,6 +319,33 @@ class StoreDirectoryController extends Controller
                 'city' => $branch->city,
                 'status' => 'PENDING_REVIEW',
             ],
+        ], 201);
+    }
+
+    /**
+     * Registro de interacción o lead comercial (WhatsApp, llamada, mapa, presencia física).
+     */
+    public function recordInteraction(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'store_id' => 'required|exists:affiliate_stores,id',
+            'branch_id' => 'nullable|exists:store_branches,id',
+            'interaction_type' => 'required|in:WHATSAPP_CLICK,PHONE_CLICK,MAP_ROUTE,IN_STORE_VIEW,PRODUCT_CLICK',
+            'metadata' => 'nullable|array',
+        ]);
+
+        $interaction = StoreLeadInteraction::record(
+            storeId: (int) $validated['store_id'],
+            interactionType: $validated['interaction_type'],
+            branchId: isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
+            userId: $request->user()?->id,
+            metadata: $validated['metadata'] ?? null
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Interacción registrada con éxito.',
+            'interaction_id' => $interaction->id,
         ], 201);
     }
 }

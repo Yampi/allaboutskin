@@ -7,6 +7,7 @@ enum UserRole: string
     case SUPER_ADMIN = 'super_admin';
     case ADMIN = 'admin';
     case SCIENTIFIC_EDITOR = 'scientific_editor';
+    case BUSINESS_OWNER = 'business_owner';
     case PREMIUM_USER = 'premium_user';
     case STANDARD_USER = 'standard_user';
 
@@ -16,6 +17,14 @@ enum UserRole: string
     public function isAdmin(): bool
     {
         return in_array($this, [self::SUPER_ADMIN, self::ADMIN], true);
+    }
+
+    /**
+     * Check if role has business / merchant privileges
+     */
+    public function isBusiness(): bool
+    {
+        return in_array($this, [self::SUPER_ADMIN, self::ADMIN, self::BUSINESS_OWNER], true);
     }
 
     /**
@@ -43,6 +52,7 @@ enum UserRole: string
             self::SUPER_ADMIN => 'Super Administrador',
             self::ADMIN => 'Administrador',
             self::SCIENTIFIC_EDITOR => 'Editor Científico / Dermatólogo',
+            self::BUSINESS_OWNER => 'Comercio / Tienda Asociada',
             self::PREMIUM_USER => 'Usuario Premium',
             self::STANDARD_USER => 'Usuario Estándar',
         };

@@ -77,6 +77,16 @@ class User extends Authenticatable
         return $this->hasMany(SecurityAuditLog::class);
     }
 
+    public function stores(): HasMany
+    {
+        return $this->hasMany(AffiliateStore::class, 'owner_id');
+    }
+
+    public function ownedStore(): HasOne
+    {
+        return $this->hasOne(AffiliateStore::class, 'owner_id');
+    }
+
     public function hasRole(UserRole|string $role): bool
     {
         $roleValue = is_string($role) ? $role : $role->value;
@@ -86,6 +96,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role?->isAdmin() ?? false;
+    }
+
+    public function isBusinessOwner(): bool
+    {
+        return $this->role?->isBusiness() ?? false;
     }
 
     public function isLocked(): bool
