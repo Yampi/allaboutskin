@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Microscope, Scan, Calendar, BookOpen, GitCompare, User, Store } from 'lucide-react';
+import { Microscope, Scan, Calendar, BookOpen, GitCompare, User, Store, ShieldCheck, LogIn } from 'lucide-react';
 import { useSkincare } from '@/context/SkincareContext';
+import { getCurrentUser, isUserAdmin, isUserBusiness, StoredUser } from '@/lib/api';
 
 interface GlobalNavbarProps {
   onOpenProfile?: () => void;
@@ -14,6 +15,11 @@ interface GlobalNavbarProps {
 export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalNavbarProps) {
   const pathname = usePathname();
   const { userProfile } = useSkincare();
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, [pathname]);
 
   const navItems = [
     { href: '/', label: 'Inicio' },
@@ -111,6 +117,38 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
               </Link>
             )}
 
+            {/* Quick Portal Switcher / Login CTA */}
+            {currentUser ? (
+              isUserAdmin(currentUser) ? (
+                <Link
+                  href="/admin"
+                  className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-teal-300 text-[11px] font-bold hover:bg-slate-800 transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                  title="Consola de Administración Central"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Admin</span>
+                </Link>
+              ) : isUserBusiness(currentUser) ? (
+                <Link
+                  href="/dashboard/empresa"
+                  className="px-3 py-1.5 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 text-[#2D5540] text-[11px] font-bold hover:bg-white transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                  title="Panel de mi Tienda & Vitrina"
+                >
+                  <Store className="w-3.5 h-3.5 text-[#2D5540]" />
+                  <span>Mi Tienda</span>
+                </Link>
+              ) : null
+            ) : (
+              <Link
+                href="/login"
+                className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
+                title="Acceder a tu cuenta"
+              >
+                <LogIn className="w-3.5 h-3.5 text-slate-500" />
+                <span>Iniciar Sesión</span>
+              </Link>
+            )}
+
             {/* User Profile Avatar */}
             <button
               onClick={onOpenProfile}
@@ -161,7 +199,33 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
             </Link>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {currentUser && isUserAdmin(currentUser) ? (
+              <Link
+                href="/admin"
+                className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-teal-400"
+                title="Consola de Administración"
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </Link>
+            ) : currentUser && isUserBusiness(currentUser) ? (
+              <Link
+                href="/dashboard/empresa"
+                className="w-8 h-8 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 flex items-center justify-center text-[#2D5540]"
+                title="Panel de mi Tienda"
+              >
+                <Store className="w-4 h-4" />
+              </Link>
+            ) : !currentUser ? (
+              <Link
+                href="/login"
+                className="w-8 h-8 rounded-full bg-white border border-[#E2D9CD] flex items-center justify-center text-slate-700"
+                title="Iniciar Sesión"
+              >
+                <LogIn className="w-4 h-4" />
+              </Link>
+            ) : null}
+
             <button
               onClick={onOpenDiagnosis}
               type="button"

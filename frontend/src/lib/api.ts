@@ -220,6 +220,49 @@ export function isUserBusiness(user: StoredUser | null): boolean {
   return user.role === 'business_owner' || user.role === 'admin' || user.role === 'super_admin';
 }
 
+export async function loginUser(email: string, password: string): Promise<StoredUser> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Credenciales incorrectas o error al iniciar sesión');
+  }
+
+  const json = await res.json();
+  const userData = json.user;
+  const storedUser: StoredUser = {
+    id: userData.id,
+    name: userData.name,
+    email: userData.email,
+    role: userData.role,
+    is_active: userData.is_active,
+    token: json.access_token,
+  };
+
+  setCurrentUser(storedUser);
+  return storedUser;
+}
+
+export async function logoutUser(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+  } catch (err) {
+    console.error('Error during logout:', err);
+  } finally {
+    setCurrentUser(null);
+  }
+}
+
 export function getSavedCustomProtocol() {
   if (typeof window === 'undefined') return null;
   try {
