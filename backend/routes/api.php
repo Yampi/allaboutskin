@@ -90,8 +90,9 @@ Route::prefix('v1')->group(function () {
 
     // 4.5. Business Portal & Merchant Store Management
     Route::prefix('business')->middleware('auth:sanctum')->group(function () {
-        // Registro de nueva tienda comercial (disponible para cualquier usuario autenticado)
+        // Registro o reclamo de tienda comercial (disponible para cualquier usuario autenticado)
         Route::post('/store/register', [BusinessStoreController::class, 'register']);
+        Route::post('/store/claim', [BusinessStoreController::class, 'claim']);
 
         // Rutas protegidas para dueños de comercio y administradores
         Route::middleware('role:business_owner,admin,super_admin')->group(function () {

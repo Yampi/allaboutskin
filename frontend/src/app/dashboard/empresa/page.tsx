@@ -34,6 +34,7 @@ import {
   isUserBusiness,
   fetchBusinessStoreProfile,
   registerBusinessStore,
+  claimBusinessStore,
   updateBusinessStoreProfile,
   fetchBusinessBranches,
   createBusinessBranch,
@@ -145,6 +146,45 @@ function BusinessDashboardContent() {
   const [onboardingWhatsapp, setOnboardingWhatsapp] = useState('');
   const [onboardingInstagram, setOnboardingInstagram] = useState('');
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
+
+  // Onboarding Mode & Claim State
+  const claimQueryParam = searchParams.get('claim') || '';
+  const [onboardingMode, setOnboardingMode] = useState<'REGISTER' | 'CLAIM'>(() => {
+    return claimQueryParam ? 'CLAIM' : 'REGISTER';
+  });
+  const [claimTargetSlug, setClaimTargetSlug] = useState(claimQueryParam);
+  const [claimWhatsapp, setClaimWhatsapp] = useState('');
+  const [claimNotes, setClaimNotes] = useState('');
+  const [isClaimSubmitting, setIsClaimSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (claimQueryParam) {
+      setClaimTargetSlug(claimQueryParam);
+      setOnboardingMode('CLAIM');
+    }
+  }, [claimQueryParam]);
+
+  const handleClaimSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimTargetSlug.trim()) {
+      showToast('error', 'Por favor ingresa el nombre o identificador de la tienda a reclamar.');
+      return;
+    }
+    setIsClaimSubmitting(true);
+    try {
+      const res = await claimBusinessStore({
+        store_slug: claimTargetSlug.trim(),
+        whatsapp: claimWhatsapp.trim() || undefined,
+        verification_notes: claimNotes.trim() || undefined,
+      });
+      showToast('success', res.message || '¡Tienda reclamada con éxito!');
+      await loadStoreProfile();
+    } catch (err: any) {
+      showToast('error', err.message || 'No se pudo reclamar la tienda.');
+    } finally {
+      setIsClaimSubmitting(false);
+    }
+  };
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -499,108 +539,213 @@ function BusinessDashboardContent() {
           </div>
         )}
 
-        <form onSubmit={handleOnboardingSubmit} className="bg-slate-900/70 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-5">
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-              Nombre de la Tienda o Farmacia *
-            </label>
-            <input
-              type="text"
-              required
-              value={onboardingStoreName}
-              onChange={(e) => setOnboardingStoreName(e.target.value)}
-              placeholder="Ej. Farmacia San Judas Tadeo / Belleza Pura Skincare"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
-            />
-          </div>
+        {/* Toggle Mode: Registrar vs Reclamar */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setOnboardingMode('REGISTER')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              onboardingMode === 'REGISTER'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Crear Tienda Nueva</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnboardingMode('CLAIM')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              onboardingMode === 'CLAIM'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Reclamar Tienda Existente</span>
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {onboardingMode === 'CLAIM' ? (
+          <form onSubmit={handleClaimSubmit} className="bg-slate-900/70 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-5">
+            <div className="bg-teal-950/40 border border-teal-500/30 rounded-2xl p-4 text-xs text-teal-200 space-y-1">
+              <span className="font-bold flex items-center gap-1.5 text-teal-300">
+                <Store className="w-4 h-4 text-teal-400" />
+                Toma el control de tu comercio ya catalogado
+              </span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                Si tu tienda o farmacia ya aparece en nuestro directorio público o mapa de precios, reclama su titularidad para fijar tus precios oficiales en $ y Bs, actualizar tu WhatsApp y recibir pedidos directos.
+              </p>
+            </div>
+
             <div>
               <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-                Ciudad *
+                Nombre o Identificador (Slug) de la Tienda *
               </label>
               <input
                 type="text"
                 required
-                value={onboardingCity}
-                onChange={(e) => setOnboardingCity(e.target.value)}
-                placeholder="Ej. Valle de la Pascua"
+                value={claimTargetSlug}
+                onChange={(e) => setClaimTargetSlug(e.target.value)}
+                placeholder="Ej. locatel-valle-de-la-pascua o farmatodo"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
               />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                Ingresa el slug o identificador que aparece en el enlace de tu tienda en el directorio.
+              </span>
             </div>
+
             <div>
               <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-                Estado *
+                WhatsApp de Ventas Comercial *
               </label>
               <input
                 type="text"
                 required
-                value={onboardingState}
-                onChange={(e) => setOnboardingState(e.target.value)}
-                placeholder="Ej. Guárico"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-              Dirección de la Sede Principal *
-            </label>
-            <input
-              type="text"
-              required
-              value={onboardingAddress}
-              onChange={(e) => setOnboardingAddress(e.target.value)}
-              placeholder="Ej. Calle Real con Av. Rómulo Gallegos, Local 3"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-                WhatsApp de Ventas *
-              </label>
-              <input
-                type="text"
-                required
-                value={onboardingWhatsapp}
-                onChange={(e) => setOnboardingWhatsapp(e.target.value)}
+                value={claimWhatsapp}
+                onChange={(e) => setClaimWhatsapp(e.target.value)}
                 placeholder="+58 412 1234567"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
               />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                Número oficial donde tus clientes te contactarán para consultar stock y compras.
+              </span>
             </div>
+
             <div>
               <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-                Instagram (Opcional)
+                Notas de Verificación o Cargo Comercial (Opcional)
+              </label>
+              <textarea
+                rows={3}
+                value={claimNotes}
+                onChange={(e) => setClaimNotes(e.target.value)}
+                placeholder="Ej. Soy el gerente general de la sede de Valle de la Pascua."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500 resize-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isClaimSubmitting}
+              className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-500 text-white font-black text-sm rounded-xl transition shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {isClaimSubmitting ? (
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Reclamar Tienda y Tomar Control</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleOnboardingSubmit} className="bg-slate-900/70 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-5">
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                Nombre de la Tienda o Farmacia *
               </label>
               <input
                 type="text"
-                value={onboardingInstagram}
-                onChange={(e) => setOnboardingInstagram(e.target.value)}
-                placeholder="@tutienda"
+                required
+                value={onboardingStoreName}
+                onChange={(e) => setOnboardingStoreName(e.target.value)}
+                placeholder="Ej. Farmacia San Judas Tadeo / Belleza Pura Skincare"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
               />
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={isOnboardingSubmitting}
-            className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-500 text-white font-black text-sm rounded-xl transition shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isOnboardingSubmitting ? (
-              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Store className="w-4 h-4" />
-                <span>Crear Tienda & Empezar Gratis</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                  Ciudad *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={onboardingCity}
+                  onChange={(e) => setOnboardingCity(e.target.value)}
+                  placeholder="Ej. Valle de la Pascua"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                  Estado *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={onboardingState}
+                  onChange={(e) => setOnboardingState(e.target.value)}
+                  placeholder="Ej. Guárico"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                Dirección de la Sede Principal *
+              </label>
+              <input
+                type="text"
+                required
+                value={onboardingAddress}
+                onChange={(e) => setOnboardingAddress(e.target.value)}
+                placeholder="Ej. Calle Real con Av. Rómulo Gallegos, Local 3"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                  WhatsApp de Ventas *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={onboardingWhatsapp}
+                  onChange={(e) => setOnboardingWhatsapp(e.target.value)}
+                  placeholder="+58 412 1234567"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
+                  Instagram (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={onboardingInstagram}
+                  onChange={(e) => setOnboardingInstagram(e.target.value)}
+                  placeholder="@tutienda"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isOnboardingSubmitting}
+              className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-500 text-white font-black text-sm rounded-xl transition shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {isOnboardingSubmitting ? (
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Store className="w-4 h-4" />
+                  <span>Crear Tienda & Empezar Gratis</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        )}
       </div>
     );
   }

@@ -737,13 +737,22 @@ export default function TiendasExplorerPage() {
                           <h3 className="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition">
                             {st.name}
                           </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                              {st.crawler_platform || st.store_type || 'ONLINE'}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {st.in_stock_offers_count || st.total_offers_count || 0} ofertas en catálogo
-                            </span>
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+                                {st.crawler_platform || st.store_type || 'ONLINE'}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {st.in_stock_offers_count || st.total_offers_count || 0} ofertas en catálogo
+                              </span>
+                            </div>
+                            <Link
+                              href={`/dashboard/empresa?claim=${encodeURIComponent(st.slug || st.id)}`}
+                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline shrink-0"
+                              title="Reclamar la administración de este comercio"
+                            >
+                              ¿Es tu tienda? Reclámala
+                            </Link>
                           </div>
                         </div>
                       </div>
@@ -834,6 +843,26 @@ export default function TiendasExplorerPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+
+              {/* Banner B2B: Reclamar Tienda */}
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-900">¿Eres el dueño o encargado de {viewingStore.name}?</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800/90 leading-relaxed">
+                    Reclama tu perfil gratis para verificar tus sucursales, actualizar precios en $ y Bs, y recibir clientes directos de Allabout.skin.
+                  </p>
+                </div>
+                <Link
+                  href={`/dashboard/empresa?claim=${encodeURIComponent(viewingStore.slug || viewingStore.id)}`}
+                  className="inline-flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-xs shrink-0 cursor-pointer"
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  <span>Reclamar mi Tienda Gratis</span>
+                </Link>
               </div>
 
               {/* Búsqueda dentro de la tienda */}

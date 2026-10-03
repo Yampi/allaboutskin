@@ -372,4 +372,76 @@ class BusinessPortalApiTest extends TestCase
             ->assertJsonPath('leads_summary_30d.total_leads', 1)
             ->assertJsonPath('leads_summary_30d.whatsapp_clicks', 1);
     }
+
+    /** @test */
+    public function authenticated_user_can_claim_an_unowned_store()
+    {
+        // Tienda catalogada sin dueño (ej: originada por scraper o directorio público)
+        $store = AffiliateStore::create([
+            'name' => 'Farmacia Llanera Del Este',
+            'slug' => 'farmacia-llanera-del-este',
+            'website_url' => 'https://farmaciallanera.com.ve',
+            'store_type' => 'PHYSICAL',
+            'country_code' => 'VE',
+            'affiliate_network' => 'Directorio Público',
+            'owner_id' => null,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'role' => UserRole::STANDARD_USER,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/business/store/claim', [
+            'store_id' => $store->id,
+            'whatsapp' => '+584149998877',
+            'verification_notes' => 'Soy el gerente administrativo de la farmacia.',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('store.name', 'Farmacia Llanera Del Este');
+
+        $this->assertDatabaseHas('affiliate_stores', [
+            'id' => $store->id,
+            'owner_id' => $user->id,
+            'whatsapp_contact' => '+584149998877',
+        ]);
+
+        // El usuario debe ascender automáticamente a BUSINESS_OWNER
+        $this->assertEquals(UserRole::BUSINESS_OWNER, $user->fresh()->role);
+    }
+
+    /** @test */
+    public function user_cannot_claim_store_already_owned_by_someone_else()
+    {
+        $ownerA = User::factory()->create(['role' => UserRole::BUSINESS_OWNER, 'is_active' => true]);
+        $store = AffiliateStore::create([
+            'name' => 'Farmacia Exclusiva La Pascua',
+            'slug' => 'farmacia-exclusiva-la-pascua',
+            'website_url' => 'https://farmaciaexclusiva.com.ve',
+            'store_type' => 'PHYSICAL',
+            'country_code' => 'VE',
+            'affiliate_network' => 'Comercio Registrado',
+            'owner_id' => $ownerA->id,
+            'is_active' => true,
+        ]);
+
+        $userB = User::factory()->create(['role' => UserRole::STANDARD_USER, 'is_active' => true]);
+        Sanctum::actingAs($userB);
+
+        $response = $this->postJson('/api/v1/business/store/claim', [
+            'store_id' => $store->id,
+            'whatsapp' => '+584120001122',
+        ]);
+
+        $response->assertStatus(409)
+            ->assertJsonPath('status', 'conflict');
+
+        // La tienda no debe cambiar de dueño
+        $this->assertEquals($ownerA->id, $store->fresh()->owner_id);
+    }
 }

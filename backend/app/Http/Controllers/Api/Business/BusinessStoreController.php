@@ -179,4 +179,97 @@ class BusinessStoreController extends Controller
             'primary_branch' => $branch,
         ], 201);
     }
+
+    /**
+     * Reclamar la propiedad de una tienda existente catalogada en el directorio.
+     */
+    public function claim(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Validar si el usuario ya posee una tienda registrada
+        $existingOwnedStore = AffiliateStore::where('owner_id', $user->id)->first();
+        if ($existingOwnedStore) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ya posees una tienda asignada a tu cuenta (' . $existingOwnedStore->name . '). Para gestionar múltiples sucursales o cadenas, añade sedes en tu panel.',
+                'store_id' => $existingOwnedStore->id,
+            ], 409);
+        }
+
+        $validated = $request->validate([
+            'store_id' => 'required_without:store_slug|nullable|integer|exists:affiliate_stores,id',
+            'store_slug' => 'required_without:store_id|nullable|string|exists:affiliate_stores,slug',
+            'whatsapp' => 'nullable|string|max:50',
+            'verification_notes' => 'nullable|string|max:500',
+        ]);
+
+        $store = null;
+        if (!empty($validated['store_id'])) {
+            $store = AffiliateStore::find($validated['store_id']);
+        } elseif (!empty($validated['store_slug'])) {
+            $store = AffiliateStore::where('slug', $validated['store_slug'])->first();
+        }
+
+        if (!$store) {
+            return response()->json([
+                'status' => 'not_found',
+                'message' => 'La tienda seleccionada no fue encontrada.',
+            ], 404);
+        }
+
+        // Si la tienda ya tiene dueño asignado
+        if ($store->owner_id !== null) {
+            if ($store->owner_id === $user->id) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Ya eres el administrador titular de esta tienda.',
+                    'store' => $store,
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'conflict',
+                'message' => 'Esta tienda ya cuenta con un administrador registrado. Si eres el legítimo titular comercial, contacta a soporte.',
+            ], 409);
+        }
+
+        // Asignar propiedad al usuario autenticado
+        $store->owner_id = $user->id;
+        if (!empty($validated['whatsapp'])) {
+            $store->whatsapp_contact = $validated['whatsapp'];
+        }
+        $store->verification_status = 'PENDING_REVIEW';
+        $store->is_active = true;
+        if (!empty($validated['verification_notes'])) {
+            $store->community_notes = trim(($store->community_notes ?? '') . "\nReclamada por: {$user->email}. Notas: " . $validated['verification_notes']);
+        }
+        $store->save();
+
+        // Ascender rol del usuario a BUSINESS_OWNER si es estándar
+        if ($user->role === UserRole::STANDARD_USER) {
+            $user->role = UserRole::BUSINESS_OWNER;
+            $user->save();
+        }
+
+        // Registrar evento en auditoría de seguridad
+        \App\Models\SecurityAuditLog::logEvent(
+            eventType: 'STORE_CLAIMED',
+            description: "El usuario {$user->email} ha reclamado la titularidad de '{$store->name}'.",
+            userId: $user->id,
+            severity: 'INFO',
+            target: "affiliate_stores:{$store->id}",
+            payload: [
+                'store_id' => $store->id,
+                'store_name' => $store->name,
+                'whatsapp' => $validated['whatsapp'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "¡Has reclamado con éxito la tienda '{$store->name}'! Ahora puedes gestionar sus sucursales, precios y ofertas.",
+            'store' => $store,
+        ]);
+    }
 }

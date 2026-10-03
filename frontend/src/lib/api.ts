@@ -924,6 +924,24 @@ export async function registerBusinessStore(payload: {
   return res.json();
 }
 
+export async function claimBusinessStore(payload: {
+  store_id?: number;
+  store_slug?: string;
+  whatsapp?: string;
+  verification_notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/business/store/claim`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al reclamar la tienda');
+  }
+  return res.json();
+}
+
 export async function updateBusinessStoreProfile(payload: {
   name?: string;
   website_url?: string | null;
