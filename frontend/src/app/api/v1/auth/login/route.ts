@@ -6,12 +6,21 @@ export async function POST(req: NextRequest) {
     const email = (body.email || '').toLowerCase().trim();
     const password = body.password || '';
 
-    // 1. Si existe backend Laravel configurado en variables de entorno, intentar proxy
-    const backendUrl = process.env.LARAVEL_API_URL;
+    if (!email || !password) {
+      return NextResponse.json(
+        { message: 'Por favor, introduce tu correo electrónico y contraseña.' },
+        { status: 422 }
+      );
+    }
+
+    // 1. Conexión al Backend Laravel central
+    const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_LARAVEL_API_URL;
+    let proxyFailed = false;
+
     if (backendUrl) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
         const res = await fetch(`${backendUrl}/auth/login`, {
           method: 'POST',
@@ -30,90 +39,76 @@ export async function POST(req: NextRequest) {
         } else {
           const errData = await res.json().catch(() => ({}));
           return NextResponse.json(
-            { message: errData.message || 'Credenciales inválidas en el servidor.' },
+            { message: errData.message || 'Credenciales inválidas. Verifica tu correo y contraseña.' },
             { status: res.status }
           );
         }
       } catch (proxyErr) {
-        console.warn('Fallback a autenticación directa en Vercel:', proxyErr);
+        console.warn('Fallo de conexión con el backend central Laravel:', proxyErr);
+        proxyFailed = true;
       }
     }
 
-    // 2. Autenticación directa / Serverless Fallback para Vercel
-    if (email === 'brian.baloa@gmail.com') {
-      if (password === 'Baloa$Admin*2026!Skin' || password === 'Admin12345!') {
+    // 2. Control de fallback: únicamente si está explícitamente activado en desarrollo
+    const isDemoAuthEnabled = process.env.ENABLE_DEMO_AUTH === 'true' || (process.env.NODE_ENV === 'development' && !backendUrl);
+
+    if (isDemoAuthEnabled) {
+      const demoAdminPass = process.env.DEMO_ADMIN_PASSWORD;
+
+      if (email.includes('admin') || email.includes('editor')) {
+        if (demoAdminPass && password === demoAdminPass) {
+          return NextResponse.json({
+            message: 'Inicio de sesión demo como Administrador.',
+            access_token: 'demo_token_admin_' + Date.now(),
+            token_type: 'Bearer',
+            user: {
+              id: 1,
+              name: 'Administrador Demo',
+              email,
+              role: 'admin',
+              is_active: true,
+            },
+          });
+        }
+      }
+
+      if (email.includes('tienda') || email.includes('comercio') || email.includes('farmacia')) {
         return NextResponse.json({
-          message: 'Inicio de sesión exitoso como Super Administrador.',
-          access_token: 'vercel_token_brian_super_admin_' + Date.now(),
+          message: 'Inicio de sesión comercial demo exitoso.',
+          access_token: 'demo_token_merchant_' + Date.now(),
           token_type: 'Bearer',
           user: {
-            id: 4,
-            name: 'Brian Baloa',
-            email: 'brian.baloa@gmail.com',
-            role: 'super_admin',
+            id: 10,
+            name: email.split('@')[0],
+            email,
+            role: 'business_owner',
             is_active: true,
           },
         });
-      } else {
-        return NextResponse.json(
-          { message: 'Contraseña incorrecta para brian.baloa@gmail.com.' },
-          { status: 401 }
-        );
       }
-    }
 
-    if (email === 'admin@allaboutskin.com') {
-      if (password === 'Admin12345!') {
+      if (password.length >= 6) {
         return NextResponse.json({
-          message: 'Inicio de sesión exitoso.',
-          access_token: 'vercel_token_admin_' + Date.now(),
+          message: 'Inicio de sesión demo exitoso.',
+          access_token: 'demo_token_user_' + Date.now(),
           token_type: 'Bearer',
           user: {
-            id: 1,
-            name: 'Super Administrador',
-            email: 'admin@allaboutskin.com',
-            role: 'super_admin',
+            id: 99,
+            name: email.split('@')[0],
+            email,
+            role: 'standard_user',
             is_active: true,
           },
         });
-      } else {
-        return NextResponse.json(
-          { message: 'Contraseña incorrecta para el administrador.' },
-          { status: 401 }
-        );
       }
     }
 
-    // Cuenta comercial demo o de prueba
-    if (email.includes('tienda') || email.includes('comercio') || email.includes('farmacia')) {
-      return NextResponse.json({
-        message: 'Inicio de sesión comercial exitoso.',
-        access_token: 'vercel_token_merchant_' + Date.now(),
-        token_type: 'Bearer',
-        user: {
-          id: 10,
-          name: email.split('@')[0],
-          email: email,
-          role: 'business_owner',
-          is_active: true,
-        },
-      });
-    }
-
-    // Usuario estándar con cualquier contraseña de más de 5 caracteres
-    if (password.length >= 6) {
-      return NextResponse.json({
-        message: 'Inicio de sesión exitoso.',
-        access_token: 'vercel_token_user_' + Date.now(),
-        token_type: 'Bearer',
-        user: {
-          id: 99,
-          name: email.split('@')[0],
-          email: email,
-          role: 'standard_user',
-          is_active: true,
-        },
-      });
+    // Si el proxy falló y no hay demo auth permitido, responder con servicio no disponible
+    if (proxyFailed) {
+      return NextResponse.json(
+        { message: 'El servicio central de autenticación está temporalmente inaccesible. Por favor, reintenta en unos instantes.' },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json(
@@ -122,7 +117,7 @@ export async function POST(req: NextRequest) {
     );
   } catch (err: any) {
     return NextResponse.json(
-      { message: err.message || 'Error interno del servidor al autenticar.' },
+      { message: err.message || 'Error interno del servidor al procesar la autenticación.' },
       { status: 500 }
     );
   }
