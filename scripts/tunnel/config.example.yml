@@ -1,0 +1,27 @@
+# ==============================================================================
+# Allabout.skin - Plantilla de Configuración de Cloudflare Tunnel
+# ==============================================================================
+# INSTRUCCIONES:
+# 1. Copia este archivo como 'config.yml' en esta misma carpeta o en '%USERPROFILE%\.cloudflared\config.yml'.
+# 2. Reemplaza los placeholders con el UUID de tu túnel y tu dominio real.
+# 3. NUNCA subas a Git ni compartas los archivos de credenciales (.json ni tokens).
+# ==============================================================================
+
+# UUID del túnel generado con 'cloudflared tunnel create allaboutskin-backend'
+tunnel: TU-TUNNEL-UUID-AQUI
+
+# Ruta al archivo de credenciales JSON descargado al crear el túnel
+credentials-file: C:\Users\TU-USUARIO\.cloudflared\TU-TUNNEL-UUID-AQUI.json
+
+# Reglas de enrutamiento de tráfico entrante (Ingress Rules)
+ingress:
+  # 1. Enrutar las peticiones públicas de la API hacia el servidor local Laravel
+  - hostname: api.tu-dominio.com
+    service: http://127.0.0.1:8000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: false
+      keepAliveTimeout: 1m30s
+
+  # 2. Regla Catch-All obligatoria de Cloudflare: responde 404 a tráfico no mapeado
+  - service: http_status:404
