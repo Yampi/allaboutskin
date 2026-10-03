@@ -49,6 +49,10 @@ export default function TerminosPage() {
         </div>
       </header>
 
+      <p className="mb-8 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600" role="note">
+        Documento en revisión: este texto aún no ha sido validado por un profesional del derecho y puede cambiar antes del lanzamiento público.
+      </p>
+
       {/* Resumen Ejecutivo */}
       <div className="rounded-lg border border-slate-200 bg-white p-5 mb-10 text-slate-800 shadow-sm">
         <div className="flex items-start gap-3">
@@ -188,7 +192,7 @@ export default function TerminosPage() {
             </h2>
           </div>
           <p>
-            Estos Términos y Condiciones se rigen e interpretan de conformidad con el ordenamiento jurídico de la República Bolivariana de Venezuela, en especial la <em>Ley sobre Mensajes de Datos y Firmas Electrónicas</em>, la <em>Ley de Comercio Electrónico</em> y la legislación civil y mercantil supletoria.
+            Estos Términos y Condiciones se rigen e interpretan de conformidad con el ordenamiento jurídico de la República Bolivariana de Venezuela, en especial la <em>Ley sobre Mensajes de Datos y Firmas Electrónicas</em> y la legislación civil y mercantil supletoria.
           </p>
           <p>
             Para la resolución de cualquier controversia emanada de la interpretación o ejecución de este acuerdo, las partes acuerdan privilegiar la vía de composición amigable y, en su defecto, someterse a la jurisdicción de los tribunales de la Circunscripción Judicial del Área Metropolitana de Caracas.

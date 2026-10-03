@@ -67,7 +67,7 @@ export default function EstadoSistemaPage() {
               Estado de la Plataforma & Contingencia
             </h1>
             <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
-              Monitoreo en tiempo real de los servicios analíticos, base de datos de formulaciones y protocolo de respaldo desconectado.
+              Estado actual de la conexión con el servidor, la base de datos y la base de ingredientes.
             </p>
           </div>
 
@@ -153,7 +153,7 @@ export default function EstadoSistemaPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm">
                 <Database className="w-4 h-4 text-slate-600" />
-                <span>Base de Datos PostgreSQL 16</span>
+                <span>Base de datos</span>
               </div>
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono ${
@@ -162,43 +162,33 @@ export default function EstadoSistemaPage() {
                     : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}
               >
-                {healthData?.services.database === 'connected' ? 'CONECTADO' : 'LOCAL CACHE'}
+                {healthData?.services.database === 'connected' ? 'CONECTADA' : 'SIN CONEXIÓN'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Catálogo maestro de 214+ fórmulas certificadas, ingredientes INCI y ofertas por sucursales.
+              Productos, ingredientes, tiendas y ofertas.
             </p>
           </div>
 
-          {/* CosIng EU */}
+          {/* Dataset de ingredientes */}
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm">
                 <BookOpen className="w-4 h-4 text-slate-600" />
-                <span>Normalizador CosIng (UE)</span>
+                <span>Base de ingredientes</span>
               </div>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
-                OPERACIONAL
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono ${
+                  healthData?.services.ingredient_dataset === 'loaded'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}
+              >
+                {healthData?.services.ingredient_dataset === 'loaded' ? 'CARGADA' : 'NO DISPONIBLE'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Índice estático de funciones cosméticas conforme al Reglamento (CE) N° 1223/2009.
-            </p>
-          </div>
-
-          {/* PubMed NCBI */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm">
-                <Microscope className="w-4 h-4 text-slate-600" />
-                <span>Enlace Bibliográfico PubMed</span>
-              </div>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
-                OPERACIONAL
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Citas científicas y evidencias de principios activos dérmicos.
+              Fichas de ingredientes con fuente y nivel de evidencia.
             </p>
           </div>
         </div>
@@ -219,12 +209,12 @@ export default function EstadoSistemaPage() {
             <span>Su rutina activa de Skin Cycling, productos del tocador y notas personales quedan preservados en el almacenamiento seguro de su navegador. Podrá continuar registrando su noche de exfoliación o retinización sin depender de una conexión activa con el servidor central.</span>
           </div>
           <div className="p-3.5 rounded bg-slate-50 border border-slate-200/80">
-            <strong className="text-slate-900 block mb-1">2. Guía Facial 2D & AR 100% Autónoma</strong>
-            <span>El mapa anatómico interactivo y las técnicas de aplicación no requieren descarga adicional de paquetes en el momento de uso, operando con plena fluidez gráfica en modo desconectado.</span>
+            <strong className="text-slate-900 block mb-1">2. Guía facial 2D y AR</strong>
+            <span>La guía 2D usa contenido de la propia app. La función de AR con cámara descarga su motor y modelo desde servicios públicos externos, por lo que necesita conexión a internet la primera vez que se usa.</span>
           </div>
           <div className="p-3.5 rounded bg-slate-50 border border-slate-200/80">
-            <strong className="text-slate-900 block mb-1">3. Sincronización Automática al Restablecer Enlace</strong>
-            <span>Al reanudarse la conectividad con el nodo, cualquier actualización de inventario o tasa BCV se sincronizará automáticamente sin requerir intervención manual.</span>
+            <strong className="text-slate-900 block mb-1">3. Al restablecerse la conexión</strong>
+            <span>La app vuelve a consultar al servidor de forma periódica. Los datos que viven en el servidor (precios, tiendas, ofertas, análisis de productos) no están disponibles mientras no haya conexión.</span>
           </div>
         </div>
       </section>

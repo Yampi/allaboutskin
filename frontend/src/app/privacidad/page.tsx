@@ -49,6 +49,10 @@ export default function PrivacidadPage() {
         </div>
       </header>
 
+      <p className="mb-8 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600" role="note">
+        Documento en revisión: este texto aún no ha sido validado por un profesional del derecho y puede cambiar antes del lanzamiento público.
+      </p>
+
       {/* Principio Clave Callout */}
       <div className="rounded-lg border border-teal-200 bg-teal-50/60 p-5 mb-10 text-slate-800 shadow-sm">
         <div className="flex items-start gap-3">
@@ -56,7 +60,7 @@ export default function PrivacidadPage() {
           <div className="space-y-1 text-sm leading-relaxed">
             <h2 className="font-semibold text-teal-950">Compromiso Fundamental de Privacidad</h2>
             <p className="text-slate-700 text-xs sm:text-sm">
-              Allabout.skin <strong>no comercializa ni cede bases de datos de usuarios a anunciantes ni terceros</strong>. La arquitectura del sistema está diseñada para procesar imágenes cosméticas y guías faciales de manera volátil y local, sin almacenar fotografías personales en servidores persistentes.
+              Allabout.skin <strong>no comercializa ni cede bases de datos de usuarios a anunciantes ni terceros</strong>. La arquitectura del sistema está diseñada para procesar las imágenes de la cámara y de las fotos faciales en su propio dispositivo, sin enviarlas ni almacenarlas en nuestros servidores.
             </p>
           </div>
         </div>
@@ -82,7 +86,7 @@ export default function PrivacidadPage() {
                 <span>Cámara y Realidad Aumentada Facial</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                El flujo de video para el tutorial de aplicación facial y masaje linfático se procesa en tiempo real mediante aceleración por hardware en su navegador web. El fotograma de su rostro <strong>nunca se graba, no se transmite a servidores externos ni se almacena en disco</strong>. Al cerrar la pestaña o finalizar la sesión, el búfer de video se destruye inmediatamente.
+                El flujo de video para el tutorial de aplicación facial y masaje linfático se procesa en tiempo real mediante aceleración por hardware en su navegador web. El fotograma de su rostro <strong>no se envía a nuestros servidores ni se guarda</strong>. Para funcionar, la herramienta descarga su motor de detección y su modelo desde servicios públicos externos (jsDelivr y Google Cloud Storage), que pueden registrar la dirección IP de su conexión como cualquier descarga web; esas descargas no incluyen su imagen.
               </p>
             </div>
 
@@ -111,7 +115,7 @@ export default function PrivacidadPage() {
           </p>
           <ul className="list-disc pl-5 space-y-1.5 text-slate-700">
             <li>La imagen del envase se analiza temporalmente a fin de extraer los caracteres alfanuméricos de la lista INCI.</li>
-            <li>Una vez completada la tokenización del texto químico, la imagen original se descarta de la memoria volátil del servidor.</li>
+            <li>El reconocimiento de texto se realiza en su dispositivo; al servidor solo se envía el texto extraído, no la imagen.</li>
             <li>Únicamente se conserva la lista normalizada de ingredientes vinculada al producto o al historial de auditoría de su cuenta si decide guardarla voluntariamente.</li>
           </ul>
         </section>
@@ -150,7 +154,7 @@ export default function PrivacidadPage() {
                 <tr>
                   <td className="px-4 py-3 font-medium text-slate-900">Geolocalización Voluntaria</td>
                   <td className="px-4 py-3">Coordenadas de latitud/longitud o ciudad seleccionada.</td>
-                  <td className="px-4 py-3">Ordenamiento de farmacias y comercios cercanos para adquisición de fórmulas. No se almacena historial de desplazamientos.</td>
+                  <td className="px-4 py-3">Ordenamiento de farmacias y comercios cercanos para adquisición de fórmulas.</td>
                 </tr>
               </tbody>
             </table>

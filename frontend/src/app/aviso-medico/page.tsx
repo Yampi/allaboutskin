@@ -48,6 +48,10 @@ export default function AvisoMedicoPage() {
         </div>
       </header>
 
+      <p className="mb-8 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600" role="note">
+        Documento en revisión: este texto aún no ha sido validado por un profesional del derecho y puede cambiar antes del lanzamiento público.
+      </p>
+
       {/* Alert Callout WCAG AA */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-5 mb-10 text-slate-800 shadow-sm" role="alert">
         <div className="flex items-start gap-3">
@@ -192,12 +196,12 @@ export default function AvisoMedicoPage() {
                 <span className="text-slate-500 text-xs">Directorio nacional de dermatólogos certificados en Venezuela.</span>
               </div>
               <a
-                href="https://svderma.org"
+                href="https://www.google.com/search?q=Sociedad+Venezolana+de+Dermatolog%C3%ADa"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-teal-700 hover:text-teal-900 font-medium ml-3"
               >
-                <span>Portal Oficial</span>
+                <span>Buscar</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -208,12 +212,12 @@ export default function AvisoMedicoPage() {
                 <span className="text-slate-500 text-xs">Registro y control sanitario de productos cosméticos y medicamentos.</span>
               </div>
               <a
-                href="http://www.inhrr.gob.ve"
+                href="https://www.google.com/search?q=Instituto+Nacional+de+Higiene+Rafael+Rangel"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-teal-700 hover:text-teal-900 font-medium ml-3"
               >
-                <span>Portal Oficial</span>
+                <span>Buscar</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>

@@ -28,32 +28,26 @@ Route::prefix('v1')->group(function () {
 
     // 0. Public Health & Node Connectivity Monitor
     Route::get('/health', function () {
-        $dbStatus = 'disconnected';
+        $dbStatus = 'error';
+        $datasetStatus = 'unavailable';
         try {
             \Illuminate\Support\Facades\DB::connection()->getPdo();
             $dbStatus = 'connected';
+            $datasetStatus = \App\Models\Ingredient::query()->exists() ? 'loaded' : 'empty';
         } catch (\Throwable $e) {
-            $dbStatus = 'error';
+            // Se reporta solo el estado; nunca el detalle del error.
         }
 
-        $isHealthy = $dbStatus === 'connected';
+        $isHealthy = $dbStatus === 'connected' && $datasetStatus === 'loaded';
 
         return response()->json([
             'status' => $isHealthy ? 'operational' : 'degraded',
             'uptime_status' => 'online',
-            'environment' => config('app.env'),
             'timestamp' => now()->toIso8601String(),
             'services' => [
                 'database' => $dbStatus,
-                'cosing_eu' => 'operational',
-                'ncbi_pubmed' => 'operational',
+                'ingredient_dataset' => $datasetStatus,
             ],
-            'node' => [
-                'name' => 'Allabout.skin Core Node',
-                'location' => 'VE-Local / Cloudflare Tunnel',
-                'contingency_mode' => false,
-            ],
-            'version' => '1.0.0'
         ], $isHealthy ? 200 : 503);
     });
 

@@ -1371,19 +1371,11 @@ export async function fetchAdminCrawlerSummary(hours: number = 24): Promise<{
 export interface SystemHealthData {
   status: 'operational' | 'degraded';
   uptime_status: 'online' | 'offline';
-  environment: string;
   timestamp: string;
   services: {
     database: string;
-    cosing_eu: string;
-    ncbi_pubmed: string;
+    ingredient_dataset: string;
   };
-  node: {
-    name: string;
-    location: string;
-    contingency_mode: boolean;
-  };
-  version: string;
 }
 
 export async function checkSystemHealth(): Promise<SystemHealthData> {

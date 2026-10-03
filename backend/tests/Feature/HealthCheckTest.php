@@ -2,38 +2,25 @@
 
 namespace Tests\Feature;
 
+use App\Models\Ingredient;
 use Tests\TestCase;
 
 class HealthCheckTest extends TestCase
 {
-    public function test_health_endpoint_returns_operational_status(): void
+    public function test_health_reports_database_and_dataset_status(): void
     {
         $response = $this->getJson('/api/v1/health');
 
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'status',
-                'uptime_status',
-                'environment',
-                'timestamp',
-                'services' => [
-                    'database',
-                    'cosing_eu',
-                    'ncbi_pubmed',
-                ],
-                'node' => [
-                    'name',
-                    'location',
-                    'contingency_mode',
-                ],
-                'version',
-            ])
-            ->assertJson([
-                'status' => 'operational',
-                'uptime_status' => 'online',
-                'services' => [
-                    'database' => 'connected',
-                ],
-            ]);
+        $response->assertJsonStructure([
+            'status',
+            'uptime_status',
+            'timestamp',
+            'services' => ['database', 'ingredient_dataset'],
+        ])->assertJsonMissingPath('environment')
+          ->assertJsonPath('services.database', 'connected');
+
+        $expectedDataset = Ingredient::query()->exists() ? 'loaded' : 'empty';
+        $response->assertJsonPath('services.ingredient_dataset', $expectedDataset);
+        $response->assertStatus($expectedDataset === 'loaded' ? 200 : 503);
     }
 }
