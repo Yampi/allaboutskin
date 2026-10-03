@@ -444,4 +444,81 @@ class BusinessPortalApiTest extends TestCase
         // La tienda no debe cambiar de dueño
         $this->assertEquals($ownerA->id, $store->fresh()->owner_id);
     }
+
+    /** @test */
+    public function business_owner_can_bulk_import_catalog_with_matching_and_new_products()
+    {
+        $owner = User::factory()->create(['role' => UserRole::BUSINESS_OWNER, 'is_active' => true]);
+        $store = AffiliateStore::create([
+            'owner_id' => $owner->id,
+            'name' => 'Farmatodo Valle de la Pascua',
+            'slug' => 'farmatodo-vlp',
+            'website_url' => 'https://farmatodo.com.ve',
+            'store_type' => 'PHYSICAL',
+            'country_code' => 'VE',
+            'is_active' => true,
+        ]);
+
+        $brand = Brand::create(['name' => 'CeraVe', 'slug' => 'cerave', 'is_verified' => true]);
+        $existingProduct = Product::create([
+            'brand_id' => $brand->id,
+            'name' => 'CeraVe Limpiador Hidratante 236ml',
+            'slug' => 'cerave-limpiador-hidratante-236ml',
+            'barcode_ean' => '3337875597180',
+            'category' => 'CLEANSER',
+            'is_verified' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $payload = [
+            'exchange_rate' => 36.50,
+            'items' => [
+                // Item 1: Coincide por código de barras existente
+                [
+                    'barcode_ean' => '3337875597180',
+                    'name' => 'CeraVe Limpiador Hidratante',
+                    'brand' => 'CeraVe',
+                    'price_usd' => 14.99,
+                    'in_stock' => true,
+                ],
+                // Item 2: Producto nuevo no catalogado previamente
+                [
+                    'barcode_ean' => '7501234567890',
+                    'name' => 'Protector Solar Dermatólogo FPS 50+',
+                    'brand' => 'Laboratorios Venezuela',
+                    'price_usd' => 22.00,
+                    'price_ves' => 803.00,
+                    'in_stock' => true,
+                    'product_url' => 'https://wa.me/584141234567?text=QuieroElProtector',
+                ],
+            ],
+        ];
+
+        $response = $this->postJson('/api/v1/business/offers/import', $payload);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('summary.total_processed', 2)
+            ->assertJsonPath('summary.created_offers', 2)
+            ->assertJsonPath('summary.matched_scientific_products', 1)
+            ->assertJsonPath('summary.created_new_products', 1)
+            ->assertJsonPath('summary.errors_count', 0);
+
+        // Verificar que la oferta del producto existente se creó y calculó VES
+        $this->assertDatabaseHas('product_store_offers', [
+            'store_id' => $store->id,
+            'product_id' => $existingProduct->id,
+            'price' => 14.99,
+            'price_ves' => 547.14, // 14.99 * 36.50
+            'in_stock' => true,
+        ]);
+
+        // Verificar que el producto nuevo fue creado
+        $this->assertDatabaseHas('products', [
+            'name' => 'Protector Solar Dermatólogo FPS 50+',
+            'barcode_ean' => '7501234567890',
+            'is_verified' => false,
+        ]);
+    }
 }

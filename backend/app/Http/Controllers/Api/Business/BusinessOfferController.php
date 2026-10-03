@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\Business;
 
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateStore;
+use App\Models\Brand;
 use App\Models\Product;
 use App\Models\ProductStoreOffer;
 use App\Models\StoreBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class BusinessOfferController extends Controller
 {
@@ -205,6 +207,159 @@ class BusinessOfferController extends Controller
             'status' => 'success',
             'message' => "Se actualizaron {$updatedCount} registros exitosamente.",
             'updated_count' => $updatedCount,
+        ]);
+    }
+
+    /**
+     * Importación masiva de productos y ofertas de catálogo (CSV / Lote JSON).
+     */
+    public function importCatalog(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $store = AffiliateStore::where('owner_id', $user->id)->firstOrFail();
+
+        $validated = $request->validate([
+            'branch_id' => 'nullable|exists:store_branches,id',
+            'exchange_rate' => 'nullable|numeric|min:0.01',
+            'items' => 'required|array|min:1|max:500',
+            'items.*.barcode_ean' => 'nullable|string|max:50',
+            'items.*.name' => 'required|string|max:200',
+            'items.*.brand' => 'nullable|string|max:100',
+            'items.*.price_usd' => 'required|numeric|min:0',
+            'items.*.price_ves' => 'nullable|numeric|min:0',
+            'items.*.in_stock' => 'nullable|boolean',
+            'items.*.product_url' => 'nullable|url|max:500',
+        ]);
+
+        // Validar sucursal si se especifica
+        $branchId = null;
+        if (!empty($validated['branch_id'])) {
+            $branch = StoreBranch::where('id', $validated['branch_id'])
+                ->where('store_id', $store->id)
+                ->firstOrFail();
+            $branchId = $branch->id;
+        }
+
+        $rate = !empty($validated['exchange_rate']) ? (float) $validated['exchange_rate'] : null;
+
+        $createdOffers = 0;
+        $updatedOffers = 0;
+        $createdProducts = 0;
+        $matchedProducts = 0;
+        $errors = [];
+
+        foreach ($validated['items'] as $index => $item) {
+            try {
+                $productName = trim($item['name']);
+                $barcode = !empty($item['barcode_ean']) ? trim($item['barcode_ean']) : null;
+                $brandName = !empty($item['brand']) ? trim($item['brand']) : 'Genérico';
+                $priceUsd = (float) $item['price_usd'];
+                $priceVes = isset($item['price_ves']) && $item['price_ves'] !== null
+                    ? (float) $item['price_ves']
+                    : ($rate ? round($priceUsd * $rate, 2) : null);
+                $inStock = isset($item['in_stock']) ? (bool) $item['in_stock'] : true;
+                $productUrl = !empty($item['product_url']) ? $item['product_url'] : $store->website_url;
+
+                // 1. Intentar encontrar producto por código de barras
+                $product = null;
+                if ($barcode) {
+                    $product = Product::where('barcode_ean', $barcode)->first();
+                }
+
+                // 2. Si no coincide por código de barras, buscar por nombre exacto o slug
+                if (!$product) {
+                    $productSlug = Str::slug($productName);
+                    $product = Product::where('slug', $productSlug)
+                        ->orWhere('name', 'ilike', $productName)
+                        ->first();
+                }
+
+                // 3. Búsqueda por coincidencia parcial si aún no se encuentra
+                if (!$product) {
+                    $product = Product::where('name', 'ilike', "%{$productName}%")->first();
+                }
+
+                if ($product) {
+                    $matchedProducts++;
+                } else {
+                    // Crear marca si no existe
+                    $brandSlug = Str::slug($brandName);
+                    $brand = Brand::firstOrCreate(
+                        ['slug' => $brandSlug],
+                        ['name' => $brandName, 'is_verified' => false]
+                    );
+
+                    // Crear producto nuevo para el catálogo de la tienda
+                    $uniqueProductSlug = Str::slug($productName . '-' . Str::random(5));
+                    $product = Product::create([
+                        'brand_id' => $brand->id,
+                        'name' => $productName,
+                        'slug' => $uniqueProductSlug,
+                        'barcode_ean' => $barcode,
+                        'category' => 'SERUM',
+                        'is_verified' => false,
+                    ]);
+                    $createdProducts++;
+                }
+
+                // 4. Crear o actualizar la oferta en la tienda
+                $offer = ProductStoreOffer::where('store_id', $store->id)
+                    ->where('product_id', $product->id)
+                    ->where(function ($q) use ($branchId) {
+                        if ($branchId) {
+                            $q->where('branch_id', $branchId);
+                        } else {
+                            $q->whereNull('branch_id');
+                        }
+                    })
+                    ->first();
+
+                if ($offer) {
+                    $offer->update([
+                        'price' => $priceUsd,
+                        'price_ves' => $priceVes,
+                        'in_stock' => $inStock,
+                        'product_url' => $productUrl,
+                        'affiliate_url' => $productUrl,
+                        'last_checked_at' => now(),
+                    ]);
+                    $updatedOffers++;
+                } else {
+                    ProductStoreOffer::create([
+                        'store_id' => $store->id,
+                        'product_id' => $product->id,
+                        'branch_id' => $branchId,
+                        'price' => $priceUsd,
+                        'price_ves' => $priceVes,
+                        'currency' => 'USD',
+                        'in_stock' => $inStock,
+                        'product_url' => $productUrl,
+                        'affiliate_url' => $productUrl,
+                        'last_checked_at' => now(),
+                    ]);
+                    $createdOffers++;
+                }
+            } catch (\Throwable $e) {
+                $errors[] = [
+                    'row' => $index + 1,
+                    'name' => $item['name'] ?? 'Desconocido',
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Procesamiento completado: {$createdOffers} ofertas nuevas, {$updatedOffers} actualizadas.",
+            'summary' => [
+                'total_processed' => count($validated['items']),
+                'created_offers' => $createdOffers,
+                'updated_offers' => $updatedOffers,
+                'matched_scientific_products' => $matchedProducts,
+                'created_new_products' => $createdProducts,
+                'errors_count' => count($errors),
+            ],
+            'errors' => $errors,
         ]);
     }
 }

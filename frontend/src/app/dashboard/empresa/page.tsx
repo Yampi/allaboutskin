@@ -28,6 +28,11 @@ import {
   HelpCircle,
   ShoppingBag,
   ArrowRight,
+  Upload,
+  FileSpreadsheet,
+  Download,
+  FileText,
+  X,
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -45,6 +50,9 @@ import {
   updateBusinessOffer,
   deleteBusinessOffer,
   bulkUpdateBusinessOffers,
+  bulkImportBusinessCatalog,
+  BulkImportItem,
+  BulkImportResponse,
   fetchBusinessAnalytics,
   searchCatalogProducts,
   BusinessStoreProfile,
@@ -116,6 +124,25 @@ function BusinessDashboardContent() {
   const [newOfferInStock, setNewOfferInStock] = useState(true);
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+
+  // Bulk CSV Importer State (DLG-EXEC)
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importRawText, setImportRawText] = useState('');
+  const [importSelectedBranch, setImportSelectedBranch] = useState<string>('');
+  const [importExchangeRate, setImportExchangeRate] = useState<string>('45.00');
+  const [parsedImportRows, setParsedImportRows] = useState<Array<{
+    barcode_ean?: string;
+    name: string;
+    brand?: string;
+    price_usd: number;
+    price_ves?: number;
+    in_stock: boolean;
+    product_url?: string;
+    isValid: boolean;
+    validationError?: string;
+  }>>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<BulkImportResponse | null>(null);
 
   // New Branch Form State
   const [branchFormName, setBranchFormName] = useState('');
@@ -369,6 +396,155 @@ function BusinessDashboardContent() {
       showToast('error', err.message || 'Error al agregar producto');
     } finally {
       setIsSubmittingOffer(false);
+    }
+  };
+
+  // Bulk CSV parsing and import handlers (DLG-EXEC)
+  const parseImportText = (text: string, rateStr: string) => {
+    const rate = parseFloat(rateStr) || null;
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    if (lines.length === 0) {
+      setParsedImportRows([]);
+      return;
+    }
+
+    const firstLineLower = lines[0].toLowerCase();
+    const hasHeader = firstLineLower.includes('producto') || firstLineLower.includes('nombre') || firstLineLower.includes('precio') || firstLineLower.includes('price');
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    const rows = dataLines.map((line) => {
+      let delimiter = ',';
+      if (line.includes('\t')) delimiter = '\t';
+      else if (line.includes(';') && (line.match(/;/g)?.length || 0) >= (line.match(/,/g)?.length || 0)) delimiter = ';';
+
+      const parts = line.split(delimiter).map((p) => p.trim().replace(/^["']|["']$/g, ''));
+
+      let barcode_ean = '';
+      let name = '';
+      let brand = '';
+      let price_usd = 0;
+      let price_ves: number | undefined = undefined;
+      let in_stock = true;
+      let product_url = '';
+
+      if (parts.length === 1) {
+        name = parts[0];
+      } else if (parts.length === 2) {
+        name = parts[0];
+        price_usd = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+      } else if (parts.length === 3) {
+        if (/^\d{8,14}$/.test(parts[0])) {
+          barcode_ean = parts[0];
+          name = parts[1];
+          price_usd = parseFloat(parts[2].replace(/[^0-9.]/g, '')) || 0;
+        } else {
+          name = parts[0];
+          brand = parts[1];
+          price_usd = parseFloat(parts[2].replace(/[^0-9.]/g, '')) || 0;
+        }
+      } else if (parts.length >= 4) {
+        if (/^\d{8,14}$/.test(parts[0])) {
+          barcode_ean = parts[0];
+          name = parts[1];
+          brand = parts[2];
+          price_usd = parseFloat(parts[3].replace(/[^0-9.]/g, '')) || 0;
+          if (parts[4]) price_ves = parseFloat(parts[4].replace(/[^0-9.]/g, '')) || undefined;
+          if (parts[5]) in_stock = !['no', '0', 'false', 'agotado'].includes(parts[5].toLowerCase());
+          if (parts[6]) product_url = parts[6];
+        } else {
+          name = parts[0];
+          brand = parts[1];
+          price_usd = parseFloat(parts[2].replace(/[^0-9.]/g, '')) || 0;
+          if (parts[3]) price_ves = parseFloat(parts[3].replace(/[^0-9.]/g, '')) || undefined;
+          if (parts[4]) in_stock = !['no', '0', 'false', 'agotado'].includes(parts[4].toLowerCase());
+          if (parts[5]) product_url = parts[5];
+        }
+      }
+
+      if (!price_ves && rate && price_usd > 0) {
+        price_ves = Math.round(price_usd * rate * 100) / 100;
+      }
+
+      const isValid = name.trim().length > 1 && price_usd > 0;
+      const validationError = !name.trim()
+        ? 'Nombre requerido'
+        : price_usd <= 0
+        ? 'Precio USD inválido'
+        : undefined;
+
+      return {
+        barcode_ean: barcode_ean || undefined,
+        name,
+        brand: brand || undefined,
+        price_usd,
+        price_ves,
+        in_stock,
+        product_url: product_url || undefined,
+        isValid,
+        validationError,
+      };
+    });
+
+    setParsedImportRows(rows);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = (event.target?.result as string) || '';
+      setImportRawText(content);
+      parseImportText(content, importExchangeRate);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateContent = "codigo_barras,producto,marca,precio_usd,stock,enlace\n7501234567890,Effaclar Gel Purificante 200ml,La Roche-Posay,18.50,si,https://wa.me/584141234567\n3337875597180,CeraVe Crema Hidratante 454g,CeraVe,24.00,si,https://wa.me/584141234567\n7591234567890,Protector Solar FPS 50+ Facial,Valmy,12.00,si,https://wa.me/584141234567";
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'plantilla_catalogo_allaboutskin.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExecuteImport = async () => {
+    const validRows = parsedImportRows.filter((r) => r.isValid);
+    if (validRows.length === 0) {
+      showToast('error', 'No hay filas válidas para importar.');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const payloadItems: BulkImportItem[] = validRows.map((r) => ({
+        barcode_ean: r.barcode_ean,
+        name: r.name,
+        brand: r.brand,
+        price_usd: r.price_usd,
+        price_ves: r.price_ves,
+        in_stock: r.in_stock,
+        product_url: r.product_url,
+      }));
+
+      const res = await bulkImportBusinessCatalog({
+        branch_id: importSelectedBranch ? parseInt(importSelectedBranch) : null,
+        exchange_rate: parseFloat(importExchangeRate) || undefined,
+        items: payloadItems,
+      });
+
+      setImportResult(res);
+      showToast('success', res.message);
+      loadOffers();
+      loadAnalytics();
+    } catch (err: any) {
+      showToast('error', err.message || 'Error al procesar la importación.');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -1075,19 +1251,35 @@ function BusinessDashboardContent() {
               </select>
             </div>
 
-            <button
-              onClick={() => {
-                setSelectedProduct(null);
-                setProductQuery('');
-                setNewOfferPrice('');
-                setNewOfferPriceVes('');
-                setShowAddOfferModal(true);
-              }}
-              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-teal-600/20 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Añadir Producto a Vitrina</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(true);
+                  setImportResult(null);
+                }}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer shadow-sm"
+                title="Carga masiva de productos vía CSV o Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-teal-400" />
+                <span>Importar CSV / Lote</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setProductQuery('');
+                  setNewOfferPrice('');
+                  setNewOfferPriceVes('');
+                  setShowAddOfferModal(true);
+                }}
+                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-teal-600/20 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Añadir Producto</span>
+              </button>
+            </div>
           </div>
 
           {/* Catalog Offers Table */}
@@ -1767,6 +1959,313 @@ function BusinessDashboardContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ================= MODAL: BULK CSV CATALOG IMPORTER (DLG-EXEC) ================= */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl p-5 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-teal-400 font-bold text-xs uppercase tracking-wider">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Importador Masivo de Catálogo</span>
+                </div>
+                <h3 className="text-xl font-black text-white">
+                  Carga Rápida de Inventario (CSV / Excel / Texto)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Importa hasta 500 productos en un solo paso. Los productos existentes se sincronizan automáticamente con la base de datos científica; los nuevos se agregan a tu vitrina.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportResult(null);
+                }}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* If import already finished: show results summary */}
+            {importResult ? (
+              <div className="space-y-5 py-2">
+                <div className="p-5 rounded-xl bg-teal-950/40 border border-teal-500/40 space-y-3">
+                  <div className="flex items-center gap-2 text-teal-300 font-bold text-sm">
+                    <CheckCircle className="w-5 h-5 text-teal-400" />
+                    <span>{importResult.message}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Nuevas Ofertas</span>
+                      <span className="text-lg font-mono font-bold text-teal-400">
+                        {importResult.summary.created_offers}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Ofertas Actualizadas</span>
+                      <span className="text-lg font-mono font-bold text-cyan-400">
+                        {importResult.summary.updated_offers}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Vinculados con Ficha Médica</span>
+                      <span className="text-lg font-mono font-bold text-emerald-400">
+                        {importResult.summary.matched_scientific_products}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Nuevos Productos Catalogados</span>
+                      <span className="text-lg font-mono font-bold text-amber-400">
+                        {importResult.summary.created_new_products}
+                      </span>
+                    </div>
+                  </div>
+
+                  {importResult.errors && importResult.errors.length > 0 && (
+                    <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                      <div className="font-bold">Observaciones en {importResult.errors.length} fila(s):</div>
+                      <div className="max-h-28 overflow-y-auto space-y-0.5 text-[11px]">
+                        {importResult.errors.map((err, i) => (
+                          <div key={i}>
+                            &bull; Fila {err.row} ({err.name}): {err.error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImportResult(null);
+                      setImportRawText('');
+                      setParsedImportRows([]);
+                    }}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Importar Otro Lote
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportResult(null);
+                      loadOffers();
+                    }}
+                    className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Cerrar y Ver Catálogo
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Controls Bar: Download Template + File Upload */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplate}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Descargar Plantilla CSV</span>
+                    </button>
+                    <span className="text-[11px] text-slate-500 hidden sm:inline">
+                      (Columnas: código, producto, marca, precio_usd, stock, enlace)
+                    </span>
+                  </div>
+
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition cursor-pointer shadow-sm">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Cargar Archivo CSV</span>
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Batch Settings: Branch & Exchange Rate */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1">
+                      Sucursal Destino
+                    </label>
+                    <select
+                      value={importSelectedBranch}
+                      onChange={(e) => setImportSelectedBranch(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-teal-500"
+                    >
+                      <option value="">Disponible en todas las sucursales</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.city})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1">
+                      Tasa de Cambio para Autocalcular Bs (VES por USD)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">
+                        Bs/$
+                      </span>
+                      <input
+                        type="number"
+                        step="0.10"
+                        value={importExchangeRate}
+                        onChange={(e) => {
+                          setImportExchangeRate(e.target.value);
+                          if (importRawText) parseImportText(importRawText, e.target.value);
+                        }}
+                        placeholder="45.00"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Raw Text / Paste Area */}
+                <div>
+                  <label className="text-xs font-bold uppercase text-slate-400 tracking-wider block mb-1">
+                    Pega tus filas aquí (o edita el texto cargado)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={importRawText}
+                    onChange={(e) => {
+                      setImportRawText(e.target.value);
+                      parseImportText(e.target.value, importExchangeRate);
+                    }}
+                    placeholder={"codigo_barras,producto,marca,precio_usd,stock,enlace\n7501234567890,Effaclar Gel 200ml,La Roche-Posay,18.50,si,https://wa.me/...\n3337875597180,CeraVe Crema 454g,CeraVe,24.00,si,https://wa.me/..."}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-teal-500 transition"
+                  />
+                </div>
+
+                {/* Preview Table (DLG-EXEC High-Density Functional Table) */}
+                {parsedImportRows.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-300">
+                        Previsualización ({parsedImportRows.length} filas detectadas)
+                      </span>
+                      <span className="text-[11px] text-teal-400 font-mono">
+                        {parsedImportRows.filter((r) => r.isValid).length} listas para importar
+                      </span>
+                    </div>
+
+                    <div className="border border-slate-800 rounded-xl overflow-hidden max-h-56 overflow-y-auto bg-slate-950/70">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-10">
+                          <tr>
+                            <th className="py-2.5 px-3">#</th>
+                            <th className="py-2.5 px-3">Código</th>
+                            <th className="py-2.5 px-3">Producto</th>
+                            <th className="py-2.5 px-3">Marca</th>
+                            <th className="py-2.5 px-3 text-right">Precio USD</th>
+                            <th className="py-2.5 px-3 text-right">Precio Bs</th>
+                            <th className="py-2.5 px-3 text-center">Stock</th>
+                            <th className="py-2.5 px-3 text-center">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-850 font-mono">
+                          {parsedImportRows.map((row, idx) => (
+                            <tr
+                              key={idx}
+                              className={`hover:bg-slate-900/60 transition ${
+                                !row.isValid ? 'bg-red-950/20' : ''
+                              }`}
+                            >
+                              <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
+                              <td className="py-2 px-3 text-slate-400">{row.barcode_ean || '—'}</td>
+                              <td className="py-2 px-3 font-sans font-medium text-white max-w-[200px] truncate">
+                                {row.name}
+                              </td>
+                              <td className="py-2 px-3 font-sans text-slate-400">{row.brand || '—'}</td>
+                              <td className="py-2 px-3 text-right text-emerald-400 font-bold">
+                                ${row.price_usd.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-3 text-right text-cyan-400">
+                                {row.price_ves ? `${row.price_ves.toFixed(2)} Bs` : '—'}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                {row.in_stock ? (
+                                  <span className="text-[10px] text-teal-400">Sí</span>
+                                ) : (
+                                  <span className="text-[10px] text-red-400">No</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-center font-sans">
+                                {row.isValid ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                                    Listo
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30">
+                                    {row.validationError || 'Inválido'}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Modal Footer Actions */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setParsedImportRows([]);
+                      setImportRawText('');
+                    }}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExecuteImport}
+                    disabled={isImporting || parsedImportRows.filter((r) => r.isValid).length === 0}
+                    className="px-6 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white font-black text-xs rounded-xl transition shadow-lg shadow-teal-600/20 cursor-pointer flex items-center gap-2"
+                  >
+                    {isImporting ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Procesando Lote...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>
+                          Importar {parsedImportRows.filter((r) => r.isValid).length} Producto(s)
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

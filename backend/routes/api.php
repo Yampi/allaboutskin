@@ -113,6 +113,7 @@ Route::prefix('v1')->group(function () {
             Route::prefix('offers')->group(function () {
                 Route::get('/', [BusinessOfferController::class, 'index']);
                 Route::post('/', [BusinessOfferController::class, 'store']);
+                Route::post('/import', [BusinessOfferController::class, 'importCatalog']);
                 Route::put('/{id}', [BusinessOfferController::class, 'update']);
                 Route::delete('/{id}', [BusinessOfferController::class, 'destroy']);
                 Route::post('/bulk-update', [BusinessOfferController::class, 'bulkUpdatePrices']);

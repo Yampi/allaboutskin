@@ -1137,6 +1137,51 @@ export async function bulkUpdateBusinessOffers(payload: {
   return res.json();
 }
 
+export interface BulkImportItem {
+  barcode_ean?: string;
+  name: string;
+  brand?: string;
+  price_usd: number;
+  price_ves?: number;
+  in_stock?: boolean;
+  product_url?: string;
+}
+
+export interface BulkImportResponse {
+  status: string;
+  message: string;
+  summary: {
+    total_processed: number;
+    created_offers: number;
+    updated_offers: number;
+    matched_scientific_products: number;
+    created_new_products: number;
+    errors_count: number;
+  };
+  errors: Array<{
+    row: number;
+    name: string;
+    error: string;
+  }>;
+}
+
+export async function bulkImportBusinessCatalog(payload: {
+  branch_id?: number | null;
+  exchange_rate?: number;
+  items: BulkImportItem[];
+}): Promise<BulkImportResponse> {
+  const res = await fetch(`${API_BASE_URL}/business/offers/import`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al importar catálogo');
+  }
+  return res.json();
+}
+
 export async function fetchBusinessAnalytics(): Promise<BusinessAnalyticsData> {
   const res = await fetch(`${API_BASE_URL}/business/analytics`, {
     headers: getAuthHeaders(),
