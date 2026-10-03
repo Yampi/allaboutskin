@@ -86,7 +86,7 @@ export default function PrivacidadPage() {
                 <span>Cámara y Realidad Aumentada Facial</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                El flujo de video para el tutorial de aplicación facial y masaje linfático se procesa en tiempo real mediante aceleración por hardware en su navegador web. El fotograma de su rostro <strong>no se envía a nuestros servidores ni se guarda</strong>. Para funcionar, la herramienta descarga su motor de detección y su modelo desde servicios públicos externos (jsDelivr y Google Cloud Storage), que pueden registrar la dirección IP de su conexión como cualquier descarga web; esas descargas no incluyen su imagen.
+                El flujo de video para el tutorial de aplicación facial y masaje linfático se procesa en tiempo real mediante aceleración por hardware en su navegador web. El fotograma de su rostro <strong>no se envía a nuestros servidores ni se guarda</strong>. El motor de detección facial y su modelo se sirven desde nuestro propio sitio, sin solicitar archivos a terceros para esta función. Otras secciones de la plataforma pueden cargar recursos externos (por ejemplo, los mapas de tiendas usan teselas de un proveedor de mapas), lo que puede exponer su dirección IP a ese proveedor como cualquier carga web.
               </p>
             </div>
 
