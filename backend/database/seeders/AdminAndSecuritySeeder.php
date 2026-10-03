@@ -14,20 +14,31 @@ class AdminAndSecuritySeeder extends Seeder
     public function run(): void
     {
         // 1. Primary Super Admin Account (Brian Baloa)
-        $brianAdmin = User::firstOrCreate(
-            ['email' => 'brian.baloa@gmail.com'],
-            [
-                'name' => 'Brian Baloa',
-                'password' => Hash::make('Baloa$Admin*2026!Skin'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $brianAdmin->role = UserRole::SUPER_ADMIN;
-        $brianAdmin->is_active = true;
-        $brianAdmin->password = Hash::make('Baloa$Admin*2026!Skin');
-        $brianAdmin->save();
+        $superAdminPassword = env('SEED_SUPERADMIN_PASSWORD');
+        $brianAdmin = User::where('email', 'brian.baloa@gmail.com')->first();
 
-        if (!$brianAdmin->skinProfile) {
+        if ($brianAdmin) {
+            $brianAdmin->role = UserRole::SUPER_ADMIN;
+            $brianAdmin->is_active = true;
+            $brianAdmin->save();
+        } elseif (empty($superAdminPassword)) {
+            if ($this->command) {
+                $this->command->warn('Variable SEED_SUPERADMIN_PASSWORD no definida o vacía. Omitiendo creación de brian.baloa@gmail.com.');
+            }
+        } else {
+            $brianAdmin = User::create([
+                'name' => 'Brian Baloa',
+                'email' => 'brian.baloa@gmail.com',
+                'password' => Hash::make($superAdminPassword),
+                'email_verified_at' => now(),
+            ]);
+            $brianAdmin->email_verified_at = now();
+            $brianAdmin->role = UserRole::SUPER_ADMIN;
+            $brianAdmin->is_active = true;
+            $brianAdmin->save();
+        }
+
+        if ($brianAdmin && !$brianAdmin->skinProfile) {
             UserSkinProfile::create([
                 'user_id' => $brianAdmin->id,
                 'skin_type' => 'COMBINATION',
@@ -36,19 +47,31 @@ class AdminAndSecuritySeeder extends Seeder
         }
 
         // 1.1 Legacy Super Admin Account
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@allaboutskin.com'],
-            [
-                'name' => 'Super Administrador',
-                'password' => Hash::make('Admin12345!'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $admin->role = UserRole::SUPER_ADMIN;
-        $admin->is_active = true;
-        $admin->save();
+        $adminPassword = env('SEED_ADMIN_PASSWORD');
+        $admin = User::where('email', 'admin@allaboutskin.com')->first();
 
-        if (!$admin->skinProfile) {
+        if ($admin) {
+            $admin->role = UserRole::SUPER_ADMIN;
+            $admin->is_active = true;
+            $admin->save();
+        } elseif (empty($adminPassword)) {
+            if ($this->command) {
+                $this->command->warn('Variable SEED_ADMIN_PASSWORD no definida o vacía. Omitiendo creación de admin@allaboutskin.com.');
+            }
+        } else {
+            $admin = User::create([
+                'name' => 'Super Administrador',
+                'email' => 'admin@allaboutskin.com',
+                'password' => Hash::make($adminPassword),
+                'email_verified_at' => now(),
+            ]);
+            $admin->email_verified_at = now();
+            $admin->role = UserRole::SUPER_ADMIN;
+            $admin->is_active = true;
+            $admin->save();
+        }
+
+        if ($admin && !$admin->skinProfile) {
             UserSkinProfile::create([
                 'user_id' => $admin->id,
                 'skin_type' => 'NORMAL',
@@ -57,19 +80,31 @@ class AdminAndSecuritySeeder extends Seeder
         }
 
         // 2. Scientific Editor / Dermatologist Account
-        $editor = User::firstOrCreate(
-            ['email' => 'dermatology@allaboutskin.com'],
-            [
-                'name' => 'Dra. Elena Vasquez (Dermatóloga)',
-                'password' => Hash::make('Editor12345!'),
-                'email_verified_at' => now(),
-            ]
-        );
-        $editor->role = UserRole::SCIENTIFIC_EDITOR;
-        $editor->is_active = true;
-        $editor->save();
+        $editorPassword = env('SEED_EDITOR_PASSWORD');
+        $editor = User::where('email', 'dermatology@allaboutskin.com')->first();
 
-        if (!$editor->skinProfile) {
+        if ($editor) {
+            $editor->role = UserRole::SCIENTIFIC_EDITOR;
+            $editor->is_active = true;
+            $editor->save();
+        } elseif (empty($editorPassword)) {
+            if ($this->command) {
+                $this->command->warn('Variable SEED_EDITOR_PASSWORD no definida o vacía. Omitiendo creación de dermatology@allaboutskin.com.');
+            }
+        } else {
+            $editor = User::create([
+                'name' => 'Dra. Elena Vasquez (Dermatóloga)',
+                'email' => 'dermatology@allaboutskin.com',
+                'password' => Hash::make($editorPassword),
+                'email_verified_at' => now(),
+            ]);
+            $editor->email_verified_at = now();
+            $editor->role = UserRole::SCIENTIFIC_EDITOR;
+            $editor->is_active = true;
+            $editor->save();
+        }
+
+        if ($editor && !$editor->skinProfile) {
             UserSkinProfile::create([
                 'user_id' => $editor->id,
                 'skin_type' => 'COMBINATION',
