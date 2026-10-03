@@ -247,7 +247,11 @@ export class FaceMaskArEngine {
     }
   }
 
-  // Helper to dynamically load @mediapipe/tasks-vision (bundled or CDN fallback)
+  // Rutas locales (servidas desde /public/mediapipe) para no depender de CDN ni filtrar la IP a terceros
+  public static readonly MEDIAPIPE_WASM_PATH = '/mediapipe/wasm';
+  public static readonly MEDIAPIPE_MODEL_PATH = '/mediapipe/models/face_landmarker.task';
+
+  // Helper to dynamically load @mediapipe/tasks-vision (bundled)
   public static async loadMediaPipeTasksVision(): Promise<any> {
     if (typeof window !== 'undefined' && (window as any).FaceLandmarker && (window as any).FilesetResolver) {
       return {
@@ -255,20 +259,9 @@ export class FaceMaskArEngine {
         FilesetResolver: (window as any).FilesetResolver,
       };
     }
-    try {
-      const vision = await import('@mediapipe/tasks-vision');
-      if (vision && vision.FaceLandmarker) return vision;
-    } catch (e) {
-      console.info('[MediaPipe] Bundled import failed, falling back to CDN import:', e);
-    }
-    try {
-      const cdnUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest';
-      const dynamicImport = new Function('url', 'return import(url)');
-      return await dynamicImport(cdnUrl);
-    } catch (cdnErr) {
-      console.warn('[MediaPipe] CDN dynamic import failed:', cdnErr);
-      throw cdnErr;
-    }
+    const vision = await import('@mediapipe/tasks-vision');
+    if (vision && vision.FaceLandmarker) return vision;
+    throw new Error('[MediaPipe] @mediapipe/tasks-vision no disponible');
   }
 
   // Initialize MediaPipe FaceLandmarker asynchronously
@@ -279,13 +272,12 @@ export class FaceMaskArEngine {
     try {
       const vision = await FaceMaskArEngine.loadMediaPipeTasksVision();
       const filesetResolver = await vision.FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        FaceMaskArEngine.MEDIAPIPE_WASM_PATH
       );
 
       const landmarkerOptions = {
         baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+          modelAssetPath: FaceMaskArEngine.MEDIAPIPE_MODEL_PATH,
           delegate: 'GPU',
         },
         outputFaceBlendshapes: false,

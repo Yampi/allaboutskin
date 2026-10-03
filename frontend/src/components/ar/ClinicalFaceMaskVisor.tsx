@@ -51,13 +51,12 @@ async function getStaticFaceLandmarker() {
     staticLandmarkerLoadingPromise = (async () => {
       const vision = await FaceMaskArEngine.loadMediaPipeTasksVision();
       const filesetResolver = await vision.FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        FaceMaskArEngine.MEDIAPIPE_WASM_PATH
       );
       try {
         cachedStaticFaceLandmarker = await vision.FaceLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
-            modelAssetPath:
-              'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+            modelAssetPath: FaceMaskArEngine.MEDIAPIPE_MODEL_PATH,
             delegate: 'GPU',
           },
           runningMode: 'IMAGE',
@@ -67,8 +66,7 @@ async function getStaticFaceLandmarker() {
       } catch {
         cachedStaticFaceLandmarker = await vision.FaceLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
-            modelAssetPath:
-              'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+            modelAssetPath: FaceMaskArEngine.MEDIAPIPE_MODEL_PATH,
             delegate: 'CPU',
           },
           runningMode: 'IMAGE',
