@@ -15,14 +15,14 @@ Este documento sintetiza la arquitectura, modelo de dominio, flujos de datos y d
 ## 2. Stack Tecnológico
 
 ### Backend (API REST & Motores de Inferencia)
-- **Framework:** Laravel 11 (PHP 8.2+)
+- **Framework:** Laravel 12 (PHP 8.2+)
 - **Base de Datos:** PostgreSQL 16 (Relacional con búsquedas `ILIKE`, índices EAN/GTIN y soporte geográfico)
 - **Autenticación y RBAC:** Laravel Sanctum + Middleware de Roles (`admin`, `super_admin`, `business_owner`, `user`)
 - **Scraping & Crawling:** HTTP Client resiliente con reintentos, bypass de detección, apollo state parser, JSON-LD extractor y rate limiting
 - **Sincronización Cambiaria:** `ExchangeRateService` con doble capa: BCV oficial (VES <-> USD vía totoya.app) + Multi-moneda internacional (CLP, MXN, EUR, COP, USD vía API abierta con fallback offline)
 
 ### Frontend (Next.js WebApp)
-- **Framework:** Next.js 14/15 (App Router, Server Components + Client Components)
+- **Framework:** Next.js 16 (App Router, Server Components + Client Components, React 19)
 - **Lenguaje:** TypeScript 5.5+
 - **Estilos:** Tailwind CSS con tokens editoriales (`#FAF8F5`, `#2D4A3E`, tipografías serif clásicas y sans-serif modernas)
 - **Iconografía:** Lucide React
@@ -35,7 +35,7 @@ Este documento sintetiza la arquitectura, modelo de dominio, flujos de datos y d
 ### A. Núcleo Científico & Catálogo
 - `Product` (`products`): Cosmético registrado con categoría (`CLEANSER`, `SERUM`, `MOISTURIZER`, `SPF`, `RETINOID`), envase, PAO (Period After Opening) y barcode EAN.
 - `Brand` (`brands`): Laboratorio o marca fabricante con país de origen y verificación clínica.
-- `Ingredient` (`ingredients`): Ficha INCI, CAS number, función dermocosmética, potencial comedogénico e irritante.
+- `Ingredient` (`ingredients`): Ficha INCI, CAS number, función dermocosmética, potencial comedogénico e irritante, fuente científica oficial (`source_name`, `source_url`), licencia de datos (`source_license`) y nivel de evidencia (`evidence_level` A-D).
 - `IngredientConflict` (`ingredient_conflicts`): Reglas de incompatibilidad química (`PH_INCOMPATIBILITY`, `CHEMICAL_DEGRADATION`, `IRRITATION_OVERLOAD`, `CHELATION`).
 - `ProductIngredient` (`product_ingredients`): Tabla pivot con orden de concentración porcentual y declaración de activo terapéutico.
 
