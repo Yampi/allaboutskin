@@ -18,6 +18,9 @@ export interface StoreBranchInfo {
   distance_meters: number;
   geofence_radius_meters: number;
   is_inside: boolean;
+  country_code?: string;
+  country_name?: string;
+  country_flag?: string;
 }
 
 export interface NearbyStoresResponse {
@@ -41,6 +44,13 @@ export interface InStoreProduct {
   barcode_ean: string | null;
   price_usd: number;
   price_ves: number | null;
+  price_local?: number | null;
+  currency_local?: string | null;
+  formatted_price_usd?: string | null;
+  formatted_price_local?: string | null;
+  store_country_code?: string | null;
+  store_country_name?: string | null;
+  store_country_flag?: string | null;
   in_stock: boolean;
   scientific_score: number;
   badge: string;
@@ -73,4 +83,66 @@ export interface StoreSuggestionInput {
   instagram_handle?: string;
   submitted_by_email?: string;
   notes?: string;
+}
+
+export interface StoreRoutineProductComparison {
+  product_id: number;
+  product_name: string;
+  category: string;
+  brand: string | null;
+  is_available_nearby: boolean;
+  closest_store: {
+    branch_id: number;
+    branch_name: string;
+    store_name: string;
+    distance_meters: number;
+    price_usd: number;
+    price_ves: number;
+    product_url?: string;
+    phone?: string;
+    whatsapp?: string;
+    latitude: number;
+    longitude: number;
+    opening_hours?: string;
+  } | null;
+  best_price_store: {
+    branch_id: number;
+    branch_name: string;
+    store_name: string;
+    distance_meters: number;
+    price_usd: number;
+    price_ves: number;
+    product_url?: string;
+    phone?: string;
+    whatsapp?: string;
+    latitude: number;
+    longitude: number;
+    opening_hours?: string;
+  } | null;
+  savings_usd: number;
+  available_stores_count: number;
+}
+
+export interface RoutineOptimizationResponse {
+  status: string;
+  user_location: {
+    lat: number;
+    lng: number;
+    radius_meters: number;
+  };
+  total_routine_products: number;
+  recommended_single_trip_store: {
+    branch: StoreBranchInfo;
+    products_available_count: number;
+    total_usd: number;
+    total_ves: number;
+    items: Array<{
+      product_id: number;
+      product_name: string;
+      price_usd: number;
+      price_ves: number;
+    }>;
+  } | null;
+  products_comparison: StoreRoutineProductComparison[];
+  all_nearby_baskets: any[];
 }

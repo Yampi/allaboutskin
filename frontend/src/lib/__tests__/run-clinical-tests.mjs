@@ -212,6 +212,103 @@ assert(r13.classification === 'HUMAN_FACE', 'Clasificado como HUMAN_FACE');
 assert(r13.faceAnalysis.skinTypeEstimate === 'NORMAL', 'Biotipo es NORMAL');
 assert(r13.faceAnalysis.cheeksAnalysis.rednessPresent === false, 'Sin rojez en mejillas');
 
+// Caso 14: Triage Médico - Herida abierta / disrupción de barrera
+console.log('\n--- Test 14: Triage Médico - Herida Abierta / Disrupción ---');
+const r14 = governAndClassifyBiomarkers({
+  detectedAnatomy: 'HUMAN_FACE',
+  confidence: 0.95,
+  landmarks: validLandmarks,
+  opticalBiomarkers: {
+    tZoneSebumReflectance: 'MODERATE',
+    cheeksSebumReflectance: 'LOW',
+    follicularOstiaPores: 'VISIBLE_T_ZONE',
+    erythemaMalarIndex: 'DIFFUSE_MODERATE',
+    stratumCorneumDesquamation: 'NONE',
+    fitzpatrickPhototypeEstimate: 3,
+    activeLesionRisk: 'OPEN_WOUND_OR_DISRUPTION',
+  }
+});
+assert(r14.faceAnalysis.triage.medicalReferralRecommended === true, 'Derivación médica activada');
+assert(r14.faceAnalysis.triage.triageLevel === 'DERMATOLOGY_REFERRAL_RECOMMENDED', 'Nivel de triage es DERMATOLOGY_REFERRAL_RECOMMENDED');
+assert(r14.faceAnalysis.triage.blockedIngredientCategories.includes('EXFOLIATING_ACIDS_AHA_BHA'), 'Exfoliantes químicos AHA/BHA bloqueados');
+assert(r14.faceAnalysis.triage.blockedIngredientCategories.includes('PURE_RETINOIDS'), 'Retinoides bloqueados en herida');
+
+// Caso 15: Triage Médico - Acné severo quístico/nodular
+console.log('\n--- Test 15: Triage Médico - Imperfecciones Nodulares Profundas ---');
+const r15 = governAndClassifyBiomarkers({
+  detectedAnatomy: 'HUMAN_FACE',
+  confidence: 0.94,
+  landmarks: validLandmarks,
+  opticalBiomarkers: {
+    tZoneSebumReflectance: 'HIGH',
+    cheeksSebumReflectance: 'HIGH',
+    follicularOstiaPores: 'DIFFUSE_WIDE',
+    erythemaMalarIndex: 'LOCALIZED_MILD',
+    stratumCorneumDesquamation: 'NONE',
+    fitzpatrickPhototypeEstimate: 3,
+    activeLesionRisk: 'SEVERE_CYSTIC_OR_NODULAR',
+  }
+});
+assert(r15.faceAnalysis.triage.medicalReferralRecommended === true, 'Derivación médica activada para acné severo');
+assert(r15.faceAnalysis.triage.blockedIngredientCategories.includes('COMEDOGENIC_HEAVY_OILS'), 'Aceites comedogénicos pesados bloqueados');
+
+// Caso 16: Ojeras Vasculares
+console.log('\n--- Test 16: Detección de Ojeras Vasculares ---');
+const r16 = governAndClassifyBiomarkers({
+  detectedAnatomy: 'HUMAN_FACE',
+  confidence: 0.95,
+  landmarks: validLandmarks,
+  opticalBiomarkers: {
+    tZoneSebumReflectance: 'LOW',
+    cheeksSebumReflectance: 'LOW',
+    follicularOstiaPores: 'MINIMAL_INCONSPICUOUS',
+    erythemaMalarIndex: 'ABSENT',
+    stratumCorneumDesquamation: 'NONE',
+    fitzpatrickPhototypeEstimate: 2,
+    darkCirclesType: 'VASCULAR',
+  }
+});
+assert(r16.faceAnalysis.periorbitalAnalysis.darkCirclesType === 'VASCULAR', 'Tipo de ojeras es VASCULAR');
+assert(r16.faceAnalysis.periorbitalAnalysis.suggestedActives.some(a => a.toLowerCase().includes('cafeína')), 'Recomienda cafeína para ojeras vasculares');
+
+// Caso 17: Ojeras Pigmentarias
+console.log('\n--- Test 17: Detección de Ojeras Pigmentarias ---');
+const r17 = governAndClassifyBiomarkers({
+  detectedAnatomy: 'HUMAN_FACE',
+  confidence: 0.96,
+  landmarks: validLandmarks,
+  opticalBiomarkers: {
+    tZoneSebumReflectance: 'MODERATE',
+    cheeksSebumReflectance: 'LOW',
+    follicularOstiaPores: 'VISIBLE_T_ZONE',
+    erythemaMalarIndex: 'ABSENT',
+    stratumCorneumDesquamation: 'NONE',
+    fitzpatrickPhototypeEstimate: 4,
+    darkCirclesType: 'PIGMENTARY',
+  }
+});
+assert(r17.faceAnalysis.periorbitalAnalysis.darkCirclesType === 'PIGMENTARY', 'Tipo de ojeras es PIGMENTARY');
+assert(r17.faceAnalysis.periorbitalAnalysis.suggestedActives.some(a => a.toLowerCase().includes('tranexámico') || a.toLowerCase().includes('vitamina c')), 'Recomienda tranexámico/vit C para ojeras pigmentarias');
+
+// Caso 18: Hiperpigmentación Post-Inflamatoria (HPI)
+console.log('\n--- Test 18: Hiperpigmentación Post-Inflamatoria (HPI) ---');
+const r18 = governAndClassifyBiomarkers({
+  detectedAnatomy: 'HUMAN_FACE',
+  confidence: 0.95,
+  landmarks: validLandmarks,
+  opticalBiomarkers: {
+    tZoneSebumReflectance: 'MODERATE',
+    cheeksSebumReflectance: 'LOW',
+    follicularOstiaPores: 'VISIBLE_T_ZONE',
+    erythemaMalarIndex: 'ABSENT',
+    stratumCorneumDesquamation: 'NONE',
+    fitzpatrickPhototypeEstimate: 5,
+    hyperpigmentationLevel: 'POST_INFLAMMATORY',
+  }
+});
+assert(r18.faceAnalysis.pigmentationAnalysis.level === 'POST_INFLAMMATORY', 'Nivel es POST_INFLAMMATORY');
+assert(r18.faceAnalysis.baumannSkinTypeCode.includes('P'), 'Código Baumann contiene P');
+
 console.log(`\n========================================`);
 console.log(`📊 RESULTADO FINAL: ${passed} Pasados, ${failed} Fallados`);
 console.log(`========================================`);

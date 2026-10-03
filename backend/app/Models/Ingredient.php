@@ -27,6 +27,7 @@ class Ingredient extends Model
             'irritation_rating' => 'integer',
             'results_timeline_weeks_min' => 'integer',
             'results_timeline_weeks_max' => 'integer',
+            'last_crawled_at' => 'datetime',
         ];
     }
 

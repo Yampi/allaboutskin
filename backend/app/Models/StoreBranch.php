@@ -20,7 +20,14 @@ class StoreBranch extends Model
             'longitude' => 'float',
             'geofence_radius_meters' => 'integer',
             'is_active' => 'boolean',
+            'is_verified' => 'boolean',
+            'last_verified_at' => 'datetime',
         ];
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->where('is_verified', true);
     }
 
     public function store(): BelongsTo

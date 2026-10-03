@@ -220,37 +220,6 @@ class ValleDeLaPascuaStoresSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // E. TIENDA INDEPENDIENTE LOCAL (Ejemplo representativo de comercio local de skincare/belleza)
-        $storeDermoPascua = AffiliateStore::updateOrCreate(['slug' => 'dermopascua-tienda-de-belleza'], [
-            'name' => 'DermoPascua & Belleza (Independiente)',
-            'website_url' => 'https://instagram.com/dermopascua_store',
-            'store_type' => 'PHYSICAL',
-            'country_code' => 'VE',
-            'affiliate_network' => 'Comercio Local',
-            'instagram_handle' => '@dermopascua_store',
-            'whatsapp_contact' => '+584243339988',
-            'is_independent' => true,
-            'verification_status' => 'VERIFIED',
-            'submitted_by_email' => 'contacto@dermopascua.com',
-            'community_notes' => 'Tienda local especializada en skincare coreano y dermocosmética importada en Valle de la Pascua.',
-            'is_active' => true,
-        ]);
-
-        $branchDermoPascua = StoreBranch::updateOrCreate(['slug' => 'dermopascua-local-av-bolivar'], [
-            'store_id' => $storeDermoPascua->id,
-            'name' => 'DermoPascua - Calle Bolívar',
-            'state' => 'Guárico',
-            'city' => 'Valle de la Pascua',
-            'address' => 'Calle Bolívar cruce con Calle Retumbo, Local 3B',
-            'reference_point' => 'A media cuadra de la Plaza Central',
-            'latitude' => 9.2162000,
-            'longitude' => -66.0105000,
-            'geofence_radius_meters' => 70,
-            'phone' => '0235-3419999',
-            'whatsapp' => '+584243339988',
-            'opening_hours' => 'Lunes a Sábado: 9:00 AM - 6:00 PM',
-            'is_active' => true,
-        ]);
 
         // F. Farmatodo (Configurado a nivel de catálogo nacional para disponibilidad online / futura sede)
         $storeFarmatodo = AffiliateStore::updateOrCreate(['slug' => 'farmatodo-ve'], [
@@ -348,22 +317,5 @@ class ValleDeLaPascuaStoresSeeder extends Seeder
             ]);
         }
 
-        // Ofertas en DermoPascua (Tienda local)
-        $prodNiacinamide = Product::where('slug', 'the-ordinary-niacinamide-10-zinc-1')->first();
-        if ($prodNiacinamide) {
-            ProductStoreOffer::updateOrCreate([
-                'product_id' => $prodNiacinamide->id,
-                'store_id' => $storeDermoPascua->id,
-                'branch_id' => $branchDermoPascua->id,
-            ], [
-                'product_url' => 'https://instagram.com/dermopascua_store',
-                'affiliate_url' => 'https://instagram.com/dermopascua_store',
-                'price' => 11.50,
-                'price_ves' => 11.50 * $rateVes,
-                'currency' => 'USD',
-                'in_stock' => true,
-                'last_checked_at' => now(),
-            ]);
-        }
     }
 }

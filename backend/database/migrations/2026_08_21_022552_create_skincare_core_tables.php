@@ -168,8 +168,8 @@ return new class extends Migration
             $table->enum('skin_type', ['OILY', 'DRY', 'COMBINATION', 'NORMAL', 'SENSITIVE'])->default('NORMAL');
             $table->unsignedTinyInteger('fitzpatrick_type')->default(3); // 1-6
             $table->enum('barrier_status', ['HEALTHY', 'COMPROMISED', 'ACUTELY_DAMAGED'])->default('HEALTHY');
-            $table->json('active_conditions')->nullable(); // ["ACNE", "ROSACEA", "MELASMA"]
-            $table->json('known_allergens')->nullable(); // ["FRAGRANCE", "LINALOOL"]
+            $table->text('active_conditions')->nullable(); // encrypted:array
+            $table->text('known_allergens')->nullable(); // encrypted:array
             $table->enum('sun_exposure_level', ['LOW', 'MODERATE', 'HIGH'])->default('MODERATE');
             $table->boolean('pregnancy_or_nursing')->default(false);
             $table->timestamps();

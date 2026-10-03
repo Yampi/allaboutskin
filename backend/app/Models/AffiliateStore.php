@@ -15,16 +15,37 @@ class AffiliateStore extends Model
 
     protected $guarded = ['id'];
 
+    protected $appends = ['country_name', 'country_flag'];
+
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
             'is_independent' => 'boolean',
             'is_featured' => 'boolean',
+            'crawler_enabled' => 'boolean',
+            'last_crawled_at' => 'datetime',
             'subscription_tier' => StoreSubscriptionTier::class,
             'subscription_expires_at' => 'datetime',
             'verified_at' => 'datetime',
         ];
+    }
+
+    public function getCountryNameAttribute(): string
+    {
+        $code = strtoupper($this->country_code ?? 'GLOBAL');
+        return \App\Services\Scraper\Services\StoreCountryDetectorService::COUNTRIES[$code]['name'] ?? 'Internacional';
+    }
+
+    public function getCountryFlagAttribute(): string
+    {
+        $code = strtoupper($this->country_code ?? 'GLOBAL');
+        return \App\Services\Scraper\Services\StoreCountryDetectorService::COUNTRIES[$code]['flag'] ?? '🌐';
+    }
+
+    public function scopeByCountry(Builder $query, string $countryCode): Builder
+    {
+        return $query->where('country_code', strtoupper($countryCode));
     }
 
     public function owner(): BelongsTo

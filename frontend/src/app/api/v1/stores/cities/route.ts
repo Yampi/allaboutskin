@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const backendUrl = process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api/v1';
+  const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(`${backendUrl}/stores/cities`, {
       signal: controller.signal,

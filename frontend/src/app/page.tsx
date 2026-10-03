@@ -179,15 +179,15 @@ export default function HomePage() {
             </div>
 
             {/* TARJETAS DE ACCIÓN CON ICONOS GRANDES Y CENTRADAS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               
               {/* Tarjeta 1: Escanear Producto */}
               <Link
                 href="/escaner?mode=product"
-                className="glass-action-card rounded-3xl p-6 sm:p-8 cursor-pointer relative group border border-emerald-500/20 hover:border-emerald-500/50 flex flex-col items-center text-center transition duration-300"
+                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-emerald-500/20 hover:border-emerald-500/50 flex flex-col items-center text-center transition duration-300"
               >
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition duration-300 shadow-xs">
-                  <svg className="w-14 h-14 sm:w-16 sm:h-16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="26" fill="#10B981" fillOpacity="0.12" />
                     <rect x="7" y="23" width="28" height="22" rx="5" stroke="#1E3A2B" strokeWidth="2.4" fill="#FFFFFF" fillOpacity="0.9" />
                     <path d="M14 23V19C14 17.8954 14.8954 17 16 17H22C23.1046 17 24 17.8954 24 19V23" stroke="#1E3A2B" strokeWidth="2.4" />
@@ -203,22 +203,22 @@ export default function HomePage() {
                     <path d="M53 10L54 12.5L56.5 13.5L54 14.5L53 17L52 14.5L49.5 13.5L52 12.5L53 10Z" fill="#10B981" />
                   </svg>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 text-slate-900 font-bold text-lg sm:text-xl group-hover:text-emerald-900 transition">
+                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-emerald-900 transition">
                   <span>Escanear producto</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-emerald-700" />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed font-medium">
-                  Envase o lista de ingredientes
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
+                  Envase o lista INCI
                 </p>
               </Link>
 
               {/* Tarjeta 2: Analizar Piel */}
               <Link
                 href="/escaner?mode=face"
-                className="glass-action-card rounded-3xl p-6 sm:p-8 cursor-pointer relative group border border-amber-500/20 hover:border-amber-500/50 flex flex-col items-center text-center transition duration-300"
+                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-amber-500/20 hover:border-amber-500/50 flex flex-col items-center text-center transition duration-300"
               >
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition duration-300 shadow-xs">
-                  <svg className="w-14 h-14 sm:w-16 sm:h-16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="26" fill="#F59E0B" fillOpacity="0.1" />
                     <path d="M12 21V15C12 13.3431 13.3431 12 15 12H21" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
                     <path d="M43 12H49C50.6569 12 52 13.3431 52 15V21" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
@@ -236,12 +236,32 @@ export default function HomePage() {
                     <circle cx="32" cy="30" r="1.3" fill="#10B981" />
                   </svg>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 text-slate-900 font-bold text-lg sm:text-xl group-hover:text-amber-900 transition">
+                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-amber-900 transition">
                   <span>Analizar piel</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-amber-700" />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed font-medium">
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
                   Selfie con diagnóstico IA
+                </p>
+              </Link>
+
+              {/* Tarjeta 3: Mascarilla AR & Rutinas Guiadas (Filtro Social TikTok/IG) */}
+              <Link
+                href="/escaner?mode=ar-mask"
+                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-teal-500/30 hover:border-teal-500/60 bg-gradient-to-b from-teal-500/5 to-emerald-500/10 flex flex-col items-center text-center transition duration-300"
+              >
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono text-[9px] font-bold uppercase tracking-wider">
+                  Filtro AR
+                </div>
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs text-teal-700">
+                  <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 group-hover:rotate-12 transition-transform" />
+                </div>
+                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-teal-900 transition">
+                  <span>Mascarilla Virtual</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-teal-700" />
+                </div>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
+                  Desmaquillado y rutinas en vivo
                 </p>
               </Link>
 

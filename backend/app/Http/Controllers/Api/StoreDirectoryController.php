@@ -348,4 +348,459 @@ class StoreDirectoryController extends Controller
             'interaction_id' => $interaction->id,
         ], 201);
     }
+
+    /**
+     * Motor de recomendación de compra para rutinas de skincare.
+     * Analiza productos de la rutina del usuario y recomienda:
+     * 1) Tienda más cercana con disponibilidad.
+     * 2) Tienda con el mejor precio disponible.
+     * 3) Tienda consolidada óptima (mayor cantidad de productos en una sola parada).
+     */
+    public function optimizeRoutine(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'radius_meters' => 'nullable|integer|min:500|max:50000',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'integer|exists:products,id',
+        ]);
+
+        $userLat = (float) $validated['lat'];
+        $userLng = (float) $validated['lng'];
+        $maxRadius = (int) ($validated['radius_meters'] ?? 15000); // 15 km por defecto
+        $exchangeRateService = new \App\Services\Currency\ExchangeRateService();
+
+        // Obtener sucursales en rango
+        $branches = StoreBranch::with('store')
+            ->where('is_active', true)
+            ->get()
+            ->filter(function ($branch) use ($userLat, $userLng, $maxRadius) {
+                $dist = StoreBranch::calculateDistanceMeters(
+                    $userLat,
+                    $userLng,
+                    $branch->latitude,
+                    $branch->longitude
+                );
+                $branch->distance_meters = round($dist);
+                return $dist <= $maxRadius;
+            })
+            ->sortBy('distance_meters')
+            ->values();
+
+        // Si no se pasaron product_ids específicos, tomar productos populares del catálogo
+        $productIds = $validated['product_ids'] ?? [];
+        if (empty($productIds)) {
+            $productIds = \App\Models\Product::take(4)->pluck('id')->toArray();
+        }
+
+        $products = \App\Models\Product::with('brand')->whereIn('id', $productIds)->get();
+
+        $branchIds = $branches->pluck('id')->toArray();
+        $storeIds = $branches->pluck('store_id')->unique()->toArray();
+
+        // Buscar ofertas disponibles para estos productos en las tiendas cercanas
+        $offers = ProductStoreOffer::with(['store', 'branch'])
+            ->whereIn('product_id', $productIds)
+            ->where(function ($q) use ($branchIds, $storeIds) {
+                $q->whereIn('branch_id', $branchIds)
+                  ->orWhereIn('store_id', $storeIds);
+            })
+            ->where('in_stock', true)
+            ->get();
+
+        $productRecommendations = [];
+        $basketByBranch = [];
+
+        foreach ($products as $product) {
+            $productOffers = $offers->where('product_id', $product->id);
+
+            $availableInBranches = [];
+
+            foreach ($branches as $branch) {
+                $offer = $productOffers->first(function ($o) use ($branch) {
+                    return $o->branch_id === $branch->id || ($o->branch_id === null && $o->store_id === $branch->store_id);
+                });
+
+                if ($offer) {
+                    $item = [
+                        'branch_id' => $branch->id,
+                        'branch_name' => $branch->name,
+                        'store_name' => $branch->store->name,
+                        'distance_meters' => $branch->distance_meters,
+                        'price_usd' => (float) $offer->price,
+                        'price_ves' => (float) ($offer->price_ves ?? $exchangeRateService->usdToVes((float) $offer->price)),
+                        'product_url' => $offer->product_url,
+                        'phone' => $branch->phone,
+                        'whatsapp' => $branch->whatsapp ?? $branch->store->whatsapp_contact,
+                        'latitude' => $branch->latitude,
+                        'longitude' => $branch->longitude,
+                        'opening_hours' => $branch->opening_hours,
+                    ];
+                    $availableInBranches[] = $item;
+
+                    if (!isset($basketByBranch[$branch->id])) {
+                        $basketByBranch[$branch->id] = [
+                            'branch' => [
+                                'id' => $branch->id,
+                                'name' => $branch->name,
+                                'store_name' => $branch->store->name,
+                                'distance_meters' => $branch->distance_meters,
+                                'address' => $branch->address,
+                                'phone' => $branch->phone,
+                                'whatsapp' => $branch->whatsapp ?? $branch->store->whatsapp_contact,
+                                'latitude' => $branch->latitude,
+                                'longitude' => $branch->longitude,
+                            ],
+                            'products_available_count' => 0,
+                            'total_usd' => 0.0,
+                            'total_ves' => 0.0,
+                            'items' => [],
+                        ];
+                    }
+                    $basketByBranch[$branch->id]['products_available_count']++;
+                    $basketByBranch[$branch->id]['total_usd'] += (float) $offer->price;
+                    $basketByBranch[$branch->id]['total_ves'] += (float) ($offer->price_ves ?? $exchangeRateService->usdToVes((float) $offer->price));
+                    $basketByBranch[$branch->id]['items'][] = [
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'price_usd' => (float) $offer->price,
+                        'price_ves' => (float) ($offer->price_ves ?? $exchangeRateService->usdToVes((float) $offer->price)),
+                    ];
+                }
+            }
+
+            $sortedByDistance = collect($availableInBranches)->sortBy('distance_meters')->values()->all();
+            $sortedByPrice = collect($availableInBranches)->sortBy('price_usd')->values()->all();
+
+            $closest = $sortedByDistance[0] ?? null;
+            $cheapest = $sortedByPrice[0] ?? null;
+
+            $savingsUsd = ($closest && $cheapest) ? max(0, $closest['price_usd'] - $cheapest['price_usd']) : 0;
+
+            $productRecommendations[] = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'category' => $product->category,
+                'brand' => $product->brand?->name,
+                'is_available_nearby' => !empty($availableInBranches),
+                'closest_store' => $closest,
+                'best_price_store' => $cheapest,
+                'savings_usd' => round($savingsUsd, 2),
+                'available_stores_count' => count($availableInBranches),
+            ];
+        }
+
+        $consolidatedOptions = collect(array_values($basketByBranch))
+            ->sort(function ($a, $b) {
+                if ($a['products_available_count'] !== $b['products_available_count']) {
+                    return $b['products_available_count'] <=> $a['products_available_count'];
+                }
+                return $a['total_usd'] <=> $b['total_usd'];
+            })
+            ->values();
+
+        $recommendedSingleStore = $consolidatedOptions->first();
+
+        return response()->json([
+            'status' => 'success',
+            'user_location' => [
+                'lat' => $userLat,
+                'lng' => $userLng,
+                'radius_meters' => $maxRadius,
+            ],
+            'total_routine_products' => count($products),
+            'recommended_single_trip_store' => $recommendedSingleStore,
+            'products_comparison' => $productRecommendations,
+            'all_nearby_baskets' => $consolidatedOptions->slice(0, 5),
+        ]);
+    }
+
+    /**
+     * Búsqueda geolocalizada de productos en Venezuela por Estado, Municipio, Parroquia, Ciudad o Coordenadas GPS.
+     * Permite al usuario encontrar qué tiendas (independientes o cadenas) tienen un producto o componente y cuál queda más cerca.
+     */
+    public function searchProductsGeolocated(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => 'nullable|string|max:150',
+            'ingredient' => 'nullable|string|max:150',
+            'state' => 'nullable|string|max:100',
+            'municipality' => 'nullable|string|max:100',
+            'parish' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'lat' => 'nullable|numeric|between:-90,90',
+            'lng' => 'nullable|numeric|between:-180,180',
+            'radius_km' => 'nullable|numeric|min:1|max:500',
+            'store_type' => 'nullable|in:ALL,INDEPENDENT,CHAIN',
+            'in_stock_only' => 'nullable|boolean',
+        ]);
+
+        $queryText = trim($validated['q'] ?? '');
+        $ingredientTerm = trim($validated['ingredient'] ?? '');
+        $userLat = isset($validated['lat']) ? (float) $validated['lat'] : null;
+        $userLng = isset($validated['lng']) ? (float) $validated['lng'] : null;
+        $radiusMeters = isset($validated['radius_km']) ? ((float) $validated['radius_km'] * 1000) : 50000;
+        $exchangeRateService = new \App\Services\Currency\ExchangeRateService();
+
+        $offersQuery = ProductStoreOffer::query()
+            ->with(['product.brand', 'product.ingredients', 'store', 'branch'])
+            ->whereHas('store', fn($sq) => $sq->where('is_active', true));
+
+        if ($country = $request->query('country') ?: $request->query('country_code')) {
+            $offersQuery->whereHas('store', fn($sq) => $sq->where('country_code', strtoupper($country)));
+        }
+
+        if ($request->boolean('in_stock_only', true)) {
+            $offersQuery->where('in_stock', true);
+        }
+
+        if ($queryText !== '') {
+            $offersQuery->whereHas('product', function ($pq) use ($queryText) {
+                $pq->where('name', 'ILIKE', "%{$queryText}%")
+                   ->orWhereHas('brand', fn($bq) => $bq->where('name', 'ILIKE', "%{$queryText}%"));
+            });
+        }
+
+        if ($ingredientTerm !== '') {
+            $offersQuery->whereHas('product.ingredients', function ($iq) use ($ingredientTerm) {
+                $iq->where('inci_name', 'ILIKE', "%{$ingredientTerm}%")
+                   ->orWhere('common_name', 'ILIKE', "%{$ingredientTerm}%")
+                   ->orWhereHas('aliases', fn($aq) => $aq->where('alias', 'ILIKE', "%{$ingredientTerm}%"));
+            });
+        }
+
+        if (!empty($validated['store_type']) && $validated['store_type'] !== 'ALL') {
+            $isIndep = $validated['store_type'] === 'INDEPENDENT';
+            $offersQuery->whereHas('store', fn($sq) => $sq->where('is_independent', $isIndep));
+        }
+
+        if (!empty($validated['state'])) {
+            $offersQuery->whereHas('branch', fn($bq) => $bq->where('state', 'ILIKE', "%{$validated['state']}%"));
+        }
+        if (!empty($validated['municipality'])) {
+            $offersQuery->whereHas('branch', fn($bq) => $bq->where('municipality', 'ILIKE', "%{$validated['municipality']}%"));
+        }
+        if (!empty($validated['parish'])) {
+            $offersQuery->whereHas('branch', fn($bq) => $bq->where('parish', 'ILIKE', "%{$validated['parish']}%"));
+        }
+        if (!empty($validated['city'])) {
+            $offersQuery->whereHas('branch', fn($bq) => $bq->where('city', 'ILIKE', "%{$validated['city']}%"));
+        }
+
+        $offers = $offersQuery->limit(100)->get();
+        $results = [];
+
+        foreach ($offers as $offer) {
+            $branch = $offer->branch;
+            $distanceMeters = null;
+
+            if ($userLat !== null && $userLng !== null && $branch && $branch->latitude && $branch->longitude) {
+                $dist = StoreBranch::calculateDistanceMeters(
+                    $userLat,
+                    $userLng,
+                    $branch->latitude,
+                    $branch->longitude
+                );
+                if ($dist > $radiusMeters) {
+                    continue;
+                }
+                $distanceMeters = round($dist);
+            }
+
+            $priceUsd = (float) $offer->price;
+            $priceVes = (float) ($offer->price_ves ?? $exchangeRateService->usdToVes($priceUsd));
+
+            $results[] = [
+                'offer_id' => $offer->id,
+                'product' => [
+                    'id' => $offer->product?->id,
+                    'name' => $offer->product?->name,
+                    'brand' => $offer->product?->brand?->name,
+                    'category' => $offer->product?->category,
+                    'barcode' => $offer->product?->barcode_ean,
+                    'ingredients' => $offer->product?->ingredients->map(fn($ing) => [
+                        'id' => $ing->id,
+                        'name' => $ing->common_name ?? $ing->inci_name,
+                        'inci' => $ing->inci_name,
+                        'is_active' => (bool) $ing->pivot->is_declared_active,
+                    ]),
+                ],
+                'pricing' => [
+                    'price_usd' => $priceUsd,
+                    'price_ves' => $priceVes,
+                    'formatted_usd' => '$' . number_format($priceUsd, 2) . ' USD',
+                    'formatted_ves' => 'Bs. ' . number_format($priceVes, 2, ',', '.'),
+                    'in_stock' => (bool) $offer->in_stock,
+                    'product_url' => $offer->product_url,
+                ],
+                'store' => [
+                    'id' => $offer->store?->id,
+                    'name' => $offer->store?->name,
+                    'is_independent' => (bool) ($offer->store?->is_independent ?? false),
+                    'website_url' => $offer->store?->website_url,
+                    'instagram_handle' => $offer->store?->instagram_handle,
+                    'whatsapp' => $offer->store?->whatsapp_contact,
+                ],
+                'branch' => $branch ? [
+                    'id' => $branch->id,
+                    'name' => $branch->name,
+                    'state' => $branch->state,
+                    'municipality' => $branch->municipality,
+                    'parish' => $branch->parish,
+                    'city' => $branch->city,
+                    'address' => $branch->address,
+                    'reference_point' => $branch->reference_point,
+                    'phone' => $branch->phone,
+                    'whatsapp' => $branch->whatsapp ?? $offer->store?->whatsapp_contact,
+                    'latitude' => $branch->latitude,
+                    'longitude' => $branch->longitude,
+                    'opening_hours' => $branch->opening_hours,
+                    'distance_meters' => $distanceMeters,
+                    'distance_km' => $distanceMeters !== null ? round($distanceMeters / 1000, 2) : null,
+                ] : null,
+            ];
+        }
+
+        if ($userLat !== null && $userLng !== null) {
+            usort($results, function ($a, $b) {
+                $distA = $a['branch']['distance_meters'] ?? PHP_INT_MAX;
+                $distB = $b['branch']['distance_meters'] ?? PHP_INT_MAX;
+                return $distA <=> $distB;
+            });
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'filters' => [
+                'query' => $queryText,
+                'ingredient' => $ingredientTerm,
+                'state' => $validated['state'] ?? 'TODOS',
+                'city' => $validated['city'] ?? 'TODAS',
+                'has_gps' => $userLat !== null && $userLng !== null,
+            ],
+            'total_matches' => count($results),
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * Directorio público de tiendas aliadas y rastreadas.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = AffiliateStore::query()
+            ->where('is_active', true)
+            ->withCount([
+                'productOffers as active_offers_count' => function ($q) {
+                    $q->where('in_stock', true);
+                },
+                'productOffers as total_offers_count',
+                'branches as active_branches_count' => function ($q) {
+                    $q->where('is_active', true);
+                },
+            ]);
+
+        if ($country = $request->query('country') ?: $request->query('country_code')) {
+            $query->where('country_code', strtoupper($country));
+        }
+
+        if ($search = $request->query('search') ?: $request->query('q')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('slug', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        $stores = $query->orderBy('name')->get()->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'name' => $s->name,
+                'slug' => $s->slug,
+                'website_url' => $s->website_url,
+                'logo_url' => $s->logo_url,
+                'store_type' => $s->store_type,
+                'country_code' => $s->country_code,
+                'country_name' => $s->country_name,
+                'country_flag' => $s->country_flag,
+                'crawler_platform' => $s->crawler_platform,
+                'instagram_handle' => $s->instagram_handle,
+                'whatsapp_contact' => $s->whatsapp_contact,
+                'total_offers_count' => (int) $s->total_offers_count,
+                'in_stock_offers_count' => (int) $s->active_offers_count,
+                'branches_count' => (int) $s->active_branches_count,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'total_stores' => $stores->count(),
+            'stores' => $stores,
+        ]);
+    }
+
+    /**
+     * Perfil público y catálogo de ofertas de una tienda específica.
+     */
+    public function show(Request $request, string $identifier): JsonResponse
+    {
+        $store = AffiliateStore::where('is_active', true)
+            ->where(function ($q) use ($identifier) {
+                if (is_numeric($identifier)) {
+                    $q->where('id', (int) $identifier);
+                } else {
+                    $q->where('slug', $identifier);
+                }
+            })
+            ->with(['branches' => function ($q) {
+                $q->where('is_active', true);
+            }])
+            ->firstOrFail();
+
+        $search = $request->query('search') ?: $request->query('q');
+        $limit = min(300, max(10, (int) $request->query('limit', 150)));
+
+        $offersQuery = ProductStoreOffer::with([
+            'product:id,name,slug,brand_id,image_url,category,volume_amount,volume_unit',
+            'product.brand:id,name',
+        ])
+        ->where('store_id', $store->id);
+
+        if ($request->boolean('in_stock_only', false)) {
+            $offersQuery->where('in_stock', true);
+        }
+
+        if ($search) {
+            $offersQuery->whereHas('product', function ($pq) use ($search) {
+                $pq->where('name', 'ILIKE', "%{$search}%")
+                   ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'ILIKE', "%{$search}%"));
+            });
+        }
+
+        $offers = $offersQuery->orderByDesc('in_stock')
+            ->orderBy('price')
+            ->take($limit)
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'store' => [
+                'id' => $store->id,
+                'name' => $store->name,
+                'slug' => $store->slug,
+                'website_url' => $store->website_url,
+                'logo_url' => $store->logo_url,
+                'store_type' => $store->store_type,
+                'country_code' => $store->country_code,
+                'country_name' => $store->country_name,
+                'country_flag' => $store->country_flag,
+                'crawler_platform' => $store->crawler_platform,
+                'instagram_handle' => $store->instagram_handle,
+                'whatsapp_contact' => $store->whatsapp_contact,
+                'branches' => $store->branches,
+                'total_offers_loaded' => $offers->count(),
+            ],
+            'products' => $offers,
+        ]);
+    }
 }

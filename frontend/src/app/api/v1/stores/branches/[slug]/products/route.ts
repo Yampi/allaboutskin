@@ -100,46 +100,7 @@ const BRANCH_PRODUCTS_MAP: Record<string, any[]> = {
       ingredients_count: 22,
     },
   ],
-  'dermopascua-local-av-bolivar': [
-    {
-      offer_id: 6,
-      product_id: 105,
-      name: 'The Ordinary Niacinamide 10% + Zinc 1% (30ml)',
-      slug: 'the-ordinary-niacinamide-10-zinc-1',
-      brand: 'The Ordinary',
-      category: 'SERUM',
-      volume_amount: 30,
-      volume_unit: 'ml',
-      barcode_ean: '0769915190311',
-      price_usd: 11.5,
-      price_ves: 805.0,
-      in_stock: true,
-      scientific_score: 98,
-      badge: 'TOP_SEBORREGULADOR',
-      safety_label: 'Fórmula científica minimalista',
-      highlights: ['Control de sebo y reducción de manchas', 'Zinc purificante al 1%'],
-      ingredients_count: 11,
-    },
-    {
-      offer_id: 7,
-      product_id: 103,
-      name: 'Neutrogena Hydro Boost Water Gel Ácido Hialurónico (50g)',
-      slug: 'neutrogena-hydro-boost-water-gel',
-      brand: 'Neutrogena',
-      category: 'MOISTURIZER',
-      volume_amount: 50,
-      volume_unit: 'g',
-      barcode_ean: '7891010885236',
-      price_usd: 17.5,
-      price_ves: 1225.0,
-      in_stock: true,
-      scientific_score: 94,
-      badge: 'APTO_TODO_TIPO',
-      safety_label: 'Excelente para el clima cálido de Guárico',
-      highlights: ['Ligero en gel', 'Refrescante'],
-      ingredients_count: 19,
-    },
-  ],
+
 };
 
 // Fallback por defecto si se consulta otra sucursal
@@ -193,10 +154,10 @@ export async function GET(
   const skinType = searchParams.get('skin_type') || 'ALL';
 
   // 1. Intentar consultar primero al backend Laravel si está disponible
-  const backendUrl = process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api/v1';
+  const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(`${backendUrl}/stores/branches/${slug}/products?skin_type=${skinType}`, {
       signal: controller.signal,
@@ -229,14 +190,16 @@ export async function GET(
         ? 'Tiendas Mundo Total'
         : slug.includes('farmahorro')
         ? 'Farmahorro'
-        : 'DermoPascua & Belleza',
-      is_independent: slug.includes('dermopascua'),
+        : slug.includes('farmatodo')
+        ? 'Farmatodo'
+        : 'Establecimiento Local',
+      is_independent: false,
       address: 'Valle de la Pascua, Edo. Guárico',
       city: 'Valle de la Pascua',
       state: 'Guárico',
-      phone: '0235-3420000',
-      whatsapp: '+584121234567',
-      instagram_handle: slug.includes('rio') ? '@riosupermarket' : '@dermopascua_store',
+      phone: null,
+      whatsapp: null,
+      instagram_handle: slug.includes('rio') ? '@riosupermarket' : null,
       opening_hours: 'Lunes a Domingo: 8:00 AM - 8:30 PM',
     },
     filters: {

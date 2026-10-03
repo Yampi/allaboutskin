@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminScraperController;
 use App\Http\Controllers\Api\Admin\AdminSecurityLogsController;
 use App\Http\Controllers\Api\Admin\AdminStoreController;
 use App\Http\Controllers\Api\Admin\AdminSystemSettingsController;
@@ -55,11 +56,15 @@ Route::prefix('v1')->group(function () {
 
     // 3.5. Local Stores, Branches & In-Store Shopping (Public)
     Route::prefix('stores')->group(function () {
+        Route::get('/', [StoreDirectoryController::class, 'index']);
+        Route::get('/search-products', [StoreDirectoryController::class, 'searchProductsGeolocated']);
         Route::get('/nearby', [StoreDirectoryController::class, 'nearby']);
         Route::get('/cities', [StoreDirectoryController::class, 'cities']);
+        Route::get('/optimize-routine', [StoreDirectoryController::class, 'optimizeRoutine']);
         Route::get('/branches/{identifier}/products', [StoreDirectoryController::class, 'branchProducts']);
         Route::post('/suggest', [StoreDirectoryController::class, 'suggest']);
         Route::post('/interactions', [StoreDirectoryController::class, 'recordInteraction']);
+        Route::get('/{identifier}', [StoreDirectoryController::class, 'show']);
     });
 
     // 4. Authenticated User Profile, Routines & Lifecycle
@@ -148,6 +153,17 @@ Route::prefix('v1')->group(function () {
             Route::patch('/{id}/verification', [AdminStoreController::class, 'updateVerification']);
             Route::patch('/{id}/subscription', [AdminStoreController::class, 'updateSubscription']);
             Route::patch('/{id}/toggle-status', [AdminStoreController::class, 'toggleStatus']);
+            Route::delete('/{id}', [AdminStoreController::class, 'destroy']);
+        });
+
+        // Scraper & Crawler Control
+        Route::prefix('scraper')->group(function () {
+            Route::get('/status', [AdminScraperController::class, 'status']);
+            Route::get('/summary', [AdminScraperController::class, 'summary']);
+            Route::post('/run', [AdminScraperController::class, 'run']);
+            Route::post('/parse-social-post', [AdminScraperController::class, 'parseSocialPost']);
+            Route::post('/detect-platform', [AdminScraperController::class, 'detectPlatform']);
+            Route::post('/discover-web', [AdminScraperController::class, 'discoverWeb']);
         });
     });
 });

@@ -48,11 +48,23 @@ class AdminStoreController extends Controller
             $query->where('subscription_tier', strtoupper($tier));
         }
 
+        // Filtro por país / sectorización
+        if ($country = $request->query('country_code') ?: $request->query('country')) {
+            $query->where('country_code', strtoupper($country));
+        }
+
         // Conteo de tiendas pendientes para alertas en el dashboard
         $pendingCount = AffiliateStore::where('verification_status', 'PENDING_REVIEW')->count();
         $verifiedCount = AffiliateStore::where('verification_status', 'VERIFIED')->count();
 
-        $perPage = min(50, max(10, (int) $request->query('per_page', 15)));
+        // Conteo por país para selector de sectorización
+        $byCountry = AffiliateStore::query()
+            ->selectRaw('country_code, count(*) as count')
+            ->groupBy('country_code')
+            ->pluck('count', 'country_code')
+            ->toArray();
+
+        $perPage = min(100, max(5, (int) $request->query('per_page', 20)));
         $stores = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json([
@@ -61,6 +73,7 @@ class AdminStoreController extends Controller
                 'pending_review' => $pendingCount,
                 'total_verified' => $verifiedCount,
                 'total_stores' => $stores->total(),
+                'by_country' => $byCountry,
             ],
             'stores' => $stores,
         ]);
@@ -69,13 +82,27 @@ class AdminStoreController extends Controller
     /**
      * Detalle completo de una tienda para auditoría.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        $search = $request->query('search');
+        $limit = min(300, max(10, (int) $request->query('limit', 200)));
+
         $store = AffiliateStore::with([
             'owner:id,name,email,role,created_at',
             'branches',
-            'productOffers' => function ($q) {
-                $q->with('product.brand')->take(30);
+            'productOffers' => function ($q) use ($search, $limit) {
+                $q->with([
+                    'store:id,name,country_code,website_url',
+                    'product:id,name,slug,brand_id,image_url,category,volume_amount,volume_unit,barcode_ean',
+                    'product.brand:id,name',
+                ]);
+                if ($search) {
+                    $q->whereHas('product', function ($pq) use ($search) {
+                        $pq->where('name', 'ILIKE', "%{$search}%")
+                           ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'ILIKE', "%{$search}%"));
+                    });
+                }
+                $q->orderByDesc('in_stock')->orderBy('price')->take($limit);
             },
         ])
         ->withCount(['branches', 'productOffers', 'leadInteractions'])
@@ -174,7 +201,7 @@ class AdminStoreController extends Controller
     }
 
     /**
-     * Activar o suspender una tienda.
+     * Activar o suspender una tienda, actualizando la disponibilidad de sus ofertas en el inventario.
      */
     public function toggleStatus(Request $request, int $id): JsonResponse
     {
@@ -184,18 +211,81 @@ class AdminStoreController extends Controller
         $store->is_active = !$store->is_active;
         $store->save();
 
+        $affectedOffersCount = 0;
+        if (!$store->is_active) {
+            // Desactivar: suspender sucursales y retirar ofertas del inventario público
+            $store->branches()->update(['is_active' => false]);
+            $affectedOffersCount = $store->productOffers()->update(['in_stock' => false]);
+            $message = "Tienda [{$store->name}] desactivada. Se retiraron {$affectedOffersCount} ofertas y sus productos del inventario activo.";
+        } else {
+            // Reactivar: restablecer sucursales y ofertas
+            $store->branches()->update(['is_active' => true]);
+            $affectedOffersCount = $store->productOffers()->update(['in_stock' => true]);
+            $message = "Tienda [{$store->name}] reactivada. Se reincorporaron {$affectedOffersCount} ofertas al inventario.";
+        }
+
         SecurityAuditLog::logEvent(
             eventType: 'STORE_STATUS_TOGGLED',
-            description: "Admin [{$admin->email}] cambió estado activo de tienda [{$store->name}] a [" . ($store->is_active ? 'ACTIVO' : 'INACTIVO') . "]",
-            userId: $admin->id,
+            description: "Admin [{$admin?->email}] cambió estado activo de tienda [{$store->name}] a [" . ($store->is_active ? 'ACTIVO' : 'INACTIVO') . "]. {$affectedOffersCount} ofertas afectadas.",
+            userId: $admin?->id,
             severity: 'WARNING',
             target: "store:{$store->id}"
         );
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Estado de la tienda actualizado.',
+            'message' => $message,
             'is_active' => $store->is_active,
+            'affected_offers_count' => $affectedOffersCount,
+        ]);
+    }
+
+    /**
+     * Eliminar permanentemente una tienda y purgar del inventario todos sus productos exclusivos.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $admin = $request->user();
+        $store = AffiliateStore::with('productOffers')->findOrFail($id);
+        $storeName = $store->name;
+
+        // Obtener todos los IDs de productos ofertados por esta tienda
+        $productIds = $store->productOffers()->pluck('product_id')->unique()->toArray();
+        $offersCount = $store->productOffers()->count();
+
+        // Eliminar la tienda (onDelete cascade limpia product_store_offers, store_branches y store_lead_interactions)
+        $store->delete();
+
+        // Purgar productos que se hayan quedado huérfanos (que no tengan ofertas de ninguna otra tienda y no sean verificados)
+        $orphanedDeletedCount = 0;
+        if (!empty($productIds)) {
+            foreach ($productIds as $pId) {
+                $hasOtherOffers = \App\Models\ProductStoreOffer::where('product_id', $pId)->exists();
+                if (!$hasOtherOffers) {
+                    $product = \App\Models\Product::find($pId);
+                    if ($product && !$product->is_verified) {
+                        $product->ingredients()->detach();
+                        $product->delete();
+                        $orphanedDeletedCount++;
+                    }
+                }
+            }
+        }
+
+        SecurityAuditLog::logEvent(
+            eventType: 'STORE_DELETED',
+            description: "Admin [{$admin?->email}] eliminó la tienda [{$storeName}]. Se eliminaron {$offersCount} ofertas y {$orphanedDeletedCount} productos exclusivos del inventario.",
+            userId: $admin?->id,
+            severity: 'WARNING',
+            target: "store:{$id}"
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "La tienda [{$storeName}] ha sido eliminada permanentemente. Se retiraron {$offersCount} ofertas y se purgaron {$orphanedDeletedCount} productos exclusivos del inventario.",
+            'deleted_store_id' => $id,
+            'deleted_offers_count' => $offersCount,
+            'orphaned_products_deleted_count' => $orphanedDeletedCount,
         ]);
     }
 }

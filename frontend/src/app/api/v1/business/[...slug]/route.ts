@@ -121,14 +121,13 @@ let mockBusinessOffers: any[] = [
 ];
 
 async function tryProxyToLaravel(req: NextRequest, slugPath: string) {
-  const backendUrl = process.env.LARAVEL_API_URL;
-  if (!backendUrl) return null;
+  const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
 
   try {
     const url = new URL(req.url);
     const targetUrl = `${backendUrl}/business/${slugPath}${url.search}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await req.text() : undefined;
 

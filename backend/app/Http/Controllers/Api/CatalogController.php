@@ -49,7 +49,16 @@ class CatalogController extends Controller
     {
         $ingredient = Ingredient::where('id', is_numeric($identifier) ? $identifier : null)
             ->orWhere('inci_name', strtoupper(str_replace('-', ' ', $identifier)))
-            ->with(['indications', 'pubmedStudies', 'aliases', 'conflictsAsA.ingredientB', 'conflictsAsB.ingredientA'])
+            ->with([
+                'indications',
+                'pubmedStudies',
+                'aliases',
+                'conflictsAsA.ingredientB',
+                'conflictsAsB.ingredientA',
+                'products.brand',
+                'products.storeOffers.store',
+                'products.storeOffers.branch',
+            ])
             ->firstOrFail();
 
         return response()->json([
@@ -63,13 +72,66 @@ class CatalogController extends Controller
      */
     public function products(Request $request): JsonResponse
     {
-        $query = Product::query()->with(['brand', 'ingredients', 'storeOffers.store']);
+        $query = Product::query()->with([
+            'brand',
+            'ingredients',
+            'storeOffers' => function ($q) {
+                $q->where('in_stock', true)
+                  ->whereHas('store', fn ($sq) => $sq->where('is_active', true));
+            },
+            'storeOffers.store',
+            'storeOffers.branch',
+        ]);
+
+        // Quitar del inventario público productos sin ofertas activas de comercios habilitados (a menos que se pase include_all=1)
+        if (!$request->boolean('include_all')) {
+            $query->whereHas('storeOffers', function ($oq) {
+                $oq->where('in_stock', true)
+                   ->whereHas('store', fn ($sq) => $sq->where('is_active', true));
+            });
+        }
+
+        // Filtro por país / sectorización geográfica de productos
+        if ($country = $request->query('country') ?: $request->query('country_code')) {
+            $query->whereHas('storeOffers.store', function ($sq) use ($country) {
+                $sq->where('is_active', true)
+                   ->where('country_code', strtoupper($country));
+            });
+        }
+
+        // Filtro por tienda específica
+        if ($storeFilter = $request->query('store_id') ?: $request->query('store')) {
+            $query->whereHas('storeOffers', function ($oq) use ($storeFilter) {
+                $oq->where('in_stock', true);
+                if (is_numeric($storeFilter)) {
+                    $oq->where('store_id', (int) $storeFilter);
+                } else {
+                    $oq->whereHas('store', fn ($sq) => $sq->where('slug', $storeFilter)->orWhere('name', 'ILIKE', "%{$storeFilter}%"));
+                }
+            });
+        }
 
         if ($request->filled('q')) {
-            $search = $request->q;
+            $search = trim($request->q);
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'like', "%{$search}%"));
+                $q->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('barcode_ean', 'ILIKE', "%{$search}%")
+                  ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'ILIKE', "%{$search}%"))
+                  ->orWhereHas('ingredients', fn ($iq) => $iq->where('inci_name', 'ILIKE', "%{$search}%")
+                      ->orWhere('common_name', 'ILIKE', "%{$search}%")
+                  );
+            });
+        }
+
+        if ($request->filled('ingredient')) {
+            $ingTerm = trim($request->ingredient);
+            $query->whereHas('ingredients', function ($iq) use ($ingTerm) {
+                if (is_numeric($ingTerm)) {
+                    $iq->where('ingredients.id', $ingTerm);
+                } else {
+                    $iq->where('inci_name', 'ILIKE', "%{$ingTerm}%")
+                       ->orWhere('common_name', 'ILIKE', "%{$ingTerm}%");
+                }
             });
         }
 
@@ -79,6 +141,15 @@ class CatalogController extends Controller
 
         if ($request->filled('brand')) {
             $query->whereHas('brand', fn ($bq) => $bq->where('slug', $request->brand));
+        }
+
+        $sort = $request->get('sort', 'latest');
+        if ($sort === 'name_asc') {
+            $query->orderBy('name', 'asc');
+        } elseif ($sort === 'name_desc') {
+            $query->orderBy('name', 'desc');
+        } else {
+            $query->orderBy('id', 'desc');
         }
 
         $products = $query->paginate($request->integer('per_page', 15));
@@ -92,7 +163,16 @@ class CatalogController extends Controller
     public function productDetail(string $slug): JsonResponse
     {
         $product = Product::where('slug', $slug)
-            ->with(['brand', 'ingredients.indications', 'ingredients.pubmedStudies', 'storeOffers.store'])
+            ->with([
+                'brand',
+                'ingredients.indications',
+                'ingredients.pubmedStudies',
+                'storeOffers' => function ($q) {
+                    $q->where('in_stock', true)
+                      ->whereHas('store', fn ($sq) => $sq->where('is_active', true));
+                },
+                'storeOffers.store',
+            ])
             ->firstOrFail();
 
         return response()->json([

@@ -39,6 +39,8 @@ import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/
 import { scanImageWithGeminiVision } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
+import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
+import ClinicalFaceMaskVisor from '@/components/ar/ClinicalFaceMaskVisor';
 
 export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
   id: string;
@@ -273,8 +275,8 @@ export default function ScannerScreen({
   onUpdateProfile,
   userProfile,
 }: ScannerScreenProps) {
-  // Input modes: 'camera' | 'upload' | 'text' | 'preset'
-  const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'text' | 'preset'>('camera');
+  // Input modes: 'camera' | 'upload' | 'text' | 'preset' | 'ar-mask'
+  const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'text' | 'preset' | 'ar-mask'>('camera');
 
   // Camera State
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -371,6 +373,8 @@ export default function ScannerScreen({
       if (queryParam) {
         setScanMode('text');
         setManualInciText(queryParam);
+      } else if (modeParam === 'ar-mask' || modeParam === 'filter' || modeParam === 'mascarilla') {
+        setScanMode('ar-mask');
       } else if (modeParam === 'face') {
         setFacingMode('user');
         if (scanMode === 'camera') {
@@ -431,6 +435,7 @@ export default function ScannerScreen({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     setCapturedImagePreview(dataUrl);
+    setImageDimensions({ width: canvas.width, height: canvas.height });
 
     // Stop camera feed immediately so the user clearly sees their captured photo & analyzing animation
     stopCamera();
@@ -456,6 +461,13 @@ export default function ScannerScreen({
       setOcrStatusText('Optimizando foto para escaneo...');
       const optimized = await optimizeImageForUpload(file, { maxDimension: 1400, quality: 0.82 });
       setCapturedImagePreview(optimized.base64);
+      const img = new Image();
+      img.onload = () => {
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+        }
+      };
+      img.src = optimized.base64;
       await processImageWithVision(optimized.blob, optimized.base64, file.name);
     } catch (err) {
       console.warn('Direct upload fallback:', err);
@@ -463,6 +475,13 @@ export default function ScannerScreen({
       reader.onload = async () => {
         const dataUrl = reader.result as string;
         setCapturedImagePreview(dataUrl);
+        const img = new Image();
+        img.onload = () => {
+          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+          }
+        };
+        img.src = dataUrl;
         await processImageWithVision(file, dataUrl, file.name);
       };
       reader.readAsDataURL(file);
@@ -577,25 +596,30 @@ export default function ScannerScreen({
         });
 
         const analysis = analyzeCosmeticLabel(rawText);
-        if (analysis.isCosmeticValid || (analysis.cleanedText && analysis.cleanedText.length > 15)) {
+        if (analysis.isCosmeticValid) {
           setScanTypeResult('PRODUCT');
           const formulaToAudit = analysis.suggestedOfficialInci || analysis.cleanedText || rawText;
           const detectedName = analysis.detectedProductName || manualProductName || fallbackName;
-          const detectedBrand = analysis.detectedBrand || manualBrandName || 'Marca Detectada';
+          const detectedBrand = analysis.detectedBrand || manualBrandName || 'Marca Cosmética';
           setManualInciText(formulaToAudit);
           setManualProductName(detectedName);
           setManualBrandName(detectedBrand);
           await runApiInciAudit(formulaToAudit, detectedName, detectedBrand);
         } else {
           setScanTypeResult('INVALID');
-          const isNetworkOrApiError = err?.message && (err.message.includes('API') || err.message.includes('Gemini') || err.message.includes('fetch') || err.message.includes('límite') || err.message.includes('servidor') || err.message.includes('Error'));
-          setRejectionMessage(
-            isNetworkOrApiError
-              ? `No se pudo conectar con el servicio de visión por IA (${err.message}). Por favor reintenta en unos momentos o ingresa los datos manualmente.`
-              : 'No pudimos clasificar automáticamente si la foto es un rostro o un cosmético. Por favor, asegúrate de tomar una selfie frontal de tu rostro o enfocar la etiqueta de ingredientes de tu producto.'
-          );
+          let userMessage = 'No detectamos un cosmético con ingredientes INCI reconocibles ni se pudo procesar la selfie. Si deseas evaluar tu piel, tómate una foto frontal con buena iluminación.';
+          if (err?.message) {
+            if (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('demanda')) {
+              userMessage = 'Los servidores de visión por IA están experimentando alta demanda momentánea. Por favor, espera unos segundos y pulsa "Reintentar con Cámara".';
+            } else if (err.message.includes('429') || err.message.includes('límite')) {
+              userMessage = 'Has alcanzado el límite de escaneos por minuto. Por favor espera unos segundos antes de intentar de nuevo.';
+            } else if (err.message.includes('fetch') || err.message.includes('network')) {
+              userMessage = 'Error de conexión con el servicio de IA. Revisa tu conexión a internet y reintenta.';
+            }
+          }
+          setRejectionMessage(userMessage);
           setOcrProgress(100);
-          setOcrStatusText(isNetworkOrApiError ? 'Error de servicio' : 'Imagen no reconocida');
+          setOcrStatusText('Reintento sugerido');
         }
       } catch (ocrErr: any) {
         setScanTypeResult('INVALID');
@@ -757,7 +781,7 @@ export default function ScannerScreen({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 animate-in fade-in duration-300">
+    <div className={`w-full max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 ${scanMode === 'ar-mask' ? 'py-1 sm:py-2' : 'py-4 sm:py-8'} animate-in fade-in duration-300`}>
       {/* Hidden Canvas for Frame Capture */}
       <canvas ref={canvasRef} className="hidden" />
 
@@ -897,229 +921,14 @@ export default function ScannerScreen({
           {/* --------------------------------------------------------------------- */}
           {scanTypeResult === 'FACE' && faceSkinResult && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* LEFT COLUMN: Interactive Photo with Face Zones Overlay (col-span-5) */}
+              {/* LEFT COLUMN: 3D AR Mask & Facial Zones Visor (col-span-5) */}
               <div className="lg:col-span-5 space-y-3">
-                <div className="card-white p-4 sm:p-5 rounded-[24px] border border-[#8FA89B]/50 shadow-diffuse-elevated space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-[#7E756F] tracking-wider block">
-                        Visor Dermatológico AR
-                      </span>
-                      <h3 className="font-serif text-[17px] font-semibold text-[#2D2825]">
-                        Zonas Dérmicas Identificadas
-                      </h3>
-                    </div>
-
-                    {/* Toggle button */}
-                    <button
-                      onClick={() => setShowFaceZones(!showFaceZones)}
-                      className="px-3 py-1.5 rounded-full bg-[#F2ECE4] hover:bg-[#E8E1D7] text-[#2D2825] text-[11.5px] font-semibold flex items-center gap-1.5 transition cursor-pointer border border-[#E2D9CD]"
-                      title="Ocultar o ver zonas identificadas sobre la foto"
-                    >
-                      {showFaceZones ? (
-                        <>
-                          <EyeOff className="w-3.5 h-3.5 text-[#7E756F]" />
-                          <span>Ocultar Zonas</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-3.5 h-3.5 text-[#4A6B5B]" />
-                          <span>Ver Zonas</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Photo Container with Overlays */}
-                  <div
-                    className="relative w-full rounded-[20px] overflow-hidden bg-[#1E2822] border-2 border-[#8FA89B] shadow-inner select-none transition-all duration-300 mx-auto"
-                    style={{
-                      aspectRatio: imageDimensions ? `${imageDimensions.width} / ${imageDimensions.height}` : '3/4',
-                      maxHeight: '68vh',
-                    }}
-                  >
-                    {capturedImagePreview ? (
-                      <img
-                        src={capturedImagePreview}
-                        alt="Selfie analizada"
-                        onLoad={(e) => {
-                          const img = e.currentTarget;
-                          if (img.naturalWidth && img.naturalHeight) {
-                            setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-                          }
-                        }}
-                        className="w-full h-full object-cover select-none pointer-events-none"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#2D3830] text-[#8FA89B]">
-                        <User className="w-20 h-20 opacity-40" />
-                      </div>
-                    )}
-
-                    {/* HUD Reticle Corners */}
-                    <div className="absolute inset-3 pointer-events-none">
-                      <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-[#8FA89B]/80 rounded-tl-lg" />
-                      <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-[#8FA89B]/80 rounded-tr-lg" />
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-[#8FA89B]/80 rounded-bl-lg" />
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-[#8FA89B]/80 rounded-br-lg" />
-                    </div>
-
-                    {/* AR OVERLAY BOXES ON PHOTO */}
-                    {showFaceZones && (
-                      <>
-                        {/* 0. FACIAL CALIBRATION RETICLE (Adaptado al rostro del sujeto) */}
-                        <div
-                          className="absolute pointer-events-none transition-all duration-500 rounded-[22px] border border-white/25 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
-                          style={{
-                            top: `${activeFaceRegions.faceBox.top}%`,
-                            left: `${activeFaceRegions.faceBox.left}%`,
-                            width: `${activeFaceRegions.faceBox.width}%`,
-                            height: `${activeFaceRegions.faceBox.height}%`,
-                          }}
-                        >
-                          <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white/70 rounded-tl" />
-                          <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white/70 rounded-tr" />
-                          <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white/70 rounded-bl" />
-                          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white/70 rounded-br" />
-                        </div>
-
-                        {/* 1. ZONA T (Frente y Puente Nasal) */}
-                        {(selectedZone === 'ALL' || selectedZone === 'ZONE_T') && (
-                          <div
-                            onClick={() => setSelectedZone(selectedZone === 'ZONE_T' ? 'ALL' : 'ZONE_T')}
-                            className={`absolute transition-all duration-300 cursor-pointer ${
-                              selectedZone === 'ZONE_T'
-                                ? 'ring-2 ring-amber-400 bg-amber-400/25 shadow-[0_0_22px_rgba(251,191,36,0.55)]'
-                                : 'border-2 border-dashed border-amber-300/80 bg-amber-300/15 hover:bg-amber-300/25'
-                            } rounded-[22px] flex flex-col items-center justify-between p-1.5 z-10`}
-                            style={{
-                              top: `${activeFaceRegions.zoneTBox.top}%`,
-                              left: `${activeFaceRegions.zoneTBox.left}%`,
-                              width: `${activeFaceRegions.zoneTBox.width}%`,
-                              height: `${activeFaceRegions.zoneTBox.height}%`,
-                            }}
-                          >
-                            <div className="bg-black/85 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-amber-300/70 shadow-lg text-white flex items-center gap-1.5 animate-pulse-subtle max-w-full">
-                              <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span className="text-[10.5px] font-bold text-amber-300 font-sans tracking-tight shrink-0">
-                                Zona T
-                              </span>
-                              <span className="text-[9px] font-medium text-white/90 bg-black/40 px-1.5 py-0.5 rounded-full truncate">
-                                Sebo {faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH' ? 'Alto' : faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE' ? 'Medio' : 'Bajo'}
-                              </span>
-                            </div>
-                            <div className="my-auto w-2 h-2 rounded-full bg-amber-400 ring-4 ring-amber-400/40 animate-pulse" />
-                          </div>
-                        )}
-
-                        {/* 2. MEJILLAS / ZONA U (Bilateral Malar) */}
-                        {(selectedZone === 'ALL' || selectedZone === 'CHEEKS') && (
-                          <>
-                            {/* Mejilla Izquierda en foto */}
-                            <div
-                              onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
-                              className={`absolute transition-all duration-300 cursor-pointer ${
-                                selectedZone === 'CHEEKS'
-                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_22px_rgba(52,211,153,0.55)]'
-                                  : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
-                              } rounded-[22px] flex items-center justify-center z-10`}
-                              style={{
-                                top: `${activeFaceRegions.leftCheekBox.top}%`,
-                                left: `${activeFaceRegions.leftCheekBox.left}%`,
-                                width: `${activeFaceRegions.leftCheekBox.width}%`,
-                                height: `${activeFaceRegions.leftCheekBox.height}%`,
-                              }}
-                            >
-                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/40 animate-pulse" />
-                            </div>
-
-                            {/* Mejilla Derecha en foto */}
-                            <div
-                              onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
-                              className={`absolute transition-all duration-300 cursor-pointer ${
-                                selectedZone === 'CHEEKS'
-                                  ? 'ring-2 ring-emerald-400 bg-emerald-400/25 shadow-[0_0_22px_rgba(52,211,153,0.55)]'
-                                  : 'border-2 border-dashed border-emerald-300/80 bg-emerald-300/15 hover:bg-emerald-300/25'
-                              } rounded-[22px] flex items-center justify-center z-10`}
-                              style={{
-                                top: `${activeFaceRegions.rightCheekBox.top}%`,
-                                left: `${activeFaceRegions.rightCheekBox.left}%`,
-                                width: `${activeFaceRegions.rightCheekBox.width}%`,
-                                height: `${activeFaceRegions.rightCheekBox.height}%`,
-                              }}
-                            >
-                              <div className="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/40 animate-pulse" />
-                            </div>
-
-                            {/* Cheeks Floating Pill */}
-                            <div
-                              onClick={() => setSelectedZone(selectedZone === 'CHEEKS' ? 'ALL' : 'CHEEKS')}
-                              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-300/70 shadow-lg text-white flex items-center gap-1.5 cursor-pointer animate-pulse-subtle z-20"
-                            >
-                              <Moon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span className="text-[11px] font-bold text-emerald-300 font-sans tracking-tight">
-                                Mejillas
-                              </span>
-                              <span className="text-[9.5px] font-medium text-white/90 bg-black/40 px-1.5 py-0.5 rounded-full">
-                                {faceSkinResult.cheeksAnalysis?.hydrationState === 'DRY'
-                                  ? 'Seca / Tirante'
-                                  : faceSkinResult.cheeksAnalysis?.hydrationState === 'BALANCED'
-                                  ? 'Equilibrada'
-                                  : 'Normal'}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
-
-                    {/* Confidence Pill */}
-                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 text-white text-[10px] font-mono flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                      {Math.round(faceSkinResult.confidence * 100)}% Certeza
-                    </div>
-                  </div>
-
-                  {/* Zone Filter Pill Buttons */}
-                  <div className="flex items-center justify-center gap-1.5 p-1 rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
-                    <button
-                      onClick={() => setSelectedZone('ALL')}
-                      className={`flex-1 py-1.5 px-2 rounded-full text-[11.5px] font-medium transition cursor-pointer text-center ${
-                        selectedZone === 'ALL'
-                          ? 'bg-[#4A6B5B] text-white font-semibold shadow-xs'
-                          : 'text-[#7E756F] hover:text-[#2D2825]'
-                      }`}
-                    >
-                      Todas
-                    </button>
-                    <button
-                      onClick={() => setSelectedZone('ZONE_T')}
-                      className={`flex-1 py-1.5 px-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1 ${
-                        selectedZone === 'ZONE_T'
-                          ? 'bg-amber-600 text-white font-semibold shadow-xs'
-                          : 'text-[#7E756F] hover:text-[#2D2825]'
-                      }`}
-                    >
-                      <Sun className="w-3 h-3" />
-                      <span>Zona T</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedZone('CHEEKS')}
-                      className={`flex-1 py-1.5 px-2 rounded-full text-[11.5px] font-medium transition cursor-pointer flex items-center justify-center gap-1 ${
-                        selectedZone === 'CHEEKS'
-                          ? 'bg-emerald-700 text-white font-semibold shadow-xs'
-                          : 'text-[#7E756F] hover:text-[#2D2825]'
-                      }`}
-                    >
-                      <Moon className="w-3 h-3" />
-                      <span>Mejillas</span>
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-[#7E756F] text-center leading-relaxed">
-                    💡 Toca los botones o las zonas en la foto para inspeccionar los biomarcadores identificados por la IA.
-                  </p>
-                </div>
+                <ClinicalFaceMaskVisor
+                  capturedImagePreview={capturedImagePreview}
+                  faceSkinResult={faceSkinResult}
+                  imageDimensions={imageDimensions}
+                  onOpenFullArTutorial={() => setScanMode('ar-mask')}
+                />
               </div>
 
               {/* RIGHT COLUMN: Clinical Diagnosis & Profile Integration (col-span-7) */}
@@ -1271,6 +1080,160 @@ export default function ScannerScreen({
                     );
                   })()}
 
+                  {/* ------------------------------------------------------------- */}
+                  {/* PROTOCOLO DE DERIVACIÓN MÉDICA / TRIAGE PREVENTIVO (B2B)       */}
+                  {/* ------------------------------------------------------------- */}
+                  {faceSkinResult.triage?.medicalReferralRecommended && (
+                    <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-amber-500/5 border-2 border-rose-400/50 shadow-sm space-y-3.5">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <AlertTriangle className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-800 text-[10px] font-extrabold uppercase tracking-wider">
+                              Atención Dermatológica Prioritaria
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-semibold">Protocolo de Seguridad</span>
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-sm sm:text-base mt-1">
+                            {faceSkinResult.triage.suggestedMedicalSpecialty || 'Derivación a Especialista Médico Recomendada'}
+                          </h4>
+                          <p className="text-xs text-slate-700 leading-relaxed mt-1">
+                            {faceSkinResult.triage.referralReason}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Activos Bloqueados por Seguridad */}
+                      {faceSkinResult.triage.blockedIngredientCategories && faceSkinResult.triage.blockedIngredientCategories.length > 0 && (
+                        <div className="p-3 rounded-2xl bg-rose-50/80 border border-rose-200/60 text-xs space-y-1.5">
+                          <div className="font-bold text-rose-900 flex items-center gap-1.5">
+                            <span>⛔</span>
+                            <span>Activos Cosméticos Suspendidos Preventivamente:</span>
+                          </div>
+                          <p className="text-[11.5px] text-rose-800">
+                            Se desaconseja el uso de exfoliantes químicos (AHA/BHA), retinoides puros o peelings hasta la valoración médica para proteger la barrera dérmica.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Botón de Encontrar Dermatólogos Cercanos (Monetización / Derivación) */}
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        <a
+                          href="https://www.google.com/maps/search/dermatologo+cerca+de+mi"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm text-center shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span>Encontrar Dermatólogos Certificados Cercanos</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <span className="text-[11px] text-slate-500 text-center sm:text-left self-center sm:max-w-[200px] leading-tight">
+                          Consulta presencial orientativa con profesionales colegiados.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ------------------------------------------------------------- */}
+                  {/* ANÁLISIS DERMATOLÓGICO AVANZADO: OJERAS, MANCHAS Y LÍNEAS     */}
+                  {/* ------------------------------------------------------------- */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+                        Análisis Específico de Necesidades Dérmicas:
+                      </span>
+                      <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                        Foco Cosmético Dirigido
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* 1. Ojeras */}
+                      <div className="p-4 rounded-2xl glass-subcard border border-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg">👁️</span>
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-800">
+                            {faceSkinResult.periorbitalAnalysis?.darkCirclesType === 'VASCULAR'
+                              ? 'Vascular'
+                              : faceSkinResult.periorbitalAnalysis?.darkCirclesType === 'PIGMENTARY'
+                              ? 'Pigmentaria'
+                              : faceSkinResult.periorbitalAnalysis?.darkCirclesType === 'STRUCTURAL_SHADOW'
+                              ? 'Estructural'
+                              : 'Contorno Normal'}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900">Contorno & Ojeras</h4>
+                          <p className="text-[11px] text-slate-600 line-clamp-3 mt-1 leading-relaxed">
+                            {faceSkinResult.periorbitalAnalysis?.description || 'Contorno ocular en equilibrio fisiológico.'}
+                          </p>
+                        </div>
+                        <div className="pt-1 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Activos Clave:</span>
+                          <span className="text-[11px] font-medium text-emerald-800 block truncate">
+                            {faceSkinResult.periorbitalAnalysis?.suggestedActives?.[0] || 'Ácido Hialurónico'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2. Manchas y Tono */}
+                      <div className="p-4 rounded-2xl glass-subcard border border-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg">☀️</span>
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-900">
+                            {faceSkinResult.pigmentationAnalysis?.level === 'POST_INFLAMMATORY'
+                              ? 'HPI Residual'
+                              : faceSkinResult.pigmentationAnalysis?.level === 'MODERATE_DIFFUSE'
+                              ? 'Tono Irregular'
+                              : faceSkinResult.pigmentationAnalysis?.level === 'MILD_SUPERFICIAL'
+                              ? 'Fotoexposición'
+                              : 'Tono Uniforme'}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900">Manchas & Pigmentación</h4>
+                          <p className="text-[11px] text-slate-600 line-clamp-3 mt-1 leading-relaxed">
+                            {faceSkinResult.pigmentationAnalysis?.description || 'Pigmentación homogénea conservada.'}
+                          </p>
+                        </div>
+                        <div className="pt-1 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Activos Clave:</span>
+                          <span className="text-[11px] font-medium text-amber-800 block truncate">
+                            {faceSkinResult.pigmentationAnalysis?.suggestedActives?.[0] || 'Antioxidantes + SPF'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. Textura y Líneas */}
+                      <div className="p-4 rounded-2xl glass-subcard border border-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg">✨</span>
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-900">
+                            {faceSkinResult.textureAndLinesAnalysis?.level === 'DYNAMIC_EXPRESSION_LINES'
+                              ? 'Expresión'
+                              : faceSkinResult.textureAndLinesAnalysis?.level === 'FINE_DEHYDRATION_LINES'
+                              ? 'Deshidratación'
+                              : 'Superficie Lisa'}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900">Textura & Líneas</h4>
+                          <p className="text-[11px] text-slate-600 line-clamp-3 mt-1 leading-relaxed">
+                            {faceSkinResult.textureAndLinesAnalysis?.description || 'Textura elástica y homogénea.'}
+                          </p>
+                        </div>
+                        <div className="pt-1 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Activos Clave:</span>
+                          <span className="text-[11px] font-medium text-teal-800 block truncate">
+                            {faceSkinResult.textureAndLinesAnalysis?.suggestedActives?.[0] || 'Péptidos + Retinol'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 3 ACTIVOS CLAVE RECOMENDADOS (EN LUGAR DE LISTA DE PÁRRAFOS) */}
                   <div className="space-y-2.5 pt-1">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
@@ -1409,11 +1372,21 @@ export default function ScannerScreen({
                     );
                   })()}
 
-                  {/* Medical Disclaimer */}
-                  <div className="p-3.5 bg-amber-50/70 border border-amber-200/50 rounded-2xl flex items-start gap-2.5 text-[11.5px] text-amber-900 leading-relaxed">
-                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold">Aviso médico preventivo:</span> {faceSkinResult.disclaimer}
+                  {/* Regulatory Disclaimer & Mandatory Patch Test Reminder */}
+                  <div className="p-4 bg-amber-50/70 border border-amber-200/60 rounded-2xl space-y-2 text-[11.5px] text-amber-900 leading-relaxed shadow-2xs">
+                    <div className="flex items-start gap-2.5">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Aviso cosmético orientativo:</span> {faceSkinResult.disclaimer}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5 pt-1.5 border-t border-amber-200/50">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-emerald-950">Prueba de Parche (Patch Test preventiva):</span>{' '}
+                        {faceSkinResult.patchTestGuidance ||
+                          'Aplica siempre una gota en el antebrazo durante 24 horas antes de incorporar nuevos activos a tu rutina.'}
+                      </div>
                     </div>
                   </div>
 
@@ -1745,23 +1718,25 @@ export default function ScannerScreen({
       {/* STATE 3: CAPTURE / INPUT VIEW (IDLE STATE BEFORE SCANNING)                */}
       {/* ========================================================================= */}
       {!isProcessing && scanTypeResult === null && (
-        <div className="space-y-6">
-          {/* Header Editorial */}
-          <div className="text-center max-w-2xl mx-auto mb-4">
-            <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-widest block">
-              Auditor INCI y Diagnóstico Facial con IA
-            </span>
-            <h1 className="font-serif text-[26px] sm:text-[32px] lg:text-[36px] font-semibold text-[#2D2825] mt-1">
-              Escáner Dermatológico y Visión AR
-            </h1>
-            <p className="text-[13px] sm:text-[14px] font-sans text-[#7E756F] mt-1.5 leading-relaxed">
-              Toma una selfie para evaluar tu biotipo cutáneo, enfoca la etiqueta de tu cosmético para auditar ingredientes en tiempo real o sube una fotografía.
-            </p>
-          </div>
+        <div className={scanMode === 'ar-mask' ? 'space-y-2' : 'space-y-6'}>
+          {/* Header Editorial - Hidden in AR mode to fit laptop screen without scrolling */}
+          {scanMode !== 'ar-mask' && (
+            <div className="text-center max-w-2xl mx-auto mb-4">
+              <span className="text-[11px] font-sans font-bold text-[#4A6B5B] uppercase tracking-widest block">
+                Auditor INCI y Diagnóstico Facial con IA
+              </span>
+              <h1 className="font-serif text-[26px] sm:text-[32px] lg:text-[36px] font-semibold text-[#2D2825] mt-1">
+                Escáner Dermatológico y Visión AR
+              </h1>
+              <p className="text-[13px] sm:text-[14px] font-sans text-[#7E756F] mt-1.5 leading-relaxed">
+                Toma una selfie para evaluar tu biotipo cutáneo, enfoca la etiqueta de tu cosmético para auditar ingredientes en tiempo real o sube una fotografía.
+              </p>
+            </div>
+          )}
 
-          <div className="max-w-2xl mx-auto space-y-4">
-            {/* Mode Selector Tabs (Cámara Real / Subir Foto / Escribir INCI / Muestras) */}
-            <div className="grid grid-cols-4 gap-1.5 p-1 rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
+          <div className={`${scanMode === 'ar-mask' ? 'w-full max-w-7xl' : 'max-w-2xl'} mx-auto space-y-3 transition-all duration-300`}>
+            {/* Mode Selector Tabs (Cámara Real / Mascarilla AR / Subir Foto / Escribir INCI / Muestras) */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 rounded-2xl sm:rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
               <button
                 onClick={() => setScanMode('camera')}
                 className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -1772,6 +1747,18 @@ export default function ScannerScreen({
               >
                 <Camera className="w-4 h-4" />
                 <span>Cámara</span>
+              </button>
+
+              <button
+                onClick={() => setScanMode('ar-mask')}
+                className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  scanMode === 'ar-mask'
+                    ? 'bg-gradient-to-r from-emerald-700 to-teal-800 text-white shadow-xs font-semibold ring-2 ring-emerald-400/40'
+                    : 'text-[#1E3A2B] bg-emerald-500/15 hover:bg-emerald-500/25 font-semibold'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Mascarilla AR</span>
               </button>
 
               <button
@@ -1804,7 +1791,7 @@ export default function ScannerScreen({
                   setScanTypeResult('PRODUCT');
                   setAuditResult(sampleScanPresets[selectedPresetIndex]);
                 }}
-                className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1 ${
                   scanMode === 'preset'
                     ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
                     : 'text-[#7E756F] hover:text-[#2D2825]'
@@ -1873,6 +1860,32 @@ export default function ScannerScreen({
                   </div>
                 </div>
 
+                {/* Quick Launcher: Mascarilla AR & Rutinas Guiadas */}
+                <div
+                  onClick={() => setScanMode('ar-mask')}
+                  className="p-3.5 rounded-2xl bg-gradient-to-r from-[#10241A] via-[#1A3426] to-[#0E1E16] border border-emerald-500/40 text-white flex items-center justify-between gap-3 shadow-md hover:border-emerald-300 transition cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition-transform shrink-0">
+                      <Sparkles className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          Nuevo Filtro Social Tipo TikTok / IG
+                        </span>
+                      </div>
+                      <h4 className="font-serif font-bold text-xs sm:text-sm text-white mt-0.5">
+                        Probar Mascarilla Virtual & Rutinas Guiadas
+                      </h4>
+                      <p className="text-[11px] text-white/75 font-sans">
+                        Aprende a desmaquillarte y verificar la cobertura facial completa con el visor interactivo.
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-emerald-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                </div>
+
                 {/* Single Capture CTA Shutter Button */}
                 <button
                   onClick={handleCaptureSnapshot}
@@ -1883,6 +1896,11 @@ export default function ScannerScreen({
                   <span>Capturar Foto & Diagnosticar</span>
                 </button>
               </div>
+            )}
+
+            {/* MODE 5: AR VIRTUAL MASK & GUIDED TUTORIALS (DLG-INNOV) */}
+            {scanMode === 'ar-mask' && (
+              <VirtualFaceMaskTutorial onClose={() => setScanMode('camera')} />
             )}
 
             {/* MODE 2: UPLOAD IMAGE FROM GALLERY */}

@@ -16,14 +16,16 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
   const pathname = usePathname();
   const { userProfile } = useSkincare();
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setCurrentUser(getCurrentUser());
   }, [pathname]);
 
   const navItems = [
     { href: '/', label: 'Inicio' },
-    { href: '/en-tienda/rio-supermercado-traki-valle-de-la-pascua', label: 'En Tienda (VE)', icon: Store },
+    { href: '/tiendas', label: 'Tiendas & Mapa', icon: Store },
     { href: '/escaner', label: 'Auditor INCI', icon: Scan },
     { href: '/calendario', label: 'Mi Calendario', icon: Calendar },
     { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
@@ -157,14 +159,20 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
               title="Configuración de Perfil Dermatológico"
             >
               <div className="text-right hidden xl:block leading-tight pr-0.5">
-                <span className="text-[11.5px] font-bold text-slate-900 block truncate max-w-[100px]">
-                  {userProfile?.name || 'Mi Perfil'}
+                <span
+                  suppressHydrationWarning
+                  className="text-[11.5px] font-bold text-slate-900 block truncate max-w-[100px]"
+                >
+                  {mounted && userProfile?.name ? userProfile.name : 'Mi Perfil'}
                 </span>
-                <span className="text-[9.5px] text-emerald-800 font-semibold block uppercase">
-                  {userProfile?.skinType || 'Sin calibrar'}
+                <span
+                  suppressHydrationWarning
+                  className="text-[9.5px] text-emerald-800 font-semibold block uppercase"
+                >
+                  {mounted && userProfile?.skinType ? userProfile.skinType : 'Sin calibrar'}
                 </span>
               </div>
-              {userProfile?.avatarUrl ? (
+              {mounted && userProfile?.avatarUrl ? (
                 <img
                   src={userProfile.avatarUrl}
                   alt={userProfile?.name || 'Usuario'}
@@ -172,7 +180,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                 />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-white border border-white shadow-xs flex items-center justify-center text-[#1E3A2B] font-bold text-xs group-hover:scale-105 transition">
-                  {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                  {mounted && userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
                 </div>
               )}
             </button>

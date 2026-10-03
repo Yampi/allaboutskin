@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             SkincareScientificSeeder::class,
+            ClinicalIngredientsDictionarySeeder::class,
+            ValleDeLaPascuaStoresSeeder::class,
             AdminAndSecuritySeeder::class,
         ]);
     }

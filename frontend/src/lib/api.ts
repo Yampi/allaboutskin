@@ -397,7 +397,7 @@ export function saveDailyRoutine(routine: UserDailyRoutine) {
 }
 
 // Admin API Methods
-function getAuthHeaders() {
+export function getAuthHeaders() {
   const user = getCurrentUser();
   return {
     'Content-Type': 'application/json',
@@ -512,8 +512,11 @@ export interface AdminStoreItem {
   logo_url?: string | null;
   store_type: 'ONLINE' | 'PHYSICAL' | 'HYBRID';
   country_code: string;
+  country_name?: string;
+  country_flag?: string;
   instagram_handle?: string | null;
   whatsapp_contact?: string | null;
+  contact_phone?: string | null;
   is_independent: boolean;
   verification_status: 'VERIFIED' | 'PENDING_REVIEW' | 'REJECTED';
   subscription_tier: 'FREE' | 'PRO_LOCAL' | 'ENTERPRISE';
@@ -547,6 +550,33 @@ export interface AdminStoreItem {
     phone?: string;
     whatsapp?: string;
   }>;
+  crawler_platform?: string;
+  product_offers?: Array<{
+    id: number;
+    price: number;
+    price_usd: number;
+    price_local?: number;
+    currency_local?: string;
+    formatted_price_usd?: string;
+    formatted_price_local?: string;
+    in_stock: boolean;
+    product_url?: string;
+    product?: {
+      id: number;
+      name: string;
+      slug: string;
+      image_url?: string;
+      category?: string;
+      volume_amount?: number;
+      volume_unit?: string;
+      barcode_ean?: string;
+      brand?: {
+        id: number;
+        name: string;
+      };
+    };
+  }>;
+  productOffers?: any[];
 }
 
 export interface AdminStoresResponse {
@@ -555,6 +585,7 @@ export interface AdminStoresResponse {
     pending_review: number;
     total_verified: number;
     total_stores: number;
+    by_country?: Record<string, number>;
   };
   stores: {
     current_page: number;
@@ -566,15 +597,19 @@ export interface AdminStoresResponse {
 
 export async function fetchAdminStores(params?: {
   page?: number;
+  per_page?: number;
   search?: string;
   verification_status?: string;
   subscription_tier?: string;
+  country_code?: string;
 }): Promise<AdminStoresResponse> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
+  if (params?.per_page) query.append('per_page', params.per_page.toString());
   if (params?.search) query.append('search', params.search);
   if (params?.verification_status) query.append('verification_status', params.verification_status);
   if (params?.subscription_tier) query.append('subscription_tier', params.subscription_tier);
+  if (params?.country_code) query.append('country_code', params.country_code);
 
   const res = await fetch(`${API_BASE_URL}/admin/stores?${query.toString()}`, {
     headers: getAuthHeaders(),
@@ -583,11 +618,39 @@ export async function fetchAdminStores(params?: {
   return res.json();
 }
 
-export async function fetchAdminStoreDetail(id: number): Promise<{ status: string; store: AdminStoreItem }> {
-  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}`, {
+export async function fetchAdminStoreDetail(id: number, search?: string): Promise<{ status: string; store: AdminStoreItem }> {
+  const url = search 
+    ? `${API_BASE_URL}/admin/stores/${id}?search=${encodeURIComponent(search)}`
+    : `${API_BASE_URL}/admin/stores/${id}`;
+  const res = await fetch(url, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Error al cargar detalle de tienda');
+  return res.json();
+}
+
+export async function fetchPublicStores(params?: {
+  country?: string;
+  search?: string;
+}): Promise<{ status: string; total_stores: number; stores: any[] }> {
+  const query = new URLSearchParams();
+  if (params?.country) query.append('country', params.country);
+  if (params?.search) query.append('search', params.search);
+  const res = await fetch(`${API_BASE_URL}/stores?${query.toString()}`);
+  if (!res.ok) throw new Error('Error al obtener tiendas públicas');
+  return res.json();
+}
+
+export async function fetchPublicStoreDetail(
+  identifier: string | number,
+  params?: { search?: string; in_stock_only?: boolean; limit?: number }
+): Promise<{ status: string; store: any; products: any[] }> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append('search', params.search);
+  if (params?.in_stock_only) query.append('in_stock_only', '1');
+  if (params?.limit) query.append('limit', String(params.limit));
+  const res = await fetch(`${API_BASE_URL}/stores/${identifier}?${query.toString()}`);
+  if (!res.ok) throw new Error('Error al obtener detalle de la tienda');
   return res.json();
 }
 
@@ -624,6 +687,18 @@ export async function toggleAdminStoreStatus(id: number) {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Error al cambiar estado de la tienda');
+  return res.json();
+}
+
+export async function deleteAdminStore(id: number) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || 'Error al eliminar la tienda');
+  }
   return res.json();
 }
 
@@ -1062,4 +1137,172 @@ export async function searchCatalogProducts(query: string): Promise<any[]> {
   const json = await res.json();
   return json.data || [];
 }
+
+export async function fetchNearbyStores(lat: number, lng: number, radiusMeters: number = 5000): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/stores/nearby?lat=${lat}&lng=${lng}&radius_meters=${radiusMeters}`);
+  if (!res.ok) {
+    throw new Error('Error al consultar tiendas cercanas');
+  }
+  return res.json();
+}
+
+export async function fetchOptimizeStoreRoutine(lat: number, lng: number, radiusMeters: number = 15000, productIds?: number[]): Promise<any> {
+  let url = `${API_BASE_URL}/stores/optimize-routine?lat=${lat}&lng=${lng}&radius_meters=${radiusMeters}`;
+  if (productIds && productIds.length > 0) {
+    productIds.forEach(id => {
+      url += `&product_ids[]=${id}`;
+    });
+  }
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('Error al optimizar rutina con tiendas cercanas');
+  }
+  return res.json();
+}
+
+export async function fetchAdminScraperStatus(): Promise<{
+  status: string;
+  metrics: {
+    total_offers: number;
+    total_branches: number;
+    total_stores: number;
+    cron_frequency: string;
+  };
+  active_ingredients?: Array<{
+    id: number;
+    inci_name: string;
+    common_name: string | null;
+    studies_count: number;
+    products_count: number;
+  }>;
+  recent_offers: Array<{
+    id: number;
+    store_name: string;
+    branch_name: string;
+    product_name: string;
+    brand_name: string;
+    price: number;
+    price_ves: number;
+    currency: string;
+    in_stock: boolean;
+    last_checked_at: string;
+  }>;
+  logs: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/admin/scraper/status`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener estado del scraper');
+  }
+  return res.json();
+}
+
+export async function triggerAdminScraperRun(payload: {
+  store?: string;
+  city?: string;
+  url?: string;
+  mode?: 'chain' | 'url' | 'ingredient' | 'all_active_ingredients' | 'refresh_prices';
+  ingredient_id?: string | number;
+}): Promise<{
+  status: string;
+  message: string;
+  output: string;
+  executed_at: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/admin/scraper/run`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al ejecutar el rastreador');
+  }
+  return res.json();
+}
+
+export interface CrawlerSummaryData {
+  summary_meta: {
+    generated_at: string;
+    generated_human: string;
+    period_hours: number;
+    period_since: string;
+    cron_schedule: string;
+  };
+  health: {
+    status: 'OPERATIONAL' | 'ATTENTION' | 'CRITICAL';
+    score: number;
+    badge: string;
+    message: string;
+  };
+  kpis: {
+    total_offers: number;
+    in_stock_offers: number;
+    out_of_stock_offers: number;
+    stock_rate_percentage: number;
+    new_offers_period: number;
+    updated_offers_period: number;
+    price_increases_period: number;
+    price_decreases_period: number;
+    total_active_ingredients: number;
+    crawled_ingredients_period: number;
+    coverage_rate_percentage: number;
+  };
+  next_queue: Array<{
+    id: number;
+    inci_name: string;
+    common_name: string | null;
+    last_crawled_human: string;
+  }>;
+  recent_price_changes: Array<{
+    id: number;
+    product_name: string;
+    brand: string;
+    store_name: string;
+    old_price_usd: number;
+    new_price_usd: number;
+    difference_usd: number;
+    percentage_change: number;
+    is_discount: boolean;
+    recorded_at: string;
+  }>;
+  stores: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    platform: string;
+    crawler_enabled: boolean;
+    last_crawled_human: string;
+    total_offers: number;
+    new_offers_period: number;
+    in_stock_offers: number;
+  }>;
+  execution_diagnostics: {
+    cycles_analyzed_count: number;
+    total_evaluated_quality_gate: number;
+    total_accepted_quality_gate: number;
+    total_rejected_quality_gate: number;
+    total_new_offers_synced: number;
+    logged_errors_count: number;
+    detected_anomalies: string[];
+  };
+  recommendations: string[];
+}
+
+export async function fetchAdminCrawlerSummary(hours: number = 24): Promise<{
+  status: string;
+  data: CrawlerSummaryData;
+}> {
+  const res = await fetch(`${API_BASE_URL}/admin/scraper/summary?hours=${hours}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener resumen del crawler');
+  }
+  return res.json();
+}
+
 

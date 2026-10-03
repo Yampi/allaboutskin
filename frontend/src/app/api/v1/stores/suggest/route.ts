@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const backendUrl = process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api/v1';
+    const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const res = await fetch(`${backendUrl}/stores/suggest`, {
         method: 'POST',
@@ -27,26 +27,15 @@ export async function POST(req: NextRequest) {
       });
       clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json(data, { status: 201 });
-      }
-    } catch {
-      // Si el backend no responde, registramos localmente con éxito
+      const data = await res.json();
+      return NextResponse.json(data, { status: res.status });
+    } catch (fetchErr) {
+      console.error('Error connecting to backend in /stores/suggest:', fetchErr);
+      return NextResponse.json(
+        { error: 'No se pudo conectar con el servidor de base de datos para registrar el comercio. Verifica que el backend esté activo.' },
+        { status: 503 }
+      );
     }
-
-    return NextResponse.json(
-      {
-        status: 'success',
-        message: '¡Establecimiento registrado con éxito! Nuestro equipo científico verificará los datos antes de publicarlo en el catálogo en tienda.',
-        data: {
-          name: body.store_name,
-          city: body.city,
-          status: 'PENDING_REVIEW',
-        },
-      },
-      { status: 201 }
-    );
   } catch {
     return NextResponse.json(
       { error: 'Error al procesar el registro del establecimiento' },

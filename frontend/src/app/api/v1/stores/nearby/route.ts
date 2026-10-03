@@ -59,25 +59,7 @@ const SEED_BRANCHES = [
     longitude: -66.0102,
     geofence_radius_meters: 80,
   },
-  {
-    id: 6,
-    name: 'DermoPascua - Calle Bolívar',
-    slug: 'dermopascua-local-av-bolivar',
-    store_name: 'DermoPascua & Belleza (Independiente)',
-    store_type: 'PHYSICAL',
-    is_independent: true,
-    state: 'Guárico',
-    city: 'Valle de la Pascua',
-    address: 'Calle Bolívar cruce con Calle Retumbo, Local 3B',
-    reference_point: 'A media cuadra de la Plaza Central',
-    phone: '0235-3419999',
-    whatsapp: '+584243339988',
-    instagram_handle: '@dermopascua_store',
-    opening_hours: 'Lunes a Sábado: 9:00 AM - 6:00 PM',
-    latitude: 9.2162,
-    longitude: -66.0105,
-    geofence_radius_meters: 70,
-  },
+
   {
     id: 5,
     name: 'Farmahorro - Av. Libertador',
@@ -139,10 +121,10 @@ export async function GET(req: NextRequest) {
   const radius = parseInt(searchParams.get('radius_meters') || '5000', 10);
 
   // 1. Intentar consultar primero al backend Laravel si está disponible
-  const backendUrl = process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api/v1';
+  const backendUrl = process.env.LARAVEL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(`${backendUrl}/stores/nearby?lat=${lat}&lng=${lng}&radius_meters=${radius}`, {
       signal: controller.signal,

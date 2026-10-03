@@ -92,14 +92,10 @@ export interface RoutineAuditResult {
 }
 
 const GEMINI_MODELS = [
-  'gemini-flash-latest',
-  'gemini-3.7-flash',
-  'gemini-3.6-flash',
+  'gemini-3.1-flash-lite',
   'gemini-3.5-flash',
-  'gemini-2.5-flash',
-  'gemini-pro-latest',
-  'gemini-2.5-pro',
-  'gemini-1.5-flash-latest',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
 ];
 
 /**
@@ -179,13 +175,17 @@ export async function callGeminiApi(
   const errorDetails: string[] = [];
 
   for (const model of candidateModels) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -200,6 +200,7 @@ export async function callGeminiApi(
         return textOutput;
       }
     } catch (err: any) {
+      clearTimeout(timeoutId);
       errorDetails.push(`${model}: ${err?.message || 'Error'}`);
       lastError = err;
     }
@@ -348,6 +349,11 @@ export function getFallbackFaceAnalysis(): VisionClassificationResult {
       erythemaMalarIndex: 'ABSENT',
       stratumCorneumDesquamation: 'NONE',
       fitzpatrickPhototypeEstimate: 3,
+      darkCirclesType: 'VASCULAR',
+      darkCirclesSeverity: 'MILD',
+      hyperpigmentationLevel: 'NONE_OR_UNIFORM',
+      textureAndLinesLevel: 'SMOOTH',
+      activeLesionRisk: 'NONE',
     },
   });
 }
@@ -396,6 +402,29 @@ DEFINICIÓN DE BIOMARCADORES ÓPTICOS (Solo cuando detectedAnatomy es "HUMAN_FAC
    - "MILD_LOCALIZED": Pequeñas zonas de textura áspera o descamación fina.
    - "MARKED_GENERALIZED": Descamación visible marcada / tirantez evidente.
 5. fitzpatrickPhototypeEstimate: Número entero del 1 al 6 según la escala Fitzpatrick (I a VI).
+6. darkCirclesType & darkCirclesSeverity (Ojeras infraorbitarias):
+   - darkCirclesType:
+     * "NONE_OR_MINIMAL": Contorno periocular homogéneo sin hipercromía ni sombras visibles.
+     * "VASCULAR": Ojeras azuladas/violáceas/rojizas por microcirculación capilar y piel fina.
+     * "PIGMENTARY": Ojeras marrones/pardas causadas por exceso focal de melanina.
+     * "STRUCTURAL_SHADOW": Sombra anatómica por surco lagrimal profundo (tear trough) o falta de volumen.
+     * "MIXED": Combinación de estasis vascular y depósito melánico.
+   - darkCirclesSeverity: "NONE" | "MILD" | "MODERATE" | "MARKED"
+7. hyperpigmentationLevel (Manchas dérmicas / fotodaño / tono irregular):
+   - "NONE_OR_UNIFORM": Tono uniforme sin máculas melánicas evidentes.
+   - "MILD_SUPERFICIAL": Ligeras pecas solares o léntigos superficiales tenues.
+   - "POST_INFLAMMATORY": Máculas pigmentadas residuales (HPI) tras brotes o roces.
+   - "MODERATE_DIFFUSE": Manchas melánicas difusas apreciables en frente, pómulos o labio superior.
+8. textureAndLinesLevel (Relieve dérmico y líneas de expresión / arrugas):
+   - "SMOOTH": Superficie lisa sin líneas aparentes.
+   - "FINE_DEHYDRATION_LINES": Finas líneas superficiales tenues por pérdida transitoria de agua.
+   - "DYNAMIC_EXPRESSION_LINES": Líneas visibles de gesticulación (frente, patas de gallo, entrecejo).
+   - "MODERATE_STATIC_LINES": Líneas o surcos dérmicos visibles en reposo.
+9. activeLesionRisk (Triage preventivo de seguridad y derivación médica):
+   - "NONE": Piel íntegra sin lesiones activas ni laceraciones.
+   - "SUPERFICIAL_BLEMISHES": Comedones, puntos negros o imperfecciones inflamatorias aisladas leves.
+   - "SEVERE_CYSTIC_OR_NODULAR": Múltiples imperfecciones nodulares o quísticas profundas recurrentes.
+   - "OPEN_WOUND_OR_DISRUPTION": Herida abierta, sangrado visible, quemadura activa o laceración epidérmica.
 
 COORDENADAS ANATÓMICAS FACIALES (Porcentajes normalizados de 0 a 100 respecto a las dimensiones de la imagen):
 Solo cuando detectedAnatomy es "HUMAN_FACE", proporciona las coordenadas de las zonas dérmicas sobre el rostro del sujeto en la foto:
@@ -428,7 +457,12 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
     "erythemaMalarIndex": "ABSENT" | "LOCALIZED_MILD" | "DIFFUSE_MODERATE" | "ACUTE_SEVERE",
     "stratumCorneumDesquamation": "NONE" | "MILD_LOCALIZED" | "MARKED_GENERALIZED",
     "fitzpatrickPhototypeEstimate": 1 | 2 | 3 | 4 | 5 | 6,
-    "visibleEtiologies": ["brillo zona T", "poros visibles", "eritema malar"]
+    "darkCirclesType": "NONE_OR_MINIMAL" | "VASCULAR" | "PIGMENTARY" | "STRUCTURAL_SHADOW" | "MIXED",
+    "darkCirclesSeverity": "NONE" | "MILD" | "MODERATE" | "MARKED",
+    "hyperpigmentationLevel": "NONE_OR_UNIFORM" | "MILD_SUPERFICIAL" | "POST_INFLAMMATORY" | "MODERATE_DIFFUSE",
+    "textureAndLinesLevel": "SMOOTH" | "FINE_DEHYDRATION_LINES" | "DYNAMIC_EXPRESSION_LINES" | "MODERATE_STATIC_LINES",
+    "activeLesionRisk": "NONE" | "SUPERFICIAL_BLEMISHES" | "SEVERE_CYSTIC_OR_NODULAR" | "OPEN_WOUND_OR_DISRUPTION",
+    "visibleEtiologies": ["brillo zona T", "poros visibles", "ojeras vasculares", "líneas finas"]
   },
   "productData": {
     "brand": "Nombre de marca si es producto o null",

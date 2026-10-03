@@ -35,6 +35,68 @@ export type DesquamationLevel = 'NONE' | 'MILD_LOCALIZED' | 'MARKED_GENERALIZED'
 export type SkinHydrationState = 'DRY' | 'NORMAL' | 'BALANCED' | 'DEHYDRATED';
 export type FitzpatrickScale = 1 | 2 | 3 | 4 | 5 | 6;
 
+// Biomarcadores extendidos para análisis estético-cosmético avanzado
+export type DarkCirclesClassification =
+  | 'NONE_OR_MINIMAL'
+  | 'VASCULAR' // Azulada/violácea (microcirculación y piel fina)
+  | 'PIGMENTARY' // Marrón/parda (acumulación melánica)
+  | 'STRUCTURAL_SHADOW' // Sombra por depresión anatómica / surco lagrimal
+  | 'MIXED';
+
+export type HyperpigmentationLevel =
+  | 'NONE_OR_UNIFORM'
+  | 'MILD_SUPERFICIAL'
+  | 'POST_INFLAMMATORY' // HPI residual
+  | 'MODERATE_DIFFUSE';
+
+export type TextureAndLinesLevel =
+  | 'SMOOTH'
+  | 'FINE_DEHYDRATION_LINES'
+  | 'DYNAMIC_EXPRESSION_LINES'
+  | 'MODERATE_STATIC_LINES';
+
+export type ActiveLesionRisk =
+  | 'NONE'
+  | 'SUPERFICIAL_BLEMISHES'
+  | 'SEVERE_CYSTIC_OR_NODULAR'
+  | 'OPEN_WOUND_OR_DISRUPTION';
+
+export type ClinicalTriageLevel =
+  | 'COSMETIC_MAINTENANCE'
+  | 'COSMETIC_ACTIVE'
+  | 'DERMATOLOGY_REFERRAL_RECOMMENDED';
+
+export interface ClinicalTriageEvaluation {
+  triageLevel: ClinicalTriageLevel;
+  medicalReferralRecommended: boolean;
+  referralReason: string | null;
+  suggestedMedicalSpecialty: string | null;
+  safetyAlerts: string[];
+  blockedIngredientCategories: string[];
+  safeRecommendedActives: string[];
+  patchTestRequired: boolean;
+}
+
+export interface PeriorbitalEvaluation {
+  darkCirclesType: DarkCirclesClassification;
+  severity: 'NONE' | 'MILD' | 'MODERATE' | 'MARKED';
+  description: string;
+  suggestedActives: string[];
+}
+
+export interface PigmentationEvaluation {
+  level: HyperpigmentationLevel;
+  description: string;
+  suggestedActives: string[];
+  sunProtectionGuidance: string;
+}
+
+export interface TextureAndLinesEvaluation {
+  level: TextureAndLinesLevel;
+  description: string;
+  suggestedActives: string[];
+}
+
 export interface NormalizedBoundingBox {
   top: number; // percentage 0 - 100
   left: number; // percentage 0 - 100
@@ -68,6 +130,11 @@ export interface ExtractedClinicalBiomarkers {
     stratumCorneumDesquamation: DesquamationLevel;
     fitzpatrickPhototypeEstimate: FitzpatrickScale;
     visibleEtiologies?: string[];
+    darkCirclesType?: DarkCirclesClassification;
+    darkCirclesSeverity?: 'NONE' | 'MILD' | 'MODERATE' | 'MARKED';
+    hyperpigmentationLevel?: HyperpigmentationLevel;
+    textureAndLinesLevel?: TextureAndLinesLevel;
+    activeLesionRisk?: ActiveLesionRisk;
   };
   productData?: {
     brand: string | null;
@@ -98,6 +165,10 @@ export interface ClinicalSkinEvaluationResult {
       rednessPresent: boolean;
       description: string;
     };
+    periorbitalAnalysis: PeriorbitalEvaluation;
+    pigmentationAnalysis: PigmentationEvaluation;
+    textureAndLinesAnalysis: TextureAndLinesEvaluation;
+    triage: ClinicalTriageEvaluation;
     biomarkers: {
       tZoneSebum: SebumReflectanceLevel;
       cheeksSebum: SebumReflectanceLevel;
@@ -111,6 +182,7 @@ export interface ClinicalSkinEvaluationResult {
     scientificReferences: string[];
     confidence: number;
     disclaimer: string;
+    patchTestGuidance: string;
   };
 }
 
@@ -223,32 +295,86 @@ export const CLINICAL_REJECTIONS_CATALOG: Record<
 };
 
 /**
+ * Normalizes bounding box coordinates regardless of whether the vision model
+ * outputs 0-1000 integer scale (standard Gemini bounding box detection),
+ * 0.0-1.0 float scale, or 0-100 percentage.
+ */
+function normalizeCoordinateBox(
+  box?: Partial<NormalizedBoundingBox> | null
+): NormalizedBoundingBox | undefined {
+  if (
+    !box ||
+    typeof box.width !== 'number' ||
+    typeof box.height !== 'number' ||
+    typeof box.top !== 'number' ||
+    typeof box.left !== 'number'
+  ) {
+    return undefined;
+  }
+
+  let { top, left, width, height } = box;
+
+  // 1. Detect 0-1000 scale (typical Gemini bounding box coordinates e.g., top = 218, width = 214)
+  if (top > 100 || left > 100 || width > 100 || height > 100) {
+    top = top / 10;
+    left = left / 10;
+    width = width / 10;
+    height = height / 10;
+  }
+  // 2. Detect 0.0 - 1.0 float normalized scale (e.g., top = 0.218, width = 0.214)
+  else if (top <= 1.0 && left <= 1.0 && width <= 1.0 && height <= 1.0 && (width > 0 || height > 0)) {
+    top = top * 100;
+    left = left * 100;
+    width = width * 100;
+    height = height * 100;
+  }
+
+  // Ensure minimum valid size
+  if (width < 4 || height < 4) {
+    return undefined;
+  }
+
+  const cleanTop = Math.max(0, Math.min(85, Math.round(top)));
+  const cleanLeft = Math.max(0, Math.min(85, Math.round(left)));
+  const cleanWidth = Math.max(5, Math.min(100 - cleanLeft, Math.round(width)));
+  const cleanHeight = Math.max(5, Math.min(100 - cleanTop, Math.round(height)));
+
+  return {
+    top: cleanTop,
+    left: cleanLeft,
+    width: cleanWidth,
+    height: cleanHeight,
+  };
+}
+
+/**
  * Derives and normalizes facial anatomical zones (Zone T, Malar Cheeks)
  * with Da Vinci / Farkas neoclassical facial third proportions.
  */
 export function deriveFaceRegions(
   extractedRegions?: Partial<FaceRegionsCoordinates>
 ): FaceRegionsCoordinates {
+  // Standard portrait selfie neoclassical framing default
   const defaultFace: NormalizedBoundingBox = { top: 12, left: 18, width: 64, height: 72 };
-  const rawFace = extractedRegions?.faceBox;
+  const rawFace = normalizeCoordinateBox(extractedRegions?.faceBox);
 
-  const faceBox: NormalizedBoundingBox =
-    rawFace && typeof rawFace.width === 'number' && rawFace.width > 5 && rawFace.height > 5
-      ? {
-          top: Math.max(0, Math.min(90, Math.round(rawFace.top))),
-          left: Math.max(0, Math.min(90, Math.round(rawFace.left))),
-          width: Math.max(15, Math.min(100, Math.round(rawFace.width))),
-          height: Math.max(15, Math.min(100, Math.round(rawFace.height))),
-        }
-      : defaultFace;
+  // Validate that faceBox is plausible (e.g. not pushed against far corner, reasonable dimensions)
+  const isPlausibleFace =
+    rawFace &&
+    rawFace.width >= 15 &&
+    rawFace.height >= 15 &&
+    rawFace.top <= 65 &&
+    rawFace.left <= 70;
+
+  const faceBox: NormalizedBoundingBox = isPlausibleFace ? rawFace! : defaultFace;
 
   // Proportional anatomical derivations based on faceBox:
   // Zone T spans upper third (forehead) and central bridge (nasal dorsum)
   const derivedZoneT: NormalizedBoundingBox = {
     top: Math.max(0, Math.round(faceBox.top + faceBox.height * 0.04)),
-    left: Math.max(0, Math.round(faceBox.left + faceBox.width * 0.26)),
-    width: Math.min(100, Math.round(faceBox.width * 0.48)),
-    height: Math.min(100, Math.round(faceBox.height * 0.50)),
+    left: Math.max(0, Math.round(faceBox.left + faceBox.width * 0.25)),
+    width: Math.min(100, Math.round(faceBox.width * 0.50)),
+    height: Math.min(100, Math.round(faceBox.height * 0.48)),
   };
 
   // Left cheek in image (viewer's left side)
@@ -267,34 +393,24 @@ export function deriveFaceRegions(
     height: Math.min(100, Math.round(faceBox.height * 0.28)),
   };
 
-  const sanitizeBox = (
-    box?: NormalizedBoundingBox,
-    fallback?: NormalizedBoundingBox
-  ): NormalizedBoundingBox => {
-    if (
-      !box ||
-      typeof box.top !== 'number' ||
-      typeof box.left !== 'number' ||
-      typeof box.width !== 'number' ||
-      typeof box.height !== 'number' ||
-      box.width < 4 ||
-      box.height < 4
-    ) {
-      return fallback!;
-    }
-    return {
-      top: Math.max(0, Math.min(95, Math.round(box.top))),
-      left: Math.max(0, Math.min(95, Math.round(box.left))),
-      width: Math.max(5, Math.min(100, Math.round(box.width))),
-      height: Math.max(5, Math.min(100, Math.round(box.height))),
-    };
-  };
+  // Normalize extracted sub-zones if provided, or derive anatomically
+  const rawZoneT = normalizeCoordinateBox(extractedRegions?.zoneTBox);
+  const rawLeftCheek = normalizeCoordinateBox(extractedRegions?.leftCheekBox);
+  const rawRightCheek = normalizeCoordinateBox(extractedRegions?.rightCheekBox);
+
+  // Validate that sub-zones are within plausible range of the face
+  const isInsideFace = (box?: NormalizedBoundingBox) =>
+    box &&
+    box.left >= Math.max(0, faceBox.left - 12) &&
+    box.left + box.width <= Math.min(100, faceBox.left + faceBox.width + 12) &&
+    box.top >= Math.max(0, faceBox.top - 12) &&
+    box.top + box.height <= Math.min(100, faceBox.top + faceBox.height + 12);
 
   return {
     faceBox,
-    zoneTBox: sanitizeBox(extractedRegions?.zoneTBox, derivedZoneT),
-    leftCheekBox: sanitizeBox(extractedRegions?.leftCheekBox, derivedLeftCheek),
-    rightCheekBox: sanitizeBox(extractedRegions?.rightCheekBox, derivedRightCheek),
+    zoneTBox: (rawZoneT && isInsideFace(rawZoneT)) ? rawZoneT : derivedZoneT,
+    leftCheekBox: (rawLeftCheek && isInsideFace(rawLeftCheek)) ? rawLeftCheek : derivedLeftCheek,
+    rightCheekBox: (rawRightCheek && isInsideFace(rawRightCheek)) ? rawRightCheek : derivedRightCheek,
   };
 }
 
@@ -517,10 +633,181 @@ export function governAndClassifyBiomarkers(
     ];
   }
 
+  // 4. TRIAGE & MEDICAL REFERRAL GOVERNANCE ENGINE
+  const lesionRisk = bio.activeLesionRisk || 'NONE';
+  const hasDisruptionOrWound = lesionRisk === 'OPEN_WOUND_OR_DISRUPTION';
+  const hasSevereCystic = lesionRisk === 'SEVERE_CYSTIC_OR_NODULAR';
+  const hasAcuteErythema = erythema === 'ACUTE_SEVERE';
+
+  let triageLevel: ClinicalTriageLevel = 'COSMETIC_MAINTENANCE';
+  let medicalReferralRecommended = false;
+  let referralReason: string | null = null;
+  let suggestedMedicalSpecialty: string | null = null;
+  let safetyAlerts: string[] = [];
+  let blockedIngredientCategories: string[] = [];
+  let safeRecommendedActives: string[] = [];
+
+  if (hasDisruptionOrWound || hasAcuteErythema) {
+    triageLevel = 'DERMATOLOGY_REFERRAL_RECOMMENDED';
+    medicalReferralRecommended = true;
+    referralReason = hasDisruptionOrWound
+      ? 'Se observa una posible disrupción o alteración visible en la barrera epidérmica. Por seguridad dermatológica, se desaconseja el uso de exfoliantes o cosméticos activos intensivos hasta su valoración médica presencial.'
+      : 'Eritema agudo con hiperreactividad vascular marcada en área facial. Requiere valoración médica presencial para descartar afecciones específicas (rosácea activa, dermatitis por contacto).';
+    suggestedMedicalSpecialty = 'Médico Dermatólogo Especialista en Barrera Cutánea y Lesiones Inflamatorias';
+    safetyAlerts = [
+      'SUSPENDER temporalmente el uso de exfoliantes químicos (Ácido Glicólico, Salicílico, Láctico) y peelings.',
+      'EVITAR retinoides (Retinol, Retinal) y formas ácidas de Vitamina C pura (L-Ascórbico < pH 3.5).',
+      'Priorizar fotoprotección 100% mineral con Óxido de Zinc y fórmulas hipoalergénicas sin perfume.',
+    ];
+    blockedIngredientCategories = [
+      'EXFOLIATING_ACIDS_AHA_BHA',
+      'PURE_RETINOIDS',
+      'ALCOHOL_DENAT',
+      'GRANULAR_SCRUBS',
+      'HIGH_STRENGTH_VITAMIN_C',
+    ];
+    safeRecommendedActives = [
+      'Centella Asiática (Madecassoside)',
+      'Pantenol (Provitamina B5) al 5%',
+      'Complejo reparador de Ceramidas 3:1:1',
+      'Fotoprotector mineral SPF 50+',
+    ];
+    visibleConcerns.unshift('Disrupción de barrera / Reactividad aguda detectada');
+  } else if (hasSevereCystic) {
+    triageLevel = 'DERMATOLOGY_REFERRAL_RECOMMENDED';
+    medicalReferralRecommended = true;
+    referralReason =
+      'Presencia de imperfecciones profundas o nodulares recurrentes. Los cosméticos de venta libre tienen alcance superficial; se recomienda valoración con un especialista médico para prevenir marcas y cicatrices dérmicas.';
+    suggestedMedicalSpecialty = 'Médico Dermatólogo Especialista en Trastornos Foliculares y Seborreicos';
+    safetyAlerts = [
+      'Evitar manipular mecánicamente o presionar las zonas con imperfecciones para prevenir hiperpigmentación postinflamatoria.',
+      'Consultar con un médico dermatólogo para evaluar pautas tópicas u orales de prescripción.',
+    ];
+    blockedIngredientCategories = ['COMEDOGENIC_HEAVY_OILS', 'GRANULAR_SCRUBS'];
+    safeRecommendedActives = [
+      'Ácido Salicílico (BHA 1-2%) en vehículo calmante',
+      'Niacinamida al 2-4% y Zinc PCA',
+      'Geles hidratantes oil-free no comedogénicos',
+    ];
+    visibleConcerns.unshift('Imperfecciones profundas con indicación de valoración clínica');
+  } else {
+    // Normal / Cosmetic active routine
+    triageLevel = (visibleConcerns.length > 1 || isErythematous || isGeneralizedOily || isGeneralizedDry)
+      ? 'COSMETIC_ACTIVE'
+      : 'COSMETIC_MAINTENANCE';
+    medicalReferralRecommended = false;
+    referralReason = null;
+    suggestedMedicalSpecialty = 'Dermatólogo Cosmético y Preventivo (Control Anual)';
+    safetyAlerts = [];
+    blockedIngredientCategories = [];
+    safeRecommendedActives = suggestedFocus;
+  }
+
+  // 5. PERIORBITAL / DARK CIRCLES ANALYSIS
+  const darkType = bio.darkCirclesType || 'NONE_OR_MINIMAL';
+  const darkSeverity = bio.darkCirclesSeverity || (darkType === 'NONE_OR_MINIMAL' ? 'NONE' : 'MILD');
+  let darkDesc = 'Contorno periocular homogéneo sin hipercromía ni estasis vascular aparente.';
+  let darkActives: string[] = ['Ácido Hialurónico hidratante', 'Protector solar periorbitario'];
+
+  if (darkType === 'VASCULAR') {
+    darkDesc = 'Ojeras de tonalidad azulada/violácea asociadas a microcirculación sanguínea superficial y piel periorbitaria muy fina.';
+    darkActives = [
+      'Cafeína al 5% anhidra (vasoconstrictor descongestionante)',
+      'Vitamina K-óxido microencapsulada (favorece la microcirculación)',
+      'Niacinamida al 2% (fortalece la piel del contorno)',
+      'Péptidos drenantes (Acetil Tetrapéptido-5 / Eyeseryl)',
+    ];
+    visibleConcerns.push('Ojeras de etiología vascular (azulada/violácea)');
+  } else if (darkType === 'PIGMENTARY') {
+    darkDesc = 'Ojeras de tonalidad marrón/parda causadas por depósito focal de melanina (hipercromía idiopática periorbitaria).';
+    darkActives = [
+      'Vitamina C estabilizada en contorno (Ascorbyl Glucoside)',
+      'Ácido Tranexámico al 1-2%',
+      'Alfa-Arbutina (inhibidor enzimático de tirosinasa)',
+      'Fotoprotector solar mineral para contorno ocular SPF 50+',
+    ];
+    visibleConcerns.push('Ojeras pigmentarias melánicas (marrones)');
+  } else if (darkType === 'STRUCTURAL_SHADOW') {
+    darkDesc = 'Sombra visual proyectada por hendidura anatómica del surco lagrimal (tear trough) o pérdida de volumen graso infraorbitario.';
+    darkActives = [
+      'Ácido Hialurónico de alto y bajo peso molecular (relleno hídrico superficial)',
+      'Péptidos redensificantes (Matrixyl Synthe-6)',
+      'Descanso reparador e hidratación constante',
+    ];
+    visibleConcerns.push('Sombra estructural por surco lagrimal (tear trough)');
+  } else if (darkType === 'MIXED') {
+    darkDesc = 'Combinación de componente vascular (microcirculación visible) con depósito superficial de pigmento melánico.';
+    darkActives = [
+      'Combinación de Cafeína y Niacinamida',
+      'Vitamina C derivada para contorno de ojos',
+      'Fotoprotección solar UV diaria',
+    ];
+    visibleConcerns.push('Ojeras mixtas (vascular + hiperpigmentación)');
+  }
+
+  // 6. PIGMENTATION & SUN DAMAGE ANALYSIS
+  const pigLevel = bio.hyperpigmentationLevel || (bio.visibleEtiologies?.some(e => e.includes('mancha')) ? 'MILD_SUPERFICIAL' : 'NONE_OR_UNIFORM');
+  let pigDesc = 'Tono cutáneo regular sin acumulación focal de melanina perceptible.';
+  let pigActives: string[] = ['Antioxidantes preventivos (Vitamina C / Ectoína)', 'Fotoprotector solar SPF 50+'];
+  let sunGuidance = 'Protector solar diario amplio espectro para preservar la uniformidad del tono.';
+
+  if (pigLevel === 'POST_INFLAMMATORY') {
+    pigDesc = 'Máculas pigmentadas residuales (Hiperpigmentación Post-Inflamatoria - HPI), comunes tras imperfecciones o reactividad dérmica.';
+    pigActives = [
+      'Ácido Azelaico al 10% (despigmentante seguro y antiinflamatorio)',
+      'Niacinamida al 4% (bloquea la transferencia de melanosomas)',
+      'Ácido Tranexámico al 2-3%',
+      'Alfa-Arbutina al 1-2%',
+    ];
+    sunGuidance = 'Protector solar SPF 50+ con protección UVA reforzada (PA++++) y filtros con óxido de hierro para bloquear luz azul visible.';
+    visibleConcerns.push('Hiperpigmentación postinflamatoria focal (HPI)');
+  } else if (pigLevel === 'MODERATE_DIFFUSE') {
+    pigDesc = 'Heterogeneidad en la distribución del pigmento melánico en zonas fotoexpuestas (pómulos, frente, labio superior).';
+    pigActives = [
+      'Ácido Azelaico al 10%',
+      'Vitamina C estabilizada al 10-15%',
+      'Extracto de Regaliz (Glabridina)',
+      'Niacinamida al 5%',
+    ];
+    sunGuidance = 'Reaplicación estricta de protector solar SPF 50+ cada 2 a 3 horas en exteriores.';
+    visibleConcerns.push('Heterogeneidad tonal y manchas solares difusas');
+  } else if (pigLevel === 'MILD_SUPERFICIAL') {
+    pigDesc = 'Ligeras irregularidades tonales superficiales en áreas expuestas a la radiación solar.';
+    pigActives = [
+      'Niacinamida al 2-4%',
+      'Sérum antioxidante de Vitamina C matutino',
+      'Fotoprotector solar de amplio espectro diario',
+    ];
+    sunGuidance = 'Fotoprotector solar diario SPF 50+ como pilar preventivo indispensable.';
+  }
+
+  // 7. TEXTURE & LINES ANALYSIS
+  const texLevel = bio.textureAndLinesLevel || 'SMOOTH';
+  let texDesc = 'Superficie dérmica lisa y uniforme, con elasticidad fisiológica conservada.';
+  let texActives: string[] = ['Hidratación equilibrada fisiológica', 'Fotoprotección antioxidante preventiva'];
+
+  if (texLevel === 'DYNAMIC_EXPRESSION_LINES' || texLevel === 'MODERATE_STATIC_LINES') {
+    texDesc = 'Líneas visibles asociadas a la gesticulación expresiva (frente, entrecejo, periocular) o atenuación gradual de fibras dérmicas.';
+    texActives = [
+      'Retinoides de liberación gradual (Retinaldehído / Retinol encapsulado) en noches de ciclado',
+      'Péptidos tensores y biomiméticos (Matrixyl 3000 / Acetil Hexapéptido-8)',
+      'Ácido Hialurónico multimolecular y Ceramidas',
+    ];
+    visibleConcerns.push('Líneas finas de expresión visibles');
+  } else if (texLevel === 'FINE_DEHYDRATION_LINES') {
+    texDesc = 'Finas líneas superficiales asociadas a pérdida transitoria de agua transepidérmica (TEWL), no a fotoenvejecimiento estructural.';
+    texActives = [
+      'Ácido Hialurónico de bajo y alto peso molecular',
+      'Pantenol (Provitamina B5) y Glicerina',
+      'Emolientes de barrera (Escualano vegetal, Ceramidas)',
+    ];
+    visibleConcerns.push('Finas líneas por deshidratación transitoria');
+  }
+
   // Build Baumann Code (e.g., ORNT, DSNW, etc.)
   const sensitiveChar = isErythematous ? 'S' : 'R';
-  const pigmentChar = (bio.visibleEtiologies && bio.visibleEtiologies.some(e => e.includes('mancha') || e.includes('pigment'))) ? 'P' : 'N';
-  const ageChar = 'T'; // Default Tight / Standard
+  const pigmentChar = (pigLevel !== 'NONE_OR_UNIFORM' || (bio.visibleEtiologies && bio.visibleEtiologies.some(e => e.includes('mancha') || e.includes('pigment')))) ? 'P' : 'N';
+  const ageChar = (texLevel === 'DYNAMIC_EXPRESSION_LINES' || texLevel === 'MODERATE_STATIC_LINES') ? 'W' : 'T';
   const fullBaumannCode = `${baumannCodePrefix === 'C' ? 'O' : baumannCodePrefix}${sensitiveChar}${pigmentChar}${ageChar}`;
 
   const resolvedFaceRegions = deriveFaceRegions(faceRegions);
@@ -544,6 +831,33 @@ export function governAndClassifyBiomarkers(
         rednessPresent: cheeksRedness,
         description: cheeksDesc,
       },
+      periorbitalAnalysis: {
+        darkCirclesType: darkType,
+        severity: darkSeverity,
+        description: darkDesc,
+        suggestedActives: darkActives,
+      },
+      pigmentationAnalysis: {
+        level: pigLevel,
+        description: pigDesc,
+        suggestedActives: pigActives,
+        sunProtectionGuidance: sunGuidance,
+      },
+      textureAndLinesAnalysis: {
+        level: texLevel,
+        description: texDesc,
+        suggestedActives: texActives,
+      },
+      triage: {
+        triageLevel,
+        medicalReferralRecommended,
+        referralReason,
+        suggestedMedicalSpecialty,
+        safetyAlerts,
+        blockedIngredientCategories,
+        safeRecommendedActives,
+        patchTestRequired: true,
+      },
       biomarkers: {
         tZoneSebum,
         cheeksSebum,
@@ -551,17 +865,22 @@ export function governAndClassifyBiomarkers(
         erythemaIndex: erythema,
         desquamation,
       },
-      visibleConcerns,
+      visibleConcerns: Array.from(new Set(visibleConcerns)),
       suggestedFocus,
       clinicalRationale,
       scientificReferences: [
         'Baumann, L. (2006). The Baumann Skin Typing System. Journal of Cosmetic Dermatology, 5(1), 30-39.',
         'Fitzpatrick, T. B. (1988). The validity and practicality of sun-reactive skin types I through VI. Archives of Dermatology, 124(6), 869-871.',
+        'Hirmand, H. (2010). Anatomy and nonsurgical management of the lower eyelid and periorbital area. Aesthetic Surgery Journal, 30(2), 241-249.',
+        'Passeron, T., et al. (2019). Clinical and biological understanding of facial hyperpigmentation. Journal of the European Academy of Dermatology and Venereology, 33, 5-14.',
+        'Glogau, R. G. (1996). Aesthetic and anatomic analysis of the aging skin. Seminars in Cutaneous Medicine and Surgery, 15(3), 134-138.',
         'Fluhr, J. W., et al. (2008). Stratum corneum hydration and transepidermal water loss. Skin Research and Technology, 14(3), 295-303.',
       ],
       confidence: Math.max(0.75, confidence || 0.92),
       disclaimer:
-        'Evaluación óptica dermatológica gobernada por el motor de Allabout.skin conforme a la escala Baumann BSTI y fototipo Fitzpatrick. No sustituye una consulta médica presencial.',
+        'Evaluación cosmética orientativa de apariencia dérmica gobernada conforme a las escalas Baumann BSTI, Glogau y Fitzpatrick. No constituye un diagnóstico médico dermatológico presencial.',
+      patchTestGuidance:
+        'Antes de incorporar nuevos cosméticos a tu rutina, realiza una prueba de parche en el antebrazo durante 24 horas para verificar la tolerancia de tu piel.',
     },
   };
 }

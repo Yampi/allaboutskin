@@ -102,8 +102,12 @@ const PHASE_COLORS: Record<number, string> = {
 };
 
 export function SkincareProvider({ children }: { children: React.ReactNode }) {
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    if (typeof window === 'undefined') return initialUserProfile;
+  const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
+  const [shelfItems, setShelfItems] = useState<ProductShelfItem[]>(defaultInitialShelf);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+
+  // Cargar perfil y anaquel desde localStorage después del montaje para garantizar consistencia SSR/hidratación
+  useEffect(() => {
     try {
       const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
       if (savedProfile) {
@@ -112,29 +116,34 @@ export function SkincareProvider({ children }: { children: React.ReactNode }) {
         if (authUser && !parsed.name) {
           parsed.name = authUser.name || authUser.email.split('@')[0];
         }
-        return parsed;
+        setUserProfile(parsed);
+      } else {
+        const authUser = getCurrentUser();
+        if (authUser) {
+          setUserProfile((prev) => ({
+            ...prev,
+            name: authUser.name || authUser.email.split('@')[0],
+          }));
+        }
       }
     } catch (e) {
       console.warn('SkincareContext: Error loading profile:', e);
     }
-    return initialUserProfile;
-  });
 
-  const [shelfItems, setShelfItems] = useState<ProductShelfItem[]>(() => {
-    if (typeof window === 'undefined') return defaultInitialShelf;
     try {
       const savedShelf = localStorage.getItem(STORAGE_KEY_SHELF);
       if (savedShelf) {
         const parsed = JSON.parse(savedShelf);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setShelfItems(parsed);
+        }
       }
     } catch (e) {
       console.warn('SkincareContext: Error loading shelf:', e);
     }
-    return defaultInitialShelf;
-  });
 
-  const isLoaded = true;
+    setIsLoaded(true);
+  }, []);
 
   // Derivación reactiva directa de conflictos para evitar setState dentro de useEffect
   const conflicts = React.useMemo(() => detectShelfConflicts(shelfItems), [shelfItems]);

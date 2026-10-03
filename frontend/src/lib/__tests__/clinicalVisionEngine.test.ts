@@ -271,5 +271,99 @@ export function runClinicalVisionGovernanceTests(): { passed: number; failed: nu
   assert(r14.faceAnalysis.faceRegions.leftCheekBox.left === 18, 'Preserves explicit leftCheekBox.left');
   assert(r14.faceAnalysis.faceRegions.rightCheekBox.left === 60, 'Preserves explicit rightCheekBox.left');
 
+  // Case 18: Triage - Herida abierta / disrupción de barrera (DERMATOLOGY_REFERRAL_RECOMMENDED)
+  const r15 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.95,
+    landmarks: validLandmarks,
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'MODERATE',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'VISIBLE_T_ZONE',
+      erythemaMalarIndex: 'DIFFUSE_MODERATE',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 3,
+      activeLesionRisk: 'OPEN_WOUND_OR_DISRUPTION',
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r15.faceAnalysis.triage.medicalReferralRecommended === true, 'Wound flags medical referral');
+  assert(r15.faceAnalysis.triage.triageLevel === 'DERMATOLOGY_REFERRAL_RECOMMENDED', 'Triage level is DERMATOLOGY_REFERRAL_RECOMMENDED');
+  assert(r15.faceAnalysis.triage.blockedIngredientCategories.includes('EXFOLIATING_ACIDS_AHA_BHA'), 'Blocks AHA/BHA exfoliants');
+  assert(r15.faceAnalysis.triage.blockedIngredientCategories.includes('PURE_RETINOIDS'), 'Blocks retinoids on open wounds');
+  assert(r15.faceAnalysis.triage.patchTestRequired === true, 'Patch test required');
+
+  // Case 19: Triage - Acné nodular/quístico severo (DERMATOLOGY_REFERRAL_RECOMMENDED)
+  const r16 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.94,
+    landmarks: validLandmarks,
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'HIGH',
+      cheeksSebumReflectance: 'HIGH',
+      follicularOstiaPores: 'DIFFUSE_WIDE',
+      erythemaMalarIndex: 'LOCALIZED_MILD',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 3,
+      activeLesionRisk: 'SEVERE_CYSTIC_OR_NODULAR',
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r16.faceAnalysis.triage.medicalReferralRecommended === true, 'Severe cystic flags medical referral');
+  assert(r16.faceAnalysis.triage.blockedIngredientCategories.includes('COMEDOGENIC_HEAVY_OILS'), 'Blocks comedogenic oils');
+
+  // Case 20: Ojeras Vasculares (VASCULAR)
+  const r17 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.95,
+    landmarks: validLandmarks,
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'LOW',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'MINIMAL_INCONSPICUOUS',
+      erythemaMalarIndex: 'ABSENT',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 2,
+      darkCirclesType: 'VASCULAR',
+      darkCirclesSeverity: 'MODERATE',
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r17.faceAnalysis.periorbitalAnalysis.darkCirclesType === 'VASCULAR', 'Periorbital is VASCULAR');
+  assert(r17.faceAnalysis.periorbitalAnalysis.suggestedActives.some(a => a.toLowerCase().includes('cafeína')), 'Suggests caffeine for vascular dark circles');
+
+  // Case 21: Ojeras Pigmentarias (PIGMENTARY)
+  const r18 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.96,
+    landmarks: validLandmarks,
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'MODERATE',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'VISIBLE_T_ZONE',
+      erythemaMalarIndex: 'ABSENT',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 4,
+      darkCirclesType: 'PIGMENTARY',
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r18.faceAnalysis.periorbitalAnalysis.darkCirclesType === 'PIGMENTARY', 'Periorbital is PIGMENTARY');
+  assert(r18.faceAnalysis.periorbitalAnalysis.suggestedActives.some(a => a.toLowerCase().includes('tranexámico') || a.toLowerCase().includes('vitamina c')), 'Suggests tranexamic/vit C for pigmentary dark circles');
+
+  // Case 22: Hiperpigmentación Post-Inflamatoria (HPI)
+  const r19 = governAndClassifyBiomarkers({
+    detectedAnatomy: 'HUMAN_FACE',
+    confidence: 0.95,
+    landmarks: validLandmarks,
+    opticalBiomarkers: {
+      tZoneSebumReflectance: 'MODERATE',
+      cheeksSebumReflectance: 'LOW',
+      follicularOstiaPores: 'VISIBLE_T_ZONE',
+      erythemaMalarIndex: 'ABSENT',
+      stratumCorneumDesquamation: 'NONE',
+      fitzpatrickPhototypeEstimate: 5,
+      hyperpigmentationLevel: 'POST_INFLAMMATORY',
+    },
+  }) as ClinicalSkinEvaluationResult;
+  assert(r19.faceAnalysis.pigmentationAnalysis.level === 'POST_INFLAMMATORY', 'Pigmentation is POST_INFLAMMATORY');
+  assert(r19.faceAnalysis.baumannSkinTypeCode.includes('P'), 'Baumann code includes P for pigmented');
+
   return { passed, failed };
 }
