@@ -23,7 +23,8 @@ import {
   Activity,
   Bot,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Compass
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -251,6 +252,15 @@ export default function MyRoutineDashboardPage() {
             >
               <Settings className="w-3 h-3" />
               <span>Ajustar</span>
+            </Link>
+
+            <Link
+              href="/escaner?mode=ar-mask"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D4A3E] hover:text-[#1E332B] bg-[#EFF5F1] hover:bg-[#E2EDE5] px-3.5 py-1.5 rounded-full border border-[#4F6D60]/20 transition"
+              title="Aprende a masajear y aplicar tus productos en el rostro con AR o Mapa 2D"
+            >
+              <Compass className="w-3 h-3 text-[#4F6D60]" />
+              <span>Guía Facial (AR / 2D)</span>
             </Link>
           </div>
         </div>

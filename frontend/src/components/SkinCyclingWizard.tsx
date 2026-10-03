@@ -436,6 +436,31 @@ export default function SkinCyclingWizard() {
               ))}
             </div>
 
+            {/* Interactive AR / 2D Facial Guide CTA Banner (DLG-HYBRID) */}
+            <div className="bg-gradient-to-r from-[#EFF5F1] via-[#FAF8F5] to-[#EFF5F1] p-4 sm:p-5 rounded-2xl border border-[#4F6D60]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#4F6D60]/15 border border-[#4F6D60]/30 flex items-center justify-center text-[#2D4A3E] shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-serif text-sm font-bold text-[#1C1B1A]">
+                    Aprende a aplicar este protocolo en tu rostro
+                  </h4>
+                  <p className="text-xs text-[#66615C] mt-0.5 font-sans">
+                    Guía facial interactiva con Realidad Aumentada o Mapa Anatómico 2D (masaje drenante y zonas dérmicas).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push('/escaner?mode=ar-mask')}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#2D4A3E] hover:bg-[#1E332B] text-white text-xs font-bold uppercase tracking-wider transition shadow-sm cursor-pointer shrink-0"
+              >
+                <span>Practicar Guía Facial</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
             {/* Rationale and Save CTA */}
             <div className="bg-[#EFF5F1] p-4 rounded-xl border border-[#4F6D60]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <span className="text-xs text-[#2D4A3E] font-medium">
