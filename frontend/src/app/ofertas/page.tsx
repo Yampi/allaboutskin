@@ -16,7 +16,6 @@ import {
   Globe2
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { API_BASE_URL } from '@/lib/api';
 
 interface CleanProductOffer {
@@ -426,8 +425,6 @@ export default function OffersAndProductsPage() {
         )}
 
       </main>
-
-      <Footer />
     </div>
   );
 }

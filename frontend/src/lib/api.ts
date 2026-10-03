@@ -1368,4 +1368,33 @@ export async function fetchAdminCrawlerSummary(hours: number = 24): Promise<{
   return res.json();
 }
 
+export interface SystemHealthData {
+  status: 'operational' | 'degraded';
+  uptime_status: 'online' | 'offline';
+  environment: string;
+  timestamp: string;
+  services: {
+    database: string;
+    cosing_eu: string;
+    ncbi_pubmed: string;
+  };
+  node: {
+    name: string;
+    location: string;
+    contingency_mode: boolean;
+  };
+  version: string;
+}
+
+export async function checkSystemHealth(): Promise<SystemHealthData> {
+  const res = await fetch(`${API_BASE_URL}/health`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new Error(`Nodo no disponible (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+
 

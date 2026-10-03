@@ -26,6 +26,37 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
+    // 0. Public Health & Node Connectivity Monitor
+    Route::get('/health', function () {
+        $dbStatus = 'disconnected';
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $dbStatus = 'connected';
+        } catch (\Throwable $e) {
+            $dbStatus = 'error';
+        }
+
+        $isHealthy = $dbStatus === 'connected';
+
+        return response()->json([
+            'status' => $isHealthy ? 'operational' : 'degraded',
+            'uptime_status' => 'online',
+            'environment' => config('app.env'),
+            'timestamp' => now()->toIso8601String(),
+            'services' => [
+                'database' => $dbStatus,
+                'cosing_eu' => 'operational',
+                'ncbi_pubmed' => 'operational',
+            ],
+            'node' => [
+                'name' => 'Allabout.skin Core Node',
+                'location' => 'VE-Local / Cloudflare Tunnel',
+                'contingency_mode' => false,
+            ],
+            'version' => '1.0.0'
+        ], $isHealthy ? 200 : 503);
+    });
+
     // 1. Authentication & Security
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);

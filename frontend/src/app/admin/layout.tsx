@@ -16,8 +16,8 @@ export default function AdminLayout({
     <AdminGuard>
       <Suspense
         fallback={
-          <div className="min-h-screen bg-[#090D16] flex items-center justify-center text-white">
-            <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center text-[#2D2825]">
+            <div className="w-8 h-8 border-4 border-[#8FA89B] border-t-transparent rounded-full animate-spin" />
           </div>
         }
       >

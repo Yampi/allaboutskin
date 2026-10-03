@@ -126,24 +126,24 @@ export default function SystemLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col lg:flex-row antialiased font-sans selection:bg-teal-500 selection:text-white">
+    <div className="min-h-screen bg-[#FAF8F5] text-[#2D2825] flex flex-col lg:flex-row antialiased font-sans selection:bg-[#8FA89B] selection:text-white">
       {/* MOBILE HEADER (visible on small screens) */}
-      <div className="lg:hidden h-16 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between sticky top-0 z-50">
+      <div className="lg:hidden h-16 bg-white/95 backdrop-blur-md border-b border-[#E8E1D7] px-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+          <div className="w-8 h-8 rounded-xl bg-[#EBF1EE] border border-[#D5E2DB] flex items-center justify-center text-[#4A6B5B]">
             <Microscope className="w-4 h-4" />
           </div>
-          <span className="font-bold text-white text-base tracking-tight">
-            Allabout<span className="text-teal-400">.skin</span>
+          <span className="font-bold text-[#2D2825] text-base tracking-tight">
+            Allabout<span className="text-[#4A6B5B]">.skin</span>
           </span>
-          <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">
+          <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] border border-[#D5E2DB]">
             Console
           </span>
         </div>
 
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800 transition"
+          className="p-2 text-[#7E756F] hover:text-[#2D2825] rounded-xl bg-[#FAF8F5] border border-[#E8E1D7] transition"
           aria-label="Toggle menu"
         >
           {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -154,13 +154,13 @@ export default function SystemLayout({
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden animate-in fade-in"
+          className="fixed inset-0 z-40 bg-[#2D2825]/40 backdrop-blur-xs lg:hidden animate-in fade-in"
         />
       )}
 
       {/* SYSTEM SIDEBAR (Fixed on desktop, drawer on mobile) */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-[#0B101B] border-r border-slate-800/80 flex flex-col justify-between transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-[#F8F5F0] border-r border-[#E8E1D7] flex flex-col justify-between transition-transform duration-200 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -168,16 +168,16 @@ export default function SystemLayout({
           {/* Brand header */}
           <div className="px-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500/20 to-emerald-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-inner shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-[#EBF1EE] border border-[#D5E2DB] flex items-center justify-center text-[#4A6B5B] shadow-xs shrink-0">
                 <Microscope className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-black text-white text-lg tracking-tight leading-none">
-                  Allabout<span className="text-teal-400">.skin</span>
+                <div className="font-black text-[#2D2825] text-lg tracking-tight leading-none">
+                  Allabout<span className="text-[#4A6B5B]">.skin</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400">
+                  <span className="w-2 h-2 rounded-full bg-[#4A6B5B] animate-pulse" />
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#7E756F]">
                     System Core v1.2
                   </span>
                 </div>
@@ -189,7 +189,7 @@ export default function SystemLayout({
           <div className="space-y-6">
             {navigationItems.map((group) => (
               <div key={group.group} className="space-y-1.5">
-                <div className="px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                <div className="px-3 text-[10px] font-extrabold uppercase tracking-widest text-[#9D948B]">
                   {group.group}
                 </div>
 
@@ -211,14 +211,14 @@ export default function SystemLayout({
                         }}
                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left group ${
                           isItemActive
-                            ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                            ? 'bg-[#EBF1EE] text-[#3D5A4C] border border-[#8FA89B]/40 shadow-xs'
+                            : 'text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4] border border-transparent'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
                           <Icon
                             className={`w-4 h-4 transition ${
-                              isItemActive ? 'text-teal-400' : 'text-slate-500 group-hover:text-slate-300'
+                              isItemActive ? 'text-[#4A6B5B]' : 'text-[#9D948B] group-hover:text-[#4A6B5B]'
                             }`}
                           />
                           <span>{item.name}</span>
@@ -228,8 +228,8 @@ export default function SystemLayout({
                           <span
                             className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${
                               item.badge === 'Supervisión'
-                                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                                : 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
+                                ? 'bg-[#FAF5EE] text-[#B45309] border border-[#DFCAAC]'
+                                : 'bg-[#FAF0ED] text-[#7C3AED] border border-[#D8A899]/50'
                             }`}
                           >
                             {item.badge}
@@ -245,17 +245,17 @@ export default function SystemLayout({
         </div>
 
         {/* User Card & Footer */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-950/40 space-y-3">
-          <div className="flex items-center justify-between bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+        <div className="p-4 border-t border-[#E8E1D7] bg-[#F2ECE4]/40 space-y-3">
+          <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#E8E1D7] shadow-xs">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-[#EBF1EE] border border-[#D5E2DB] flex items-center justify-center text-[#4A6B5B] font-bold text-xs shrink-0">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'B'}
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-white truncate">
+                <div className="text-xs font-bold text-[#2D2825] truncate">
                   {currentUser?.name || 'Brian Baloa'}
                 </div>
-                <div className="text-[10px] text-teal-400 uppercase font-extrabold truncate">
+                <div className="text-[10px] text-[#4A6B5B] uppercase font-extrabold truncate">
                   {currentUser?.role || 'Super Admin'}
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function SystemLayout({
 
             <button
               onClick={handleLogout}
-              className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+              className="p-1.5 text-[#9D948B] hover:text-[#E11D48] hover:bg-[#FAF0ED] rounded-lg transition"
               title="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
@@ -273,7 +273,7 @@ export default function SystemLayout({
           <Link
             href="/"
             target="_blank"
-            className="w-full py-2 px-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-[11px] font-bold transition flex items-center justify-center gap-1.5"
+            className="w-full py-2 px-3 rounded-xl bg-white hover:bg-[#F8F5F0] border border-[#E8E1D7] text-[#7E756F] hover:text-[#2D2825] text-[11px] font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
           >
             <span>Abrir Web Pública</span>
             <ExternalLink className="w-3 h-3" />
@@ -284,11 +284,11 @@ export default function SystemLayout({
       {/* MAIN SYSTEM BODY */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* TOP SYSTEM APP BAR */}
-        <header className="hidden lg:flex h-16 bg-[#0B101B]/80 backdrop-blur-md border-b border-slate-800/80 px-6 lg:px-8 items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+        <header className="hidden lg:flex h-16 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-[#E8E1D7] px-6 lg:px-8 items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#7E756F]">
             <span>Sistema</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-white font-bold">
+            <ChevronRight className="w-3.5 h-3.5 text-[#9D948B]" />
+            <span className="text-[#2D2825] font-bold">
               {pathname === '/admin'
                 ? effectiveSection === 'stores'
                   ? 'Supervisión de Tiendas & Comercios'
@@ -308,25 +308,25 @@ export default function SystemLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF1EE] border border-[#D5E2DB] text-[#4A6B5B] text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#4A6B5B] animate-pulse" />
               <span>API v1: En Línea</span>
             </div>
 
             {pathname === '/admin' ? (
               <Link
                 href="/dashboard/empresa"
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F8F5F0] border border-[#E8E1D7] text-[#2D2825] text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
               >
-                <Building2 className="w-3.5 h-3.5 text-teal-400" />
+                <Building2 className="w-3.5 h-3.5 text-[#4A6B5B]" />
                 <span>Ver Portal Empresa</span>
               </Link>
             ) : (
               <Link
                 href="/admin"
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F8F5F0] border border-[#E8E1D7] text-[#2D2825] text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#4A6B5B]" />
                 <span>Ver Consola Admin</span>
               </Link>
             )}
@@ -334,7 +334,7 @@ export default function SystemLayout({
         </header>
 
         {/* WORKSPACE CONTENT AREA */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:px-10 max-w-[1750px] w-full mx-auto">
           {children}
         </main>
       </div>

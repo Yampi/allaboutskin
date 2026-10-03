@@ -34,25 +34,49 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="md:col-span-4 space-y-2.5">
-            <h4 className="text-white font-serif font-bold text-xs uppercase tracking-wider">Rigor Científico</h4>
-            <div className="bg-[#161F1A] p-3.5 rounded-2xl border border-[#2D3C33] text-xs text-[#8E9C93] space-y-1.5">
+          <div className="md:col-span-4 space-y-3">
+            <h4 className="text-white font-serif font-bold text-xs uppercase tracking-wider">Marco Legal & Rigor</h4>
+            <div className="bg-[#161F1A] p-3.5 rounded-lg border border-[#2D3C33] text-xs text-[#8E9C93] space-y-2">
               <div className="flex items-center gap-1.5 text-[#A2BAAD] font-semibold">
                 <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Aviso Divulgativo</span>
+                <span>Deslinde Médico & Sanitario</span>
               </div>
               <p className="text-[11px] leading-relaxed text-[#7C8A81]">
-                La información provista es de carácter divulgativo y no reemplaza el diagnóstico o prescripción médica personalizada de un especialista en dermatología.
+                Información de orientación dermocosmética sin carácter prescriptivo ni diagnóstico clínico. Conforme a la Ley de Ejercicio de la Medicina de Venezuela.
               </p>
             </div>
+
+            <ul className="grid grid-cols-2 gap-2 text-[11px] text-[#8E9C93] pt-1">
+              <li>
+                <Link href="/aviso-medico" className="hover:text-white transition-colors underline-offset-2 hover:underline">
+                  Aviso Médico Oficial
+                </Link>
+              </li>
+              <li>
+                <Link href="/terminos" className="hover:text-white transition-colors underline-offset-2 hover:underline">
+                  Términos y Portal B2B
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacidad" className="hover:text-white transition-colors underline-offset-2 hover:underline">
+                  Privacidad & OCR/AR
+                </Link>
+              </li>
+              <li>
+                <Link href="/estado" className="hover:text-white transition-colors underline-offset-2 hover:underline text-teal-400">
+                  Estado & Uptime
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
         <div className="pt-8 border-t border-[#2D3C33] text-[11px] flex flex-col sm:flex-row justify-between items-center text-[#6E7B73] gap-3">
-          <p>© {new Date().getFullYear()} Allabout.skin. Ciencia, formulación y bienestar dérmico.</p>
-          <div className="flex space-x-6 text-[10px] tracking-wider uppercase">
-            <span>CosIng EU Database</span>
-            <span>PubMed NCBI E-Utilities</span>
+          <p>© {new Date().getFullYear()} Allabout.skin. Ciencia, formulación y bienestar dérmico en Venezuela.</p>
+          <div className="flex flex-wrap items-center gap-4 text-[10px] tracking-wider uppercase">
+            <span>CosIng EU Reg. 1223/2009</span>
+            <span>PubMed NCBI</span>
+            <span className="text-teal-400 font-medium">DLG-EXEC 1.0</span>
           </div>
         </div>
       </div>

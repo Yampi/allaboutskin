@@ -8,6 +8,8 @@ import MobileDock from './MobileDock';
 import ProfileModal from '@/components/mobile/ProfileModal';
 import MicroscopyModal from '@/components/mobile/MicroscopyModal';
 import InStoreNotificationBanner from '@/components/InStoreNotificationBanner';
+import OfflineStatusBanner from '@/components/system/OfflineStatusBanner';
+import Footer from '@/components/Footer';
 
 function LayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +22,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   if (isSystemArea) {
     return (
       <div className="min-h-screen bg-[#090D16] text-slate-100 selection:bg-teal-500 selection:text-white">
+        <OfflineStatusBanner />
         {children}
       </div>
     );
@@ -27,6 +30,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#2D2825] selection:bg-[#8FA89B]/30 antialiased">
+      {/* 0. Resilience & Offline Status Banner */}
+      <OfflineStatusBanner />
+
       {/* 1. Universal Responsive Navbar */}
       <GlobalNavbar
         onOpenProfile={() => setIsProfileOpen(true)}
@@ -34,9 +40,12 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       />
 
       {/* 2. Main Page Content */}
-      <main className="flex-1 w-full pb-24 lg:pb-12">
+      <main className="flex-1 w-full pb-16 lg:pb-8">
         {children}
       </main>
+
+      {/* 2.5. Universal Authoritative Footer */}
+      <Footer />
 
       {/* 3. Universal Mobile Bottom Dock (Hidden on >= lg) */}
       <MobileDock />
