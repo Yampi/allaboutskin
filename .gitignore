@@ -44,3 +44,8 @@ Thumbs.db
 
 # Local evaluation bundles
 *.zip
+
+# Database dumps & local backups
+*.dump
+backups/
+
