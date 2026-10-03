@@ -13,6 +13,8 @@ class Ingredient extends Model
 
     protected $guarded = ['id'];
 
+    protected $appends = ['evidence_grade_description'];
+
     protected function casts(): array
     {
         return [
@@ -28,7 +30,19 @@ class Ingredient extends Model
             'results_timeline_weeks_min' => 'integer',
             'results_timeline_weeks_max' => 'integer',
             'last_crawled_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function getEvidenceGradeDescriptionAttribute(): string
+    {
+        return match ($this->evidence_level) {
+            'A' => 'Nivel A: Alta evidencia clínica (Ensayos Clínicos Aleatorizados / Revisiones Sistemáticas)',
+            'B' => 'Nivel B: Evidencia clínica moderada (Estudios controlados / Ensayos in vivo)',
+            'C' => 'Nivel C: Evidencia preliminar (Estudios ex vivo / Ensayos abiertos)',
+            'D' => 'Nivel D: Evidencia mecanística básica (Ensayos in vitro / Farmacocinéticos)',
+            default => 'En evaluación clínica',
+        };
     }
 
     public function aliases(): HasMany

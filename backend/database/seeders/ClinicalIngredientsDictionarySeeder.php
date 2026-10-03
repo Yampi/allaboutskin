@@ -955,11 +955,26 @@ class ClinicalIngredientsDictionarySeeder extends Seeder
             $aliases = $data['aliases'] ?? [];
             unset($data['aliases']);
 
-            $slug = Str::slug($data['inci_name']);
+            $data['source_name'] = $data['source_name'] ?? 'CosIng UE (Comisión Europea)';
+            $data['source_url'] = $data['source_url'] ?? 'https://ec.europa.eu/growth/tools-databases/cosing/';
+            $data['source_license'] = $data['source_license'] ?? 'EU Open Data / Public Domain';
+            $data['evidence_level'] = $data['evidence_level'] ?? 'B';
+            $data['reviewed_at'] = $data['reviewed_at'] ?? now();
+
             $ingredient = Ingredient::firstOrCreate(
                 ['inci_name' => $data['inci_name']],
                 $data
             );
+
+            if (empty($ingredient->source_name)) {
+                $ingredient->update([
+                    'source_name' => $data['source_name'],
+                    'source_url' => $data['source_url'],
+                    'source_license' => $data['source_license'],
+                    'evidence_level' => $data['evidence_level'],
+                    'reviewed_at' => $data['reviewed_at'],
+                ]);
+            }
 
             foreach ($aliases as $alias) {
                 IngredientAlias::firstOrCreate([
