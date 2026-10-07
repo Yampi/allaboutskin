@@ -190,6 +190,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('/{id}/verification', [AdminStoreController::class, 'updateVerification']);
             Route::patch('/{id}/subscription', [AdminStoreController::class, 'updateSubscription']);
             Route::patch('/{id}/toggle-status', [AdminStoreController::class, 'toggleStatus']);
+            Route::patch('/{id}/quick-update', [AdminStoreController::class, 'quickUpdate']);
             Route::delete('/{id}', [AdminStoreController::class, 'destroy']);
         });
 

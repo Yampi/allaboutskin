@@ -20,7 +20,9 @@ import {
   ChevronRight,
   ShieldCheck,
   FlaskConical,
-  Sparkles
+  Sparkles,
+  ShieldAlert,
+  Zap
 } from 'lucide-react';
 
 interface AdminDashboardOverviewProps {
@@ -31,98 +33,34 @@ interface AdminDashboardOverviewProps {
   } | null;
   totalStoresCount?: number;
   totalUsersCount?: number;
+  pendingStoresCount?: number;
+  criticalEventsCount?: number;
+  realActivityLogs?: Array<{
+    id: number;
+    event_type: string;
+    description: string;
+    severity: string;
+    created_at: string;
+    ip_address?: string | null;
+  }>;
 }
 
 export default function AdminDashboardOverview({
   onNavigateTab,
   systemHealth,
-  totalStoresCount,
-  totalUsersCount,
+  totalStoresCount = 0,
+  totalUsersCount = 0,
+  pendingStoresCount = 0,
+  criticalEventsCount = 0,
+  realActivityLogs = [],
 }: AdminDashboardOverviewProps) {
-  const [hoveredDonutSegment, setHoveredDonutSegment] = useState<string | null>(null);
-
-  // KPIs
-  const usersCount = totalUsersCount || 24832;
-  const storesCount = totalStoresCount || 1248;
-  const productsCount = 8642;
-  const issuesCount = 3;
-
-  // Donut SVG Parameters
-  const size = 180;
-  const strokeWidth = 26;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  // Segments (Clientes 78%, Tiendas 18%, Admins 3%, Super Admin 1%)
-  const segments = [
-    { id: 'clients', label: 'Clientes', percent: 78, color: '#38BDF8', strokeColor: '#0284C7' },
-    { id: 'stores', label: 'Tiendas', percent: 18, color: '#A855F7', strokeColor: '#7C3AED' },
-    { id: 'admins', label: 'Admins', percent: 3, color: '#F43F5E', strokeColor: '#E11D48' },
-    { id: 'superadmin', label: 'Super Admin', percent: 1, color: '#F59E0B', strokeColor: '#D97706' },
-  ];
-
-  let cumulativePercent = 0;
-
-  // System Health items
-  const healthMetrics = [
-    { name: 'API / Backend', uptime: '98.7%', status: 'optimal', icon: Server },
-    { name: 'Base de datos (PostgreSQL)', uptime: '99.9%', status: 'optimal', icon: Database },
-    { name: 'Scrapers y fuentes', uptime: '100%', status: 'optimal', icon: Radio },
-    { name: 'CDN / Hosting', uptime: '99.8%', status: 'optimal', icon: Globe },
-  ];
-
-  // Recent Activity Feed
-  const recentActivity = [
-    {
-      id: '1',
-      title: 'Nuevo usuario registrado',
-      subtitle: 'maria.lopez@email.com',
-      time: 'hace 2 min',
-      icon: Users,
-      badgeColor: 'bg-sky-50 text-sky-600 border-sky-100',
-    },
-    {
-      id: '2',
-      title: 'Tienda pendiente de verificación',
-      subtitle: 'Farmacia El Valle',
-      time: 'hace 12 min',
-      icon: Store,
-      badgeColor: 'bg-amber-50 text-amber-600 border-amber-100',
-      actionTab: 'stores' as const,
-    },
-    {
-      id: '3',
-      title: 'Producto actualizado',
-      subtitle: 'La Roche-Posay Anthelios',
-      time: 'hace 28 min',
-      icon: Package,
-      badgeColor: 'bg-purple-50 text-purple-600 border-purple-100',
-    },
-    {
-      id: '4',
-      title: 'Incidencia resuelta',
-      subtitle: 'Error en scraper de Farmatodo',
-      time: 'hace 1 h',
-      icon: CheckCircle2,
-      badgeColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      actionTab: 'scraper' as const,
-    },
-    {
-      id: '5',
-      title: 'Nuevo comentario científico',
-      subtitle: 'Dr. Pérez (Dermatólogo)',
-      time: 'hace 2 h',
-      icon: FlaskConical,
-      badgeColor: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      actionTab: 'ingredients' as const,
-    },
-  ];
+  const isHealthy = systemHealth?.database === 'connected';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       
       {/* ========================================================= */}
-      {/* 1. TOP KPI CARDS (4 COLUMNAS - MOCKUP MORADO ADMIN)      */}
+      {/* 1. TOP KPI CARDS (DATOS 100% REALES DEL BACKEND)         */}
       {/* ========================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
@@ -130,256 +68,247 @@ export default function AdminDashboardOverview({
         <div className="bg-white p-5 rounded-2xl border border-purple-100/80 shadow-2xs hover:shadow-xs transition">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Usuarios totales
+              Usuarios registrados
             </span>
             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">
-            {usersCount.toLocaleString('es-ES')}
+            {totalUsersCount.toLocaleString('es-ES')}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>+8% vs. mes anterior</span>
-          </div>
+          <button
+            onClick={() => onNavigateTab('users')}
+            className="text-[11px] font-bold text-purple-600 hover:text-purple-700 transition inline-flex items-center gap-1 mt-1 cursor-pointer"
+          >
+            <span>Gestionar usuarios</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
 
-        {/* KPI 2: Tiendas activas */}
-        <div className="bg-white p-5 rounded-2xl border border-purple-100/80 shadow-2xs hover:shadow-xs transition">
+        {/* KPI 2: Tiendas registradas */}
+        <div className="bg-white p-5 rounded-2xl border border-sky-100/80 shadow-2xs hover:shadow-xs transition">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Tiendas activas
+              Tiendas aliadas
             </span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
               <Store className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">
-            {storesCount.toLocaleString('es-ES')}
+            {totalStoresCount.toLocaleString('es-ES')}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>+12% vs. mes anterior</span>
+          <div className="flex items-center justify-between mt-1">
+            <button
+              onClick={() => onNavigateTab('stores')}
+              className="text-[11px] font-bold text-sky-600 hover:text-sky-700 transition inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Ver comercios</span>
+              <ChevronRight className="w-3 h-3" />
+            </button>
+            {pendingStoresCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold text-[10px] border border-amber-200 animate-pulse">
+                {pendingStoresCount} por revisar
+              </span>
+            )}
           </div>
         </div>
 
-        {/* KPI 3: Productos en catálogo */}
-        <div className="bg-white p-5 rounded-2xl border border-purple-100/80 shadow-2xs hover:shadow-xs transition">
+        {/* KPI 3: Auditoría y Seguridad */}
+        <div className="bg-white p-5 rounded-2xl border border-rose-100/80 shadow-2xs hover:shadow-xs transition">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Productos en catálogo
+              Alertas del Sistema
             </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Package className="w-4 h-4" />
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              criticalEventsCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              {criticalEventsCount > 0 ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">
-            {productsCount.toLocaleString('es-ES')}
+            {criticalEventsCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>+5% vs. mes anterior</span>
-          </div>
+          <button
+            onClick={() => onNavigateTab('security')}
+            className={`text-[11px] font-bold transition inline-flex items-center gap-1 mt-1 cursor-pointer ${
+              criticalEventsCount > 0 ? 'text-rose-600 hover:text-rose-700' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <span>{criticalEventsCount > 0 ? 'Inspeccionar incidencias' : 'Bitácora segura sin fallas'}</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
 
-        {/* KPI 4: Incidencias abiertas */}
-        <div className="bg-white p-5 rounded-2xl border border-rose-100/80 shadow-2xs hover:shadow-xs transition flex flex-col justify-between">
+        {/* KPI 4: Estado del Sistema */}
+        <div className="bg-white p-5 rounded-2xl border border-emerald-100/80 shadow-2xs hover:shadow-xs transition flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Incidencias abiertas
+                Infraestructura
               </span>
-              <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Activity className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-rose-600 mt-2">
-              {issuesCount}
+            <div className="text-sm font-extrabold text-slate-900 mt-2 flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span>{isHealthy ? '100% Operativo' : 'Estado Degradado'}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            <span>-70% vs. mes anterior</span>
-          </div>
+          <button
+            onClick={() => onNavigateTab('settings')}
+            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition inline-flex items-center gap-1 mt-2 text-left cursor-pointer"
+          >
+            <span>Chequeo de nodos y BD</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
       </div>
 
       {/* ========================================================= */}
-      {/* 2. PANELES CENTRALES (3 COLUMNAS - TIMELINE, SALUD, DONUT)*/}
+      {/* 2. FEED DE ACTIVIDAD & BITÁCORA EN TIEMPO REAL            */}
       {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
-        {/* PANEL 1: ACTIVIDAD RECIENTE (TIMELINE) */}
-        <div className="bg-white p-6 rounded-2xl border border-purple-100/80 shadow-2xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                Actividad reciente
+        {/* COL 1 y 2: BITÁCORA REAL DE EVENTOS / SEGURIDAD */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <Activity className="w-4 h-4 text-purple-600" />
+                Bitácora de Eventos y Acciones Recientes
               </h2>
-              <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              <p className="text-xs text-slate-500 mt-0.5">
+                Eventos auditados en tiempo real (autenticación, moderación, fallas y cambios).
+              </p>
             </div>
+            <button
+              onClick={() => onNavigateTab('security')}
+              className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Ver log completo</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-            <div className="space-y-3.5">
-              {recentActivity.map((act) => {
-                const Icon = act.icon;
+          {realActivityLogs.length > 0 ? (
+            <div className="space-y-3">
+              {realActivityLogs.slice(0, 6).map((log) => {
+                const isCritical = log.severity === 'CRITICAL' || log.event_type.includes('EXCEPTION');
+                const isWarning = log.severity === 'WARNING';
                 return (
                   <div
-                    key={act.id}
-                    onClick={() => act.actionTab && onNavigateTab(act.actionTab)}
-                    className={`flex items-start gap-3 text-xs p-1.5 rounded-xl transition ${
-                      act.actionTab ? 'cursor-pointer hover:bg-purple-50/60' : ''
+                    key={log.id}
+                    className={`p-3.5 rounded-xl border transition flex items-start justify-between gap-3 ${
+                      isCritical
+                        ? 'bg-rose-50/60 border-rose-200/80'
+                        : isWarning
+                        ? 'bg-amber-50/60 border-amber-200/80'
+                        : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/50'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${act.badgeColor}`}>
-                      <Icon className="w-4 h-4" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                          isCritical
+                            ? 'bg-rose-600 text-white'
+                            : isWarning
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {log.event_type}
+                        </span>
+                        {log.ip_address && (
+                          <span className="text-[10px] font-mono text-slate-400">
+                            IP: {log.ip_address}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium text-slate-800 leading-snug">
+                        {log.description}
+                      </p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-slate-800 leading-tight truncate">
-                        {act.title}
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                        {act.subtitle} &bull; <span className="text-slate-400">{act.time}</span>
-                      </div>
+
+                    <div className="text-[11px] text-slate-400 shrink-0 font-medium">
+                      {new Date(log.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
-
-          <button
-            onClick={() => onNavigateTab('security')}
-            className="text-xs font-bold text-purple-600 hover:text-purple-700 transition inline-flex items-center gap-1 mt-4 text-left pt-2 border-t border-slate-50"
-          >
-            <span>Ver todas</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          ) : (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No hay eventos recientes registrados en la bitácora de auditoría.
+            </div>
+          )}
         </div>
 
-        {/* PANEL 2: SALUD DEL SISTEMA (UPTIME & SERVICIOS) */}
-        <div className="bg-white p-6 rounded-2xl border border-purple-100/80 shadow-2xs flex flex-col justify-between">
+        {/* COL 3: MONITOREO DE NODOS Y SALUD DEL SERVICIO */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                Salud del sistema
-              </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Operativo
-              </span>
-            </div>
+            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2 mb-3">
+              <Server className="w-4 h-4 text-emerald-600" />
+              Estado de los Nodos
+            </h3>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              Monitoreo activo de conectividad, base de datos y dataset dermatológico INCI.
+            </p>
 
-            {/* Overall status badge */}
-            <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center gap-2 mb-4">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-              <span className="text-xs font-bold text-emerald-800">
-                Todos los servicios operativos
-              </span>
-            </div>
-
-            {/* Metrics List */}
             <div className="space-y-3">
-              {healthMetrics.map((metric, i) => {
-                const Icon = metric.icon;
-                return (
-                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-none">
-                    <div className="flex items-center gap-2 text-slate-700 font-medium">
-                      <Icon className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{metric.name}</span>
-                    </div>
-                    <span className="font-mono font-bold text-emerald-600 text-xs">
-                      {metric.uptime}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigateTab('settings')}
-            className="text-xs font-bold text-purple-600 hover:text-purple-700 transition inline-flex items-center gap-1 mt-4 text-left pt-2 border-t border-slate-50"
-          >
-            <span>Ver detalle</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* PANEL 3: DISTRIBUCIÓN DE USUARIOS (DONUT CHART SVG) */}
-        <div className="bg-white p-6 rounded-2xl border border-purple-100/80 shadow-2xs flex flex-col justify-between">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-900 tracking-tight mb-2">
-              Distribución de usuarios
-            </h2>
-
-            {/* Donut Chart SVG */}
-            <div className="relative flex items-center justify-center my-3">
-              <svg width={size} height={size} className="transform -rotate-90">
-                {segments.map((seg) => {
-                  const strokeDasharray = `${(seg.percent / 100) * circumference} ${circumference}`;
-                  const strokeDashoffset = - (cumulativePercent / 100) * circumference;
-                  cumulativePercent += seg.percent;
-
-                  return (
-                    <circle
-                      key={seg.id}
-                      cx={size / 2}
-                      cy={size / 2}
-                      r={radius}
-                      fill="transparent"
-                      stroke={seg.strokeColor}
-                      strokeWidth={hoveredDonutSegment === seg.id ? strokeWidth + 4 : strokeWidth}
-                      strokeDasharray={strokeDasharray}
-                      strokeDashoffset={strokeDashoffset}
-                      className="transition-all duration-300 cursor-pointer"
-                      onMouseEnter={() => setHoveredDonutSegment(seg.id)}
-                      onMouseLeave={() => setHoveredDonutSegment(null)}
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Center Total Counter */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-lg font-black text-slate-900 leading-none">
-                  {usersCount.toLocaleString('es-ES')}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Database className="w-4 h-4 text-slate-600" />
+                  <span className="text-xs font-bold text-slate-800">Base de Datos</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  systemHealth?.database === 'connected'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}>
+                  {systemHealth?.database === 'connected' ? 'Conectada' : 'Desconectada'}
                 </span>
-                <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                  Total usuarios
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <FlaskConical className="w-4 h-4 text-slate-600" />
+                  <span className="text-xs font-bold text-slate-800">Dataset INCI</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  systemHealth?.ingredient_dataset === 'loaded'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}>
+                  {systemHealth?.ingredient_dataset === 'loaded' ? 'Cargado' : 'Vacío'}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Radio className="w-4 h-4 text-slate-600" />
+                  <span className="text-xs font-bold text-slate-800">Crawler & Scraper</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                  Listo
                 </span>
               </div>
             </div>
-
-            {/* Legend */}
-            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-              {segments.map((seg) => (
-                <div
-                  key={seg.id}
-                  className={`flex items-center gap-1.5 p-1 rounded-lg transition ${
-                    hoveredDonutSegment === seg.id ? 'bg-purple-50 font-bold' : ''
-                  }`}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: seg.strokeColor }}
-                  />
-                  <span className="text-slate-600 text-[11px] truncate">{seg.label}:</span>
-                  <span className="font-bold text-slate-800 text-[11px] ml-auto">
-                    {seg.percent}%
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <button
-            onClick={() => onNavigateTab('users')}
-            className="text-xs font-bold text-purple-600 hover:text-purple-700 transition inline-flex items-center gap-1 mt-4 text-left pt-2 border-t border-slate-50"
-          >
-            <span>Gestionar usuarios & roles</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">Trazabilidad activa</span>
+            <button
+              onClick={() => onNavigateTab('settings')}
+              className="text-xs font-bold text-slate-700 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Ver configuración</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
+
       </div>
 
     </div>

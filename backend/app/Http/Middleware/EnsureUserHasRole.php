@@ -21,7 +21,10 @@ class EnsureUserHasRole
 
         if (!$user) {
             return response()->json([
+                'status' => 'error',
+                'error_type' => 'UNAUTHENTICATED',
                 'message' => 'No autenticado.',
+                'action_required' => 'login',
             ], 401);
         }
 
@@ -35,13 +38,19 @@ class EnsureUserHasRole
             );
 
             return response()->json([
+                'status' => 'error',
+                'error_type' => 'ACCOUNT_SUSPENDED',
                 'message' => 'Tu cuenta ha sido suspendida. Contacta con soporte.',
+                'action_required' => 'contact_support',
             ], 403);
         }
 
         if ($user->isLocked()) {
             return response()->json([
+                'status' => 'error',
+                'error_type' => 'ACCOUNT_LOCKED',
                 'message' => 'Tu cuenta está temporalmente bloqueada por motivos de seguridad.',
+                'action_required' => 'account_locked',
             ], 423);
         }
 
@@ -62,7 +71,10 @@ class EnsureUserHasRole
             );
 
             return response()->json([
+                'status' => 'error',
+                'error_type' => 'FORBIDDEN',
                 'message' => 'Acceso denegado. No tienes los permisos requeridos para esta sección.',
+                'action_required' => 'insufficient_permissions',
             ], 403);
         }
 

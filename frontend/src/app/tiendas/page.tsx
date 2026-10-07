@@ -37,6 +37,7 @@ import {
   fetchOptimizeStoreRoutine,
   fetchPublicStores,
   fetchPublicStoreDetail,
+  recordStoreInteraction,
   getCurrentUser,
   StoredUser
 } from '@/lib/api';
@@ -107,6 +108,37 @@ export default function TiendasDirectorioPage() {
     setUserCoords({ lat: city.lat, lng: city.lng });
     setIsGpsActive(false);
     setIsCityModalOpen(false);
+  };
+
+  const handleOutboundWhatsApp = (branch: any, productName?: string) => {
+    const storeId = branch.store_id || branch.id || 1;
+    const phone = (branch.whatsapp || branch.phone || '').replace(/[^0-9]/g, '');
+    recordStoreInteraction({
+      store_id: storeId,
+      branch_id: branch.id,
+      interaction_type: 'WHATSAPP_CLICK',
+      metadata: { product_name: productName, city: selectedCity.shortName },
+    });
+    if (phone) {
+      const msg = encodeURIComponent(
+        productName
+          ? `¡Hola! Vi en All About Skin que tienen "${productName}". ¿Tienen stock disponible en su sede de ${branch.name}?`
+          : `¡Hola! Los vi a través de All About Skin y deseo consultar disponibilidad en su sede de ${branch.name}.`
+      );
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+    }
+  };
+
+  const handleOutboundMapRoute = (branch: any) => {
+    const storeId = branch.store_id || branch.id || 1;
+    recordStoreInteraction({
+      store_id: storeId,
+      branch_id: branch.id,
+      interaction_type: 'MAP_ROUTE',
+      metadata: { city: selectedCity.shortName, address: branch.address },
+    });
+    const query = encodeURIComponent(`${branch.name} ${branch.address || ''} ${branch.city || selectedCity.name}`);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
   };
 
   const handleRequestGps = () => {
@@ -427,71 +459,90 @@ export default function TiendasDirectorioPage() {
         {/* ========================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
-          {/* Izquierda (Col 8): 3 Tarjetas de Tiendas (Farmatodo, Locatel, Río) */}
+          {/* Izquierda (Col 8): Tarjetas de Tiendas (Conectadas a Sedes Reales con Leads) */}
           <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-            {storeCardsData.map((store) => (
-              <div
-                key={store.id}
-                className="bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  {/* Logo + Name + Distance */}
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-2xl ${store.logoBg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-2xs`}>
-                      {store.logoLetter}
-                    </div>
-                    <div>
-                      <h3 className="font-extrabold text-sm text-[#2D2825] leading-tight">
-                        {store.name}
-                      </h3>
-                      <div className="text-[11px] text-[#8C827A] font-medium">
-                        {store.distance}
+            {(branches.length > 0 ? branches.slice(0, 3) : storeCardsData).map((store: any, idx: number) => {
+              const isRealBranch = Boolean(store.address || store.city);
+              const storeTitle = store.name || store.store_name || 'Farmacia Aliada';
+              const distanceText = store.distance_meters
+                ? `${(store.distance_meters / 1000).toFixed(1)} km • Aprox. 10 min`
+                : store.distance || 'En tu zona';
+              const initialLetter = storeTitle.charAt(0).toUpperCase();
+              const logoBg = store.logoBg || (idx === 0 ? 'bg-blue-600' : idx === 1 ? 'bg-[#2E7D5B]' : 'bg-orange-600');
+
+              return (
+                <div
+                  key={store.id || idx}
+                  className="bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    {/* Logo + Name + Distance */}
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-2xl ${logoBg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-2xs`}>
+                        {store.logoLetter || initialLetter}
+                      </div>
+                      <div className="truncate">
+                        <h3 className="font-extrabold text-sm text-[#2D2825] leading-tight truncate">
+                          {storeTitle}
+                        </h3>
+                        <div className="text-[11px] text-[#8C827A] font-medium">
+                          {distanceText}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Chips: Stock & Price */}
-                  <div className="space-y-1.5 pt-1">
-                    <div>
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        store.stockType === 'full'
-                          ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB]'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          store.stockType === 'full' ? 'bg-[#2E7D5B]' : 'bg-amber-500'
-                        }`} />
-                        <span>{store.stockBadge}</span>
-                      </span>
-                    </div>
-                    <div>
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                        store.priceBadge === 'Mejor precio'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : 'bg-[#FAFAF7] text-[#66615C] border border-[#E8E1D7]'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          store.priceBadge === 'Mejor precio' ? 'bg-emerald-600' : 'bg-blue-500'
-                        }`} />
-                        <span>{store.priceBadge}</span>
-                      </span>
+                    {/* Chips: Stock & Price */}
+                    <div className="space-y-1.5 pt-1">
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D5B]" />
+                          <span>{store.stockBadge || 'Stock Verificado'}</span>
+                        </span>
+                      </div>
+                      {store.address && (
+                        <div className="text-[11px] text-[#66615C] line-clamp-2 leading-snug">
+                          {store.address}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                {/* Botón Ver Productos */}
-                <div className="pt-2 border-t border-[#F0ECE1]">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenStoreProducts(store)}
-                    className="w-full text-center py-2 rounded-xl bg-[#FAFAF7] hover:bg-[#E6F4EC] hover:text-[#2E7D5B] border border-[#E8E1D7] text-xs font-bold text-[#2D2825] transition cursor-pointer flex items-center justify-center gap-1"
-                  >
-                    <span>Ver productos</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  {/* Acciones de Derivación: WhatsApp + Mapa + Catálogo */}
+                  <div className="space-y-2 pt-2 border-t border-[#F0ECE1]">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOutboundWhatsApp(store)}
+                        className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                        title="Contactar directamente por WhatsApp"
+                      >
+                        <Phone className="w-3 h-3 text-emerald-600" />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOutboundMapRoute(store)}
+                        className="py-1.5 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                        title="Ver ruta en Google Maps"
+                      >
+                        <Navigation className="w-3 h-3 text-sky-600" />
+                        <span>Ruta</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStoreProducts(store)}
+                      className="w-full text-center py-2 rounded-xl bg-[#FAFAF7] hover:bg-[#E6F4EC] hover:text-[#2E7D5B] border border-[#E8E1D7] text-xs font-bold text-[#2D2825] transition cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <span>Ver productos</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Derecha (Col 4): Map Preview Card con pines interactivos */}

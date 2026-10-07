@@ -412,6 +412,111 @@ export interface UserDailyRoutine {
   updatedAt: string;
 }
 
+export interface SkinProfileData {
+  id?: number;
+  user_id?: number;
+  skin_type: 'OILY' | 'DRY' | 'COMBINATION' | 'NORMAL' | 'SENSITIVE';
+  fitzpatrick_type?: number | null;
+  barrier_status: 'HEALTHY' | 'COMPROMISED' | 'ACUTELY_DAMAGED';
+  active_conditions?: string[];
+  known_allergens?: string[];
+  sun_exposure_level?: 'LOW' | 'MODERATE' | 'HIGH';
+  pregnancy_or_nursing?: boolean;
+}
+
+export async function fetchUserProfile(): Promise<{ status: string; data: SkinProfileData } | null> {
+  const user = getCurrentUser();
+  if (!user?.token) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/profile`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('Error al obtener perfil dermatológico:', err);
+    return null;
+  }
+}
+
+export async function updateUserProfile(data: Partial<SkinProfileData>): Promise<{ status: string; data: SkinProfileData; message?: string }> {
+  const res = await fetch(`${API_BASE_URL}/profile`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al actualizar perfil de piel');
+  }
+  return await res.json();
+}
+
+export async function fetchUserTodayRoutine(date?: string) {
+  const user = getCurrentUser();
+  if (!user?.token) return null;
+  try {
+    const url = date ? `${API_BASE_URL}/routine/today?date=${date}` : `${API_BASE_URL}/routine/today`;
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('Error al obtener rutina del día:', err);
+    return null;
+  }
+}
+
+export async function addUserRoutineItem(data: {
+  product_id?: number;
+  custom_name?: string;
+  slot: 'AM' | 'PM';
+  cycle_type: 'EVERYDAY' | 'EXFOLIATION_NIGHT' | 'RETINOID_NIGHT' | 'RECOVERY_NIGHT' | 'SPECIFIC_DAYS';
+  step_order?: number;
+  notes?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/routine/items`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al agregar producto a la rutina');
+  }
+  return await res.json();
+}
+
+export async function deleteUserRoutineItem(id: number) {
+  const res = await fetch(`${API_BASE_URL}/routine/items/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al eliminar producto');
+  }
+  return await res.json();
+}
+
+export async function logUserRoutineAdherence(data: {
+  slot: 'AM' | 'PM';
+  skin_feeling_rating?: number;
+  photo_url?: string;
+  notes?: string;
+  date?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/routine/log`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al registrar cumplimiento de rutina');
+  }
+  return await res.json();
+}
+
 export function getSavedDailyRoutine(): UserDailyRoutine | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -733,6 +838,55 @@ export async function deleteAdminStore(id: number) {
   return res.json();
 }
 
+export async function quickUpdateAdminStore(id: number, data: {
+  country_code?: string;
+  country_name?: string;
+  country_flag?: string;
+  city?: string;
+  whatsapp_contact?: string;
+  name?: string;
+  is_active?: boolean;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}/quick-update`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || 'Error al actualizar datos rápidos de la tienda');
+  }
+  return res.json();
+}
+
+export async function recordStoreInteraction(params: {
+  store_id: number;
+  interaction_type: 'WHATSAPP_CLICK' | 'PHONE_CLICK' | 'MAP_ROUTE' | 'IN_STORE_VIEW' | 'PRODUCT_CLICK';
+  branch_id?: number;
+  metadata?: Record<string, any>;
+}) {
+  try {
+    const user = getCurrentUser();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (user?.token) {
+      headers['Authorization'] = `Bearer ${user.token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/stores/interactions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err) {
+    console.debug('Aviso lead interaction anónimo:', err);
+    return null;
+  }
+}
+
 // AI Skincare Endpoints
 export async function fetchAiDiagnosis(params: {
   inci_text: string;
@@ -904,6 +1058,26 @@ export interface BusinessAnalyticsData {
     whatsapp_clicks: number;
     phone_clicks: number;
     in_store_views: number;
+    map_routes?: number;
+    product_clicks?: number;
+  };
+  routine_impact?: {
+    total_routine_items: number;
+    active_users_relying: number;
+  };
+  demand_gap_opportunities?: Array<{
+    inci_name: string;
+    common_name: string;
+    evidence_level: string;
+    benefit: string;
+    opportunity_score: number;
+  }>;
+  anonymous_demographics?: {
+    total_sample_size: number;
+    oily_skin_pct: number;
+    dry_skin_pct: number;
+    combination_skin_pct: number;
+    sensitive_skin_pct: number;
   };
   branches_performance: Array<{
     id: number;

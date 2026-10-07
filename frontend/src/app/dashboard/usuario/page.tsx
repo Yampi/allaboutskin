@@ -31,23 +31,26 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { getCurrentUser, StoredUser } from '@/lib/api';
+import { getCurrentUser, StoredUser, fetchUserProfile, fetchPublicStores, logUserRoutineAdherence } from '@/lib/api';
 
 export default function UserSkinDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [activeTab, setActiveTab] = useState<'AM' | 'PM'>('AM');
   const [activeSidebarNav, setActiveSidebarNav] = useState('inicio');
+  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [vanityProducts, setVanityProducts] = useState<any[]>([]);
+  const [nearbyStores, setNearbyStores] = useState<any[]>([]);
 
   // Routine Checklist State
   const [routineItems, setRoutineItems] = useState([
-    { id: '1', name: 'Limpiador suave', done: true, period: 'AM' },
-    { id: '2', name: 'Sérum niacinamida', done: true, period: 'AM' },
-    { id: '3', name: 'Hidratante ligera', done: false, period: 'AM' },
-    { id: '4', name: 'Protector solar SPF 50', done: false, period: 'AM' },
-    { id: '5', name: 'Doble limpieza óleo', done: false, period: 'PM' },
-    { id: '6', name: 'Retinol 0.3% microencapsulado', done: false, period: 'PM' },
-    { id: '7', name: 'Bálsamo reparador Cica', done: false, period: 'PM' },
+    { id: '1', name: 'Limpiador suave equilibrante', done: true, period: 'AM' },
+    { id: '2', name: 'Sérum hidratante o antioxidante', done: false, period: 'AM' },
+    { id: '3', name: 'Hidratante fisiológica de barrera', done: false, period: 'AM' },
+    { id: '4', name: 'Protector solar de amplio espectro SPF 50', done: false, period: 'AM' },
+    { id: '5', name: 'Limpieza nocturna suave', done: false, period: 'PM' },
+    { id: '6', name: 'Tratamiento activo según ciclo', done: false, period: 'PM' },
+    { id: '7', name: 'Bálsamo o emulsión reparadora', done: false, period: 'PM' },
   ]);
 
   useEffect(() => {
@@ -55,21 +58,95 @@ export default function UserSkinDashboardPage() {
     if (user) {
       setCurrentUser(user);
     }
+
+    // Cargar perfil real de la base de datos
+    fetchUserProfile()
+      .then((res) => {
+        if (res?.data) {
+          setUserProfile(res.data);
+        }
+      })
+      .catch(() => {});
+
+    // Cargar productos reales del tocador
+    try {
+      const saved = localStorage.getItem('allaboutskin_vanity_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVanityProducts(parsed);
+          // Adaptar items de rutina a los productos reales
+          const amSteps = parsed.filter((p: any) => p.phase === 0 || !p.phase);
+          const pmSteps = parsed.filter((p: any) => p.phase && p.phase > 0);
+          if (amSteps.length > 0 || pmSteps.length > 0) {
+            const dynamicList: Array<{ id: string; name: string; done: boolean; period: 'AM' | 'PM' }> = [];
+            amSteps.forEach((p: any, idx: number) => {
+              dynamicList.push({ id: `am-${idx}`, name: p.name || 'Producto AM', done: false, period: 'AM' });
+            });
+            pmSteps.forEach((p: any, idx: number) => {
+              dynamicList.push({ id: `pm-${idx}`, name: p.name || 'Producto PM', done: false, period: 'PM' });
+            });
+            if (dynamicList.length > 0) {
+              setRoutineItems(dynamicList);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('Error al leer productos del tocador:', e);
+    }
+
+    // Cargar tiendas reales de la base de datos
+    fetchPublicStores()
+      .then((res) => {
+        if (res?.stores && Array.isArray(res.stores)) {
+          setNearbyStores(res.stores.slice(0, 3));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const toggleCheck = (id: string) => {
-    setRoutineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item))
-    );
+    setRoutineItems((prev) => {
+      const next = prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item));
+      const completedSteps = next.filter((i) => i.done).map((i) => i.name);
+      if (currentUser?.token) {
+        logUserRoutineAdherence({
+          slot: activeTab,
+          notes: `Pasos completados: ${completedSteps.join(', ')}`,
+        }).catch(() => {});
+      }
+      return next;
+    });
   };
 
-  const userName = currentUser?.name || 'María González';
+  const userName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuario');
   const isPremium = currentUser?.role === 'premium_user' || true;
 
   const currentRoutineSteps = routineItems.filter((i) => i.period === activeTab);
 
-  // SVG Gauge calculations (Score: 78/100)
-  const score = 78;
+  // Dynamic Skin Profile & Gauge calculations
+  const skinTypeLabel = userProfile?.skin_type === 'COMBINATION' ? 'Mixta'
+    : userProfile?.skin_type === 'OILY' ? 'Grasa'
+    : userProfile?.skin_type === 'DRY' ? 'Seca'
+    : userProfile?.skin_type === 'SENSITIVE' ? 'Sensible'
+    : userProfile?.skin_type === 'NORMAL' ? 'Normal / Equilibrada'
+    : 'No calibrado';
+
+  const fitzpatrickLabel = userProfile?.fitzpatrick_scale
+    ? `Fototipo ${userProfile.fitzpatrick_scale}`
+    : 'Pendiente';
+
+  const concernsLabel = Array.isArray(userProfile?.concerns) && userProfile.concerns.length > 0
+    ? userProfile.concerns.slice(0, 2).join(' + ')
+    : 'Mantenimiento barrera';
+
+  const score = userProfile?.barrier_status === 'DAMAGED' ? 45
+    : userProfile?.barrier_status === 'SENSITIVE' ? 65
+    : userProfile?.skin_type ? 82
+    : 78;
+
+  const barrierStatusText = score >= 80 ? 'Óptima' : score >= 60 ? 'Buena' : 'Comprometida';
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
@@ -273,13 +350,15 @@ export default function UserSkinDashboardPage() {
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center text-center">
                   <span className="text-xl font-extrabold text-[#2D2825] leading-none">
-                    78<span className="text-[11px] font-medium text-[#8C827A]">/100</span>
+                    {score}<span className="text-[11px] font-medium text-[#8C827A]">/100</span>
                   </span>
                   <span className="text-[8px] font-semibold text-[#66615C] mt-0.5">
                     Salud de la barrera
                   </span>
-                  <span className="mt-1 px-1.5 py-0.2 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] text-[8px] font-bold">
-                    Buena
+                  <span className={`mt-1 px-1.5 py-0.2 rounded-full border text-[8px] font-bold ${
+                    score >= 80 ? 'bg-[#E6F4EC] border-[#D5E2DB] text-[#2E7D5B]' : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}>
+                    {barrierStatusText}
                   </span>
                 </div>
               </div>
@@ -288,10 +367,10 @@ export default function UserSkinDashboardPage() {
               <div className="space-y-2 text-xs">
                 <div>
                   <span className="text-[10px] font-bold text-[#8C827A] uppercase block">
-                    Biotipo Baumann
+                    Biotipo Cutáneo
                   </span>
                   <span className="font-semibold text-[#2D2825]">
-                    Graso / Sensible
+                    {skinTypeLabel}
                   </span>
                 </div>
                 <div>
@@ -299,15 +378,15 @@ export default function UserSkinDashboardPage() {
                     Fototipo Fitzpatrick
                   </span>
                   <span className="font-semibold text-[#2D2825]">
-                    III (Morena clara)
+                    {fitzpatrickLabel}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-[#8C827A] uppercase block">
-                    Focos activos
+                    Focos o Necesidades
                   </span>
                   <span className="font-medium text-[#66615C]">
-                    Poros + Leve acné
+                    {concernsLabel}
                   </span>
                 </div>
               </div>
@@ -482,31 +561,38 @@ export default function UserSkinDashboardPage() {
             </div>
 
             {/* Product with Critical PAO */}
-            <div className="p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2.5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1 shrink-0">
-                  <div className="w-3.5 h-7 rounded-sm bg-blue-500/80 mx-auto" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-[#2D2825] truncate">
-                    CeraVe Hidratante Facial
+            {vanityProducts.length > 0 ? (
+              <div className="p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1 shrink-0">
+                    <span className="text-base">🧴</span>
                   </div>
-                  <div className="text-[10px] text-[#66615C]">
-                    Abierto hace 42 días
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[#2D2825] truncate">
+                      {vanityProducts[0].name || 'Producto en tocador'}
+                    </div>
+                    <div className="text-[10px] text-[#66615C]">
+                      {vanityProducts[0].brand || 'Uso activo'}
+                    </div>
                   </div>
+                  <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] border border-[#D5E2DB] px-2 py-0.5 rounded-full shrink-0">
+                    Activo
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
-                  18 días restantes
-                </span>
-              </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-1">
-                <div className="w-full bg-[#E8E1D7]/50 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-[#2E7D5B] h-full rounded-full w-[72%]" />
+                {/* Progress Bar */}
+                <div className="space-y-1">
+                  <div className="w-full bg-[#E8E1D7]/50 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-[#2E7D5B] h-full rounded-full w-[85%]" />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E8E1D7] text-center space-y-1.5">
+                <p className="text-xs font-semibold text-[#2D2825]">Sin alertas de PAO</p>
+                <p className="text-[10px] text-[#7E756F]">Escanea un producto para monitorear su caducidad</p>
+              </div>
+            )}
 
             <Link
               href="/biblioteca"
@@ -542,10 +628,10 @@ export default function UserSkinDashboardPage() {
 
               <div className="space-y-1 text-right">
                 <div className="text-xs font-bold text-[#2D2825]">
-                  <span className="text-[#2E7D5B] font-extrabold">5</span> en uso
+                  <span className="text-[#2E7D5B] font-extrabold">{vanityProducts.length || routineItems.length}</span> en rutina
                 </div>
-                <div className="text-[10px] font-semibold text-amber-700">
-                  2 por vencer
+                <div className="text-[10px] font-semibold text-[#5D6B63]">
+                  {vanityProducts.length > 0 ? 'Sincronizado' : 'Protocolo sugerido'}
                 </div>
               </div>
             </div>
@@ -554,7 +640,7 @@ export default function UserSkinDashboardPage() {
               href="/mi-rutina"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
             >
-              <span>Ver inventario</span>
+              <span>Ver tocador</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -570,62 +656,49 @@ export default function UserSkinDashboardPage() {
 
             {/* Pharmacies List */}
             <div className="space-y-2">
-              {/* Farmatodo */}
-              <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
-                    F
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#2D2825] leading-tight">Farmatodo</div>
-                    <div className="text-[10px] text-[#2E7D5B] font-medium">2.3 km · Stock disponible</div>
-                  </div>
-                </div>
-                <Link
-                  href="/tiendas"
-                  className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[#2D2825] text-[10px] font-bold hover:bg-[#E6F4EC] hover:text-[#2E7D5B] transition shadow-2xs"
-                >
-                  Ver en mapa
-                </Link>
-              </div>
-
-              {/* Locatel */}
-              <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#2E7D5B] text-white font-black text-[10px] flex items-center justify-center">
-                    L
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#2D2825] leading-tight">Locatel</div>
-                    <div className="text-[10px] text-[#2E7D5B] font-medium">3.1 km · Stock disponible</div>
-                  </div>
-                </div>
-                <Link
-                  href="/tiendas"
-                  className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[#2D2825] text-[10px] font-bold hover:bg-[#E6F4EC] hover:text-[#2E7D5B] transition shadow-2xs"
-                >
-                  Ver en mapa
-                </Link>
-              </div>
-
-              {/* Río Supermercado */}
-              <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-orange-600 text-white font-black text-[10px] flex items-center justify-center">
-                    R
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#2D2825] leading-tight">Río Supermercado</div>
-                    <div className="text-[10px] text-amber-600 font-medium">4.8 km · Stock limitado</div>
+              {nearbyStores.length > 0 ? (
+                nearbyStores.map((store: any, idx: number) => {
+                  const initial = store.store_name?.charAt(0) || store.name?.charAt(0) || 'T';
+                  const storeName = store.store_name || store.name || 'Tienda';
+                  const locationText = store.city || store.state || (store.distance_km ? `${store.distance_km} km` : 'Disponible');
+                  return (
+                    <div key={store.id || idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#2E7D5B] text-white font-black text-[10px] flex items-center justify-center">
+                          {initial}
+                        </div>
+                        <div>
+                          <div className="font-bold text-[#2D2825] leading-tight truncate max-w-[130px]">
+                            {storeName}
+                          </div>
+                          <div className="text-[10px] text-[#2E7D5B] font-medium">
+                            {locationText} · Verificada
+                          </div>
+                        </div>
+                      </div>
+                      <Link
+                        href="/tiendas"
+                        className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[#2D2825] text-[10px] font-bold hover:bg-[#E6F4EC] hover:text-[#2E7D5B] transition shadow-2xs"
+                      >
+                        Ver en mapa
+                      </Link>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-3 text-center rounded-xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-1">
+                  <p className="text-xs font-bold text-[#2D2825]">Directorio de farmacias</p>
+                  <p className="text-[10px] text-[#66615C]">Encuentra puntos de venta oficiales y stock local</p>
+                  <div className="pt-1">
+                    <Link
+                      href="/tiendas"
+                      className="inline-block px-3 py-1 rounded-full bg-[#2E7D5B] text-white text-[10px] font-bold shadow-2xs"
+                    >
+                      Explorar comercios
+                    </Link>
                   </div>
                 </div>
-                <Link
-                  href="/tiendas"
-                  className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[#2D2825] text-[10px] font-bold hover:bg-[#E6F4EC] hover:text-[#2E7D5B] transition shadow-2xs"
-                >
-                  Ver en mapa
-                </Link>
-              </div>
+              )}
             </div>
           </div>
         </div>

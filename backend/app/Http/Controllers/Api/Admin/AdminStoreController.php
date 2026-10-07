@@ -241,6 +241,55 @@ class AdminStoreController extends Controller
     }
 
     /**
+     * Actualización rápida de datos clave de la tienda (país, ciudad, nombre, whatsapp, contacto).
+     */
+    public function quickUpdate(Request $request, int $id): JsonResponse
+    {
+        $admin = $request->user();
+        $store = AffiliateStore::findOrFail($id);
+
+        $validated = $request->validate([
+            'country_code' => 'nullable|string|max:5',
+            'country_name' => 'nullable|string|max:100',
+            'country_flag' => 'nullable|string|max:10',
+            'name' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'whatsapp_contact' => 'nullable|string|max:50',
+            'instagram_handle' => 'nullable|string|max:100',
+            'website_url' => 'nullable|string|max:255',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if (isset($validated['country_code'])) {
+            $validated['country_code'] = strtoupper($validated['country_code']);
+        }
+
+        $city = $validated['city'] ?? null;
+        unset($validated['city']);
+
+        $store->update(array_filter($validated, fn($val) => !is_null($val)));
+
+        if ($city) {
+            $store->branches()->update(['city' => $city]);
+        }
+
+        SecurityAuditLog::logEvent(
+            eventType: 'STORE_QUICK_UPDATED',
+            description: "Admin [{$admin?->email}] actualizó datos rápidos de tienda [{$store->name}]",
+            userId: $admin?->id,
+            severity: 'INFO',
+            target: "store:{$store->id}",
+            payload: $validated
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Datos de la tienda [{$store->name}] actualizados correctamente.",
+            'store' => $store->fresh()->load('branches'),
+        ]);
+    }
+
+    /**
      * Eliminar permanentemente una tienda y purgar del inventario todos sus productos exclusivos.
      */
     public function destroy(Request $request, int $id): JsonResponse

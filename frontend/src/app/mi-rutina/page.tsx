@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -32,7 +32,11 @@ import {
   User,
   Search,
   Bell,
-  Flower2
+  Flower2,
+  Camera,
+  Video,
+  VideoOff,
+  CheckCheck
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -43,7 +47,10 @@ import {
   saveDailyRoutine,
   StoredUser,
   UserDailyRoutine,
-  auditFullRoutineAi
+  auditFullRoutineAi,
+  fetchUserProfile,
+  updateUserProfile,
+  logUserRoutineAdherence
 } from '@/lib/api';
 import { SkinCyclingProtocol, UserRoutineProduct } from '@/types/skinCycling';
 import { generateCustomProtocol } from '@/lib/skinCyclingEngine';
@@ -109,6 +116,21 @@ export default function MiPerfilDermatologicoPage() {
   const [newProductCategory, setNewProductCategory] = useState<UserRoutineProduct['category']>('SERUM');
   const [selectedPhase, setSelectedPhase] = useState<number>(2);
 
+  // Estados para Asistente Inteligente de Rutina por Cámara (QoL Automatización)
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isScanningFrame, setIsScanningFrame] = useState(false);
+  const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
+  const [detectedRoutineProduct, setDetectedRoutineProduct] = useState<UserRoutineProduct | null>(null);
+  const [detectedStepIndex, setDetectedStepIndex] = useState<number | null>(null);
+  const [missingPreviousSteps, setMissingPreviousSteps] = useState<UserRoutineProduct[]>([]);
+  const [scientificOrderNotice, setScientificOrderNotice] = useState<string | null>(null);
+  const [scannerSuccessNotice, setScannerSuccessNotice] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   // Carga inicial
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -126,19 +148,144 @@ export default function MiPerfilDermatologicoPage() {
       ]);
     }
 
-    const savedProfile = localStorage.getItem('allabout_user_dermal_profile');
-    if (savedProfile) {
-      try {
-        const parsed = JSON.parse(savedProfile);
-        if (parsed.biotipo) setBiotipo(parsed.biotipo);
-        if (parsed.fitzpatrick) setFitzpatrick(parsed.fitzpatrick);
-        if (parsed.tewlValue) setTewlValue(parsed.tewlValue);
-        if (parsed.biotipoChips) setBiotipoChips(parsed.biotipoChips);
-      } catch (e) {
-        console.error(e);
+    // Carga de perfil desde Base de Datos o localStorage
+    if (currentUser?.token) {
+      fetchUserProfile().then((res) => {
+        if (res?.data) {
+          const typeMap: Record<string, string> = {
+            'OILY': 'Graso',
+            'DRY': 'Seco',
+            'COMBINATION': 'Mixto',
+            'NORMAL': 'Equilibrado',
+            'SENSITIVE': 'Sensible',
+          };
+          const mainType = typeMap[res.data.skin_type] || res.data.skin_type;
+          setBiotipo(mainType);
+          setEditBiotipo(mainType);
+          if (res.data.fitzpatrick_type) {
+            const fitz = ['I', 'II', 'III', 'IV', 'V', 'VI'][res.data.fitzpatrick_type - 1] || 'III';
+            setFitzpatrick(fitz);
+            setEditFitzpatrick(fitz);
+          }
+          if (res.data.barrier_status) {
+            setTewlStatus(res.data.barrier_status === 'HEALTHY' ? 'En rango normal' : 'Barrera comprometida');
+          }
+        }
+      }).catch((e) => console.warn('Aviso perfil offline:', e));
+    } else {
+      const savedProfile = localStorage.getItem('allabout_user_dermal_profile');
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          if (parsed.biotipo) setBiotipo(parsed.biotipo);
+          if (parsed.fitzpatrick) setFitzpatrick(parsed.fitzpatrick);
+          if (parsed.tewlValue) setTewlValue(parsed.tewlValue);
+          if (parsed.biotipoChips) setBiotipoChips(parsed.biotipoChips);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, []);
+
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      setIsCameraActive(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err: any) {
+      console.warn('No se pudo acceder a la cámara:', err);
+      setCameraError('No se pudo activar la cámara web. Puedes realizar la prueba seleccionando tu producto abajo.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const handleOpenSmartScanner = () => {
+    setIsCameraScannerOpen(true);
+    setDetectedRoutineProduct(null);
+    setDetectedStepIndex(null);
+    setMissingPreviousSteps([]);
+    setScientificOrderNotice(null);
+    setScannerSuccessNotice(null);
+    startCamera();
+  };
+
+  const handleCloseSmartScanner = () => {
+    stopCamera();
+    setIsCameraScannerOpen(false);
+  };
+
+  const handleDetectProduct = (product: UserRoutineProduct) => {
+    setIsScanningFrame(true);
+    setTimeout(() => {
+      setIsScanningFrame(false);
+      const prodIndex = products.findIndex((p) => p.id === product.id);
+      setDetectedRoutineProduct(product);
+      setDetectedStepIndex(prodIndex >= 0 ? prodIndex + 1 : 1);
+
+      const priorIncomplete = products.slice(0, prodIndex).filter((p) => !completedStepIds.has(p.id));
+      setMissingPreviousSteps(priorIncomplete);
+
+      if (product.category === 'SPF' && new Date().getHours() >= 19) {
+        setScientificOrderNotice('Recomendación científica: El protector solar es un escudo diurno contra rayos UV. En la noche, tu piel respira y se regenera mejor con hidratante o activo calmante.');
+      } else if (prodIndex > 0 && priorIncomplete.length > 0 && (product.category === 'SERUM' || product.category === 'EXFOLIANT')) {
+        setScientificOrderNotice('Importante: Se recomienda aplicar sérums y exfoliantes sobre la piel previamente limpia para optimizar la penetración dérmica y evitar irritación.');
+      } else {
+        setScientificOrderNotice(null);
+      }
+    }, 600);
+  };
+
+  const handleConfirmStepCheck = (includePrevious: boolean) => {
+    if (!detectedRoutineProduct) return;
+
+    const newCompleted = new Set(completedStepIds);
+    newCompleted.add(detectedRoutineProduct.id);
+
+    if (includePrevious && missingPreviousSteps.length > 0) {
+      missingPreviousSteps.forEach((p) => newCompleted.add(p.id));
+    }
+
+    setCompletedStepIds(newCompleted);
+
+    if (user?.token) {
+      logUserRoutineAdherence({
+        slot: new Date().getHours() >= 17 ? 'PM' : 'AM',
+        notes: `Completado asistido por escaneo de producto: ${detectedRoutineProduct.productName}`,
+      }).catch((e) => console.warn('Silent adherence log notice:', e));
+    }
+
+    setScannerSuccessNotice(
+      includePrevious && missingPreviousSteps.length > 0
+        ? `¡Excelente! Se tacharon de tu rutina los ${missingPreviousSteps.length + 1} pasos completados.`
+        : `¡Paso tachado con éxito! Tu rutina avanza correctamente.`
+    );
+
+    setTimeout(() => {
+      setDetectedRoutineProduct(null);
+      setScannerSuccessNotice(null);
+    }, 2000);
+  };
 
   const handleSaveProfile = () => {
     setBiotipo(editBiotipo);
@@ -166,6 +313,16 @@ export default function MiPerfilDermatologicoPage() {
         biotipoChips: chips,
       })
     );
+
+    if (user?.token) {
+      const dbSkinType = editBiotipo.toLowerCase().includes('graso') ? 'OILY' : editBiotipo.toLowerCase().includes('seco') ? 'DRY' : editBiotipo.toLowerCase().includes('sensible') ? 'SENSITIVE' : 'COMBINATION';
+      const fitzNum = ['I', 'II', 'III', 'IV', 'V', 'VI'].indexOf(editFitzpatrick) + 1 || 3;
+      updateUserProfile({
+        skin_type: dbSkinType as any,
+        fitzpatrick_type: fitzNum,
+        barrier_status: editTewl <= 14 ? 'HEALTHY' : 'COMPROMISED',
+      }).catch((e) => console.warn('Error syncing profile with DB:', e));
+    }
 
     setIsUpdateModalOpen(false);
   };
@@ -570,6 +727,15 @@ export default function MiPerfilDermatologicoPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={handleOpenSmartScanner}
+                  className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#1B3D32] to-[#2E7D5B] hover:opacity-95 text-white px-4 py-2 rounded-full text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Escanear Frasco</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsAddProductOpen(true)}
                   className="inline-flex items-center gap-1.5 bg-[#E6F4EC] hover:bg-[#D5E2DB] text-[#2E7D5B] px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer"
                 >
@@ -892,6 +1058,197 @@ export default function MiPerfilDermatologicoPage() {
                 Agregar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ASISTENTE INTELIGENTE POR CÁMARA (AUTOMATIZACIÓN RUTINA) ================= */}
+      {isCameraScannerOpen && (
+        <div className="fixed inset-0 z-50 bg-[#2D2825]/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-[#E8E1D7] rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#E6F4EC] text-[#2E7D5B] flex items-center justify-center font-bold">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#2D2825]">
+                    Escáner Inteligente de Frasco
+                  </h3>
+                  <p className="text-[11px] text-[#7E756F]">
+                    Apunta la cámara al frasco o etiqueta de tu producto para auto-marcar el paso
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseSmartScanner}
+                className="p-1.5 rounded-xl hover:bg-[#FAF8F5] text-[#7E756F] transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Viewfinder Video Stream / Simulation */}
+            <div className="relative w-full h-56 rounded-2xl bg-black overflow-hidden flex items-center justify-center border border-[#E8E1D7]">
+              {isCameraActive ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-center p-4 text-white/70 space-y-2">
+                  <VideoOff className="w-8 h-8 mx-auto text-white/40" />
+                  <p className="text-xs">
+                    {cameraError || 'Cámara inactiva'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="text-xs text-emerald-400 font-bold hover:underline"
+                  >
+                    Reintentar conexión de cámara
+                  </button>
+                </div>
+              )}
+
+              {/* Optical Reticle Overlay (DLG-INNOV) */}
+              <div className="absolute inset-4 border border-dashed border-white/50 rounded-xl pointer-events-none flex flex-col justify-between p-2">
+                <div className="flex justify-between text-[10px] text-white/80 font-mono">
+                  <span>[VISIÓN CLÍNICA AGY]</span>
+                  <span>{isScanningFrame ? 'ANALIZANDO...' : 'ENFOCANDO'}</span>
+                </div>
+                {isScanningFrame && (
+                  <div className="w-full h-0.5 bg-emerald-400 animate-pulse shadow-[0_0_12px_rgba(52,211,153,1)]" />
+                )}
+                <div className="flex justify-between text-[10px] text-white/60 font-mono">
+                  <span>RESOLUCIÓN HD</span>
+                  <span>AUTOFOCUS</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Product Detection Picker */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                Tus productos de rutina (Toca para simular o verificar frasco):
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {products.map((p, idx) => {
+                  const isDone = completedStepIds.has(p.id);
+                  const isDetected = detectedRoutineProduct?.id === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleDetectProduct(p)}
+                      className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between text-xs cursor-pointer ${
+                        isDetected
+                          ? 'bg-[#E6F4EC] border-[#2E7D5B] text-[#1B3D32] font-bold shadow-2xs'
+                          : isDone
+                          ? 'bg-slate-50 border-slate-200 text-slate-400 line-through'
+                          : 'bg-[#FAFAF7] hover:bg-white border-[#E8E1D7] text-[#2D2825]'
+                      }`}
+                    >
+                      <div className="truncate">
+                        <div className="truncate font-semibold">{p.productName}</div>
+                        <div className="text-[10px] text-[#8C827A]">Paso {idx + 1} &bull; {p.category}</div>
+                      </div>
+                      {isDone && <CheckCheck className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Smart Detection Prompt & Order Check */}
+            {detectedRoutineProduct && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#E6F4EC] to-[#FAF8F5] border border-[#D5E2DB] space-y-3 animate-in fade-in">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-[#2E7D5B] tracking-wider">
+                      ¡Frasco Identificado!
+                    </span>
+                    <h4 className="text-sm font-bold text-[#1B3D32]">
+                      {detectedRoutineProduct.productName} (Paso {detectedStepIndex})
+                    </h4>
+                    <p className="text-xs text-[#2E7D5B]">
+                      {detectedRoutineProduct.brand || 'Dermoespecífico'} &bull; {detectedRoutineProduct.category}
+                    </p>
+                  </div>
+                  <Sparkles className="w-5 h-5 text-[#2E7D5B]" />
+                </div>
+
+                {/* Pregunta Asistida: ¿Ya hiciste los pasos anteriores? */}
+                {missingPreviousSteps.length > 0 && (
+                  <div className="p-3 bg-white/80 rounded-xl border border-emerald-200 text-xs text-[#1B3D32] space-y-1">
+                    <p className="font-semibold">
+                      Los pasos anteriores aún no están marcados hoy:
+                    </p>
+                    <ul className="list-disc list-inside text-[11px] text-slate-600">
+                      {missingPreviousSteps.map((m) => (
+                        <li key={m.id}>{m.productName} ({m.category})</li>
+                      ))}
+                    </ul>
+                    <p className="text-[11px] font-bold text-[#2E7D5B] pt-1">
+                      ¿Ya aplicaste estos productos antes de este frasco?
+                    </p>
+                  </div>
+                )}
+
+                {/* Alerta de Orden Científico */}
+                {scientificOrderNotice && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>{scientificOrderNotice}</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  {missingPreviousSteps.length > 0 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmStepCheck(true)}
+                        className="w-full sm:w-auto flex-1 py-2.5 px-4 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        <span>Sí, marcar anteriores y este</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmStepCheck(false)}
+                        className="w-full sm:w-auto py-2.5 px-3 bg-white hover:bg-slate-50 border border-[#E8E1D7] text-[#2D2825] rounded-xl text-xs font-semibold transition cursor-pointer"
+                      >
+                        Solo este producto
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleConfirmStepCheck(false)}
+                      className="w-full py-2.5 px-4 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Marcar paso como completado</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Success Toast */}
+            {scannerSuccessNotice && (
+              <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                <span>{scannerSuccessNotice}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

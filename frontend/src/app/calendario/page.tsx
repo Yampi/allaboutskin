@@ -22,7 +22,10 @@ import { useSkincare } from '@/context/SkincareContext';
 
 export default function CalendarioPage() {
   const { userProfile, completeNightRitual } = useSkincare();
-  const [selectedDayIndex, setSelectedDayIndex] = useState(1); // Mar 15 (Retinoide) por defecto
+
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // Lunes = 0, Domingo = 6
+  const [selectedDayIndex, setSelectedDayIndex] = useState(dayOfWeek);
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({
     'step-1': true,
     'step-2': true,
@@ -30,21 +33,37 @@ export default function CalendarioPage() {
     'step-4': true,
   });
 
-  const weekDays = [
-    { dayName: 'Lun', date: '14', phaseNum: 1, phaseLabel: 'Exfoliación', bgBadge: 'bg-rose-100 text-rose-800' },
-    { dayName: 'Mar', date: '15', phaseNum: 2, phaseLabel: 'Retinoide', isToday: true, bgBadge: 'bg-sky-100 text-sky-800' },
-    { dayName: 'Mié', date: '16', phaseNum: 3, phaseLabel: 'Recuperación', bgBadge: 'bg-[#E6F4EC] text-[#2E7D5B]' },
-    { dayName: 'Jue', date: '17', phaseNum: 4, phaseLabel: 'Recuperación', bgBadge: 'bg-[#E6F4EC] text-[#2E7D5B]' },
-    { dayName: 'Vie', date: '18', phaseNum: 1, phaseLabel: 'Exfoliación', bgBadge: 'bg-rose-100 text-rose-800' },
-    { dayName: 'Sáb', date: '19', phaseNum: 2, phaseLabel: 'Retinoide', bgBadge: 'bg-sky-100 text-sky-800' },
-    { dayName: 'Dom', date: '20', phaseNum: 3, phaseLabel: 'Recuperación', bgBadge: 'bg-[#E6F4EC] text-[#2E7D5B]' },
-  ];
+  const currentMonthName = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+
+  // Generar los 7 días de la semana actual
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - dayOfWeek);
+
+  const phaseNames = ['Exfoliación', 'Retinoide', 'Recuperación', 'Recuperación'];
+  const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  const weekDays = dayNames.map((name, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    const phaseIdx = i % 4;
+    const phaseNum = phaseIdx + 1;
+    const isToday = d.toDateString() === now.toDateString();
+    return {
+      dayName: name,
+      date: d.getDate().toString(),
+      phaseNum,
+      phaseLabel: phaseNames[phaseIdx],
+      isToday,
+      bgBadge: phaseNum === 1 ? 'bg-rose-100 text-rose-800' : phaseNum === 2 ? 'bg-sky-100 text-sky-800' : 'bg-[#E6F4EC] text-[#2E7D5B]',
+    };
+  });
 
   const toggleStep = (stepId: string) => {
     setCompletedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }));
   };
 
-  const selectedDay = weekDays[selectedDayIndex];
+  const selectedDay = weekDays[selectedDayIndex] || weekDays[0];
 
   return (
     <div className="w-full min-h-screen bg-[#FAFAF7] text-[#2D2825] py-8 pb-20">
@@ -77,7 +96,7 @@ export default function CalendarioPage() {
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="text-xs font-extrabold text-[#2D2825] px-2 min-w-[90px] text-center">
-              Abril 2026
+              {capitalizedMonth}
             </span>
             <button
               type="button"

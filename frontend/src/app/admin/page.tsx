@@ -68,6 +68,7 @@ import {
   updateAdminStoreVerification,
   updateAdminStoreSubscription,
   toggleAdminStoreStatus,
+  quickUpdateAdminStore,
   deleteAdminStore,
   fetchAdminScraperStatus,
   triggerAdminScraperRun,
@@ -702,6 +703,23 @@ function AdminDashboardContent() {
     }
   };
 
+  const [quickCountryEditStore, setQuickCountryEditStore] = useState<any | null>(null);
+
+  const handleQuickUpdateStoreCountry = async (storeId: number, countryCode: string, countryName?: string, countryFlag?: string) => {
+    try {
+      const res = await quickUpdateAdminStore(storeId, {
+        country_code: countryCode,
+        country_name: countryName,
+        country_flag: countryFlag,
+      });
+      showNotification('success', res.message || `País actualizado a ${countryCode}`);
+      setQuickCountryEditStore(null);
+      loadStores();
+    } catch (err: any) {
+      showNotification('error', err.message || 'Error al actualizar país de la tienda');
+    }
+  };
+
   const handleInspectStore = async (store: any) => {
     setInspectingStore(store);
     setStoreProductSearch('');
@@ -920,8 +938,11 @@ function AdminDashboardContent() {
           <AdminDashboardOverview
             onNavigateTab={handleTabChange}
             systemHealth={systemHealth}
-            totalStoresCount={storeSummary?.total_stores || 1248}
-            totalUsersCount={usersTotal || 24832}
+            totalStoresCount={storeSummary?.total_stores ?? 0}
+            totalUsersCount={usersTotal ?? 0}
+            pendingStoresCount={storeSummary?.pending_review ?? 0}
+            criticalEventsCount={securityStats?.critical_events_today ?? 0}
+            realActivityLogs={securityLogs}
           />
         )}
 
@@ -2128,13 +2149,19 @@ function AdminDashboardContent() {
                             <div>
                               <div className="font-bold text-[#2D2825] flex items-center gap-2">
                                 <span>{store.name}</span>
-                                <span
-                                  className="px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-[#2D2825] text-xs font-semibold flex items-center gap-1 shadow-sm"
-                                  title={store.country_name || (store.country_code === 'VE' ? 'Venezuela' : store.country_code)}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setQuickCountryEditStore(store);
+                                  }}
+                                  className="px-2 py-0.5 rounded-full bg-[#FAF8F5] hover:bg-[#EBF1EE] border border-[#E8E1D7] hover:border-[#4A6B5B] text-[#2D2825] text-xs font-semibold flex items-center gap-1 shadow-sm transition cursor-pointer"
+                                  title="Clic para cambiar país rápidamente"
                                 >
                                   <span>{store.country_flag || (store.country_code === 'VE' ? '🇻🇪' : '🌐')}</span>
                                   <span>{store.country_code || 'VE'}</span>
-                                </span>
+                                  <ChevronDown className="w-2.5 h-2.5 text-[#9D948B]" />
+                                </button>
                                 {store.is_featured && (
                                   <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-[#B45309] text-[10px] font-black uppercase flex items-center gap-0.5">
                                     <Sparkles className="w-2.5 h-2.5" /> PRO
@@ -2351,6 +2378,72 @@ function AdminDashboardContent() {
         )}
       </div>
     )}
+
+      {/* ================= MODAL: QUICK STORE COUNTRY CHANGER (QoL ADMIN) ================= */}
+      {quickCountryEditStore && (
+        <div className="fixed inset-0 z-50 bg-[#2D2825]/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E8E1D7] rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 space-y-5">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <div>
+                <span className="text-[10px] font-black uppercase text-[#4A6B5B] tracking-wider">
+                  Acción Rápida de Moderación
+                </span>
+                <h3 className="text-base font-extrabold text-[#2D2825]">
+                  Cambiar País de Tienda
+                </h3>
+                <p className="text-xs text-[#7E756F]">
+                  {quickCountryEditStore.name} (ID: #{quickCountryEditStore.id})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickCountryEditStore(null)}
+                className="p-1.5 rounded-xl hover:bg-[#FAF8F5] text-[#7E756F] transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#66615C]">
+              Selecciona el país para reasignar la tienda en el directorio geolocalizado:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { code: 'VE', flag: '🇻🇪', name: 'Venezuela' },
+                { code: 'CL', flag: '🇨🇱', name: 'Chile' },
+                { code: 'CO', flag: '🇨🇴', name: 'Colombia' },
+                { code: 'MX', flag: '🇲🇽', name: 'México' },
+                { code: 'US', flag: '🇺🇸', name: 'Estados Unidos' },
+                { code: 'ES', flag: '🇪🇸', name: 'España' },
+                { code: 'AR', flag: '🇦🇷', name: 'Argentina' },
+                { code: 'PE', flag: '🇵🇪', name: 'Perú' },
+                { code: 'GLOBAL', flag: '🌐', name: 'Internacional' },
+              ].map((c) => {
+                const isSelected = (quickCountryEditStore.country_code || 'VE').toUpperCase() === c.code;
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => handleQuickUpdateStoreCountry(quickCountryEditStore.id, c.code, c.name, c.flag)}
+                    className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#EBF1EE] border-[#4A6B5B] text-[#1B3D32] shadow-2xs font-bold'
+                        : 'bg-[#FAFAF7] hover:bg-white border-[#E8E1D7] text-[#2D2825]'
+                    }`}
+                  >
+                    <span className="text-xl">{c.flag}</span>
+                    <div>
+                      <div className="text-xs font-bold leading-tight">{c.name}</div>
+                      <div className="text-[10px] text-[#8C827A] font-mono">{c.code}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: INSPECT STORE DETAILS & VITRINA ================= */}
       {inspectingStore && (
