@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Microscope, Scan, Calendar, BookOpen, GitCompare, User, Store, ShieldCheck, LogIn } from 'lucide-react';
+import { Sparkles, Microscope, Scan, Calendar, BookOpen, GitCompare, User, Store, ShieldCheck, LogIn, HeartPulse } from 'lucide-react';
 import { useSkincare } from '@/context/SkincareContext';
 import { getCurrentUser, isUserAdmin, isUserBusiness, StoredUser } from '@/lib/api';
 
@@ -25,31 +25,28 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
 
   const navItems = [
     { href: '/', label: 'Inicio' },
-    { href: '/tiendas', label: 'Tiendas & Mapa', icon: Store },
-    { href: '/escaner', label: 'Auditor INCI', icon: Scan },
-    { href: '/calendario', label: 'Mi Calendario', icon: Calendar },
-    { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
-    { href: '/comparador', label: 'Comparador', icon: GitCompare },
+    { href: '/#como-funciona', label: 'Cómo funciona' },
+    { href: '/tiendas', label: 'Tiendas' },
+    { href: '/escaner', label: 'Escáner IA' },
+    { href: '/calendario', label: 'Skin Cycling' },
+    { href: '/mi-rutina', label: 'Mi Piel' },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/75 backdrop-blur-xl border-b border-white/80 transition-all duration-200 shadow-2xs">
+    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-[#E8E1D7] transition-all duration-200 shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* DESKTOP HEADER (>= 1024px / 72px de altura) */}
         <div className="hidden lg:flex items-center justify-between h-20 gap-3">
           
           {/* 1. Izquierda: Logo & Subtítulo Clínico */}
-          <Link href="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
-            <div className="w-10 h-10 rounded-2xl glass-subcard flex items-center justify-center text-[#1E3A2B] group-hover:scale-105 transition shadow-xs">
-              <Microscope className="w-5 h-5 text-[#1E3A2B]" />
+          <Link href="/" className="flex items-center gap-2.5 group cursor-pointer shrink-0">
+            <div className="w-9 h-9 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] group-hover:scale-105 transition shadow-2xs">
+              <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
             </div>
             <div>
-              <span className="text-[21px] font-bold text-slate-900 tracking-tight leading-none block">
-                Allabout<span className="text-[#2E5540]">.skin</span>
-              </span>
-              <span className="text-[10px] font-medium text-slate-500 tracking-wide mt-0.5 block">
-                Auditoría Científica de Skincare
+              <span className="text-[20px] font-extrabold text-[#2D2825] tracking-tight leading-none block">
+                allabout<span className="text-[#2E7D5B]">.skin</span>
               </span>
             </div>
           </Link>
@@ -72,34 +69,14 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                       : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
                   }`}
                 >
-                  {item.icon && (
-                    <item.icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                  )}
                   <span>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* 3. Derecha: Live Badge TEWL + CTA Escanear + Avatar (100% whitespace-nowrap) */}
+          {/* 3. Derecha: CTA Escanear + Avatar (100% whitespace-nowrap) */}
           <div className="flex items-center gap-2 xl:gap-3 shrink-0">
-            {/* Live Diagnosis Badge */}
-            <button
-              onClick={onOpenDiagnosis}
-              type="button"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-subcard text-[#1E3A2B] text-[11px] font-bold hover:bg-white/90 transition cursor-pointer shadow-xs whitespace-nowrap shrink-0"
-              title="Ver informe de barrera cutánea"
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-              </span>
-              <span className="whitespace-nowrap">
-                {userProfile?.tewlScore && userProfile.tewlScore !== '--'
-                  ? `TEWL: ${userProfile.tewlScore.split(' ')[0]}`
-                  : 'Biotipo Dérmico'}
-              </span>
-            </button>
 
             {/* CTA Píldora: si ya estamos en /escaner, muestra Volver al Inicio */}
             {pathname.startsWith('/escaner') ? (
@@ -139,16 +116,31 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                   <Store className="w-3.5 h-3.5 text-[#2D5540]" />
                   <span>Mi Tienda</span>
                 </Link>
-              ) : null
+              ) : (
+                <Link
+                  href="/dashboard/usuario"
+                  className="px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold hover:bg-rose-100 transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                  title="Mi Tocador & Salud de Piel"
+                >
+                  <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Mi Piel</span>
+                </Link>
+              )
             ) : (
-              <Link
-                href="/login"
-                className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
-                title="Acceder a tu cuenta"
-              >
-                <LogIn className="w-3.5 h-3.5 text-slate-500" />
-                <span>Iniciar Sesión</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#2D2825] hover:text-[#2E7D5B] transition whitespace-nowrap"
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/registro"
+                  className="px-4 py-1.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold transition shadow-xs whitespace-nowrap"
+                >
+                  Crear cuenta
+                </Link>
+              </div>
             )}
 
             {/* User Profile Avatar */}

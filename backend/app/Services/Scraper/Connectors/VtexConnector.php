@@ -56,11 +56,15 @@ class VtexConnector implements StoreConnectorInterface
 
                 $basePrice = (float) ($seller['Price'] ?? 0);
                 $tax = (float) ($seller['Tax'] ?? 0);
-                $priceVes = $basePrice + $tax;
+                $rawVes = $basePrice + $tax;
                 $inStock = (int) ($seller['AvailableQuantity'] ?? 0) > 0;
 
-                // En tiendas VTEX venezolanas (como Locatel), el precio base viene en Bolívares (VES)
-                $priceUsd = $priceVes > 0 ? $this->exchangeRateService->vesToUsd($priceVes) : 0.00;
+                $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                    rawPrice: $rawVes,
+                    currency: 'VES',
+                    countryCode: $store->country_code,
+                    rawVes: $rawVes
+                );
 
                 $branchSlug = null;
                 $merchantInstallments = $seller['Installments'][0]['sellerMerchantInstallments'][0]['id'] ?? null;
@@ -71,7 +75,7 @@ class VtexConnector implements StoreConnectorInterface
                 $offers[] = new ScrapedProductOfferDTO(
                     storeSlug: $store->slug,
                     productName: $productName,
-                    price: $priceUsd,
+                    price: $normalized['price_usd'],
                     currency: 'USD',
                     inStock: $inStock,
                     productUrl: $productUrl,
@@ -79,7 +83,9 @@ class VtexConnector implements StoreConnectorInterface
                     barcodeEan: !empty($barcode) && is_numeric($barcode) ? $barcode : null,
                     category: 'SKINCARE',
                     branchSlug: $branchSlug,
-                    priceVes: $priceVes
+                    priceVes: $normalized['price_ves'],
+                    priceLocal: $normalized['price_local'],
+                    currencyLocal: $normalized['currency_local']
                 );
             }
         } catch (\Throwable $e) {

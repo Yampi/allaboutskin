@@ -22,6 +22,7 @@ class StoreCountryDetectorService
         'PE' => ['name' => 'Perú', 'flag' => '🇵🇪', 'currency' => 'PEN'],
         'EC' => ['name' => 'Ecuador', 'flag' => '🇪🇨', 'currency' => 'USD'],
         'HN' => ['name' => 'Honduras', 'flag' => '🇭🇳', 'currency' => 'HNL'],
+        'DO' => ['name' => 'República Dominicana', 'flag' => '🇩🇴', 'currency' => 'DOP'],
         'SV' => ['name' => 'El Salvador', 'flag' => '🇸🇻', 'currency' => 'USD'],
         'IN' => ['name' => 'India', 'flag' => '🇮🇳', 'currency' => 'INR'],
         'CH' => ['name' => 'Suiza', 'flag' => '🇨🇭', 'currency' => 'CHF'],

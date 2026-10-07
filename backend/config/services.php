@@ -40,4 +40,31 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
     ],
 
+    'google_search' => [
+        'api_key' => env('GOOGLE_SEARCH_API_KEY'),
+        'cx' => env('GOOGLE_SEARCH_CX'),
+    ],
+
+    'serper' => [
+        'api_key' => env('SERPER_API_KEY'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_ADMIN_CHAT_ID'),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/api/v1/auth/google/callback'),
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/api/v1/auth/facebook/callback'),
+    ],
+
 ];
+

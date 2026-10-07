@@ -62,7 +62,7 @@ class WebStoreDiscoveryEngine
         protected ?MultiStoreCrawlerEngine $crawlerEngine = null,
         protected ?StoreCountryDetectorService $countryDetector = null
     ) {
-        $this->searchProvider = $searchProvider ?? new DuckDuckGoSearchProvider();
+        $this->searchProvider = $searchProvider ?? app(WebSearchProviderInterface::class);
         $this->detector = $detector ?? new StorePlatformDetectorService();
         $this->crawlerEngine = $crawlerEngine ?? app(MultiStoreCrawlerEngine::class);
         $this->countryDetector = $countryDetector ?? new StoreCountryDetectorService();

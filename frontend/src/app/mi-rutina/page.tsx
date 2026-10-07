@@ -4,27 +4,35 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Calendar as CalendarIcon,
   Sparkles,
-  CheckCircle2,
-  Plus,
-  Trash2,
-  Flame,
   ShieldCheck,
-  Sun,
-  Moon,
-  ArrowRight,
-  Settings,
-  Share2,
-  Copy,
-  Check,
-  Layers,
-  AlertTriangle,
   Activity,
   Bot,
+  AlertTriangle,
+  ArrowRight,
+  Plus,
+  Trash2,
+  Calendar,
+  CheckCircle2,
+  Info,
   Clock,
-  ShieldAlert,
-  Compass
+  Layers,
+  ChevronRight,
+  Sliders,
+  Check,
+  X,
+  RefreshCw,
+  Sun,
+  Moon,
+  Home,
+  HeartPulse,
+  Package,
+  Scan,
+  Store,
+  User,
+  Search,
+  Bell,
+  Flower2
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -40,76 +48,127 @@ import {
 import { SkinCyclingProtocol, UserRoutineProduct } from '@/types/skinCycling';
 import { generateCustomProtocol } from '@/lib/skinCyclingEngine';
 
-export default function MyRoutineDashboardPage() {
+// Swatches de fototipos Fitzpatrick I a VI
+const FITZPATRICK_SWATCHES = [
+  { type: 'I', label: 'Muy clara (se quema siempre, nunca broncea)', color: '#FBF0E4' },
+  { type: 'II', label: 'Clara (se quema con facilidad, broncea mínimo)', color: '#F3DCBE' },
+  { type: 'III', label: 'Morena clara (se quema moderadamente, broncea bien)', color: '#DFB28B' },
+  { type: 'IV', label: 'Morena (se quema mínimamente, broncea fácilmente)', color: '#BC865A' },
+  { type: 'V', label: 'Oscura (raramente se quema, broncea profusamente)', color: '#8D5832' },
+  { type: 'VI', label: 'Muy oscura (nunca se quema, altamente pigmentada)', color: '#4D2C1D' },
+];
+
+export default function MiPerfilDermatologicoPage() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
-  const [protocol, setProtocol] = useState<SkinCyclingProtocol | null>(null);
-  const [products, setProducts] = useState<UserRoutineProduct[]>([]);
-  const [dailyRoutine, setDailyRoutine] = useState<UserDailyRoutine | null>(null);
-  const [activeTab, setActiveTab] = useState<'WEEKLY' | 'DAILY'>('WEEKLY');
-  const [streakCount, setStreakCount] = useState<number>(0);
-  const [isAmDone, setIsAmDone] = useState<boolean>(false);
-  const [isPmDone, setIsPmDone] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'perfil' | 'rutina'>('perfil');
 
-  // AI Routine Audit State
-  const [aiRoutineAudit, setAiRoutineAudit] = useState<any | null>(null);
+  // Datos del Perfil Dermatológico (Vista 5 de Mockup)
+  const [biotipo, setBiotipo] = useState('Graso / Sensible');
+  const [biotipoChips, setBiotipoChips] = useState(['Graso', 'Sensible']);
+  const [fitzpatrick, setFitzpatrick] = useState('III');
+  const [tewlValue, setTewlValue] = useState(12.4);
+  const [tewlStatus, setTewlStatus] = useState('En rango normal');
+  
+  const [focosActivos, setFocosActivos] = useState([
+    { id: 'acne', label: 'Acné (leve)', color: 'bg-amber-500', text: 'text-amber-800' },
+    { id: 'poros', label: 'Poros dilatados', color: 'bg-purple-500', text: 'text-purple-800' },
+    { id: 'rojez', label: 'Enrojecimiento (leve)', color: 'bg-rose-500', text: 'text-rose-800' },
+    { id: 'manchas', label: 'Manchas post-acné', color: 'bg-amber-700', text: 'text-amber-900' },
+  ]);
+
+  const [historialAnalisis] = useState([
+    { date: '15 abr 2026', type: 'Escaneo facial', score: 78, status: 'Buena' },
+    { date: '02 mar 2026', type: 'Escaneo facial', score: 72, status: 'Estable' },
+    { date: '18 ene 2026', type: 'Escaneo facial', score: 68, status: 'Atención' },
+  ]);
+
+  const [recomendaciones] = useState([
+    'Mantener rutina de control de sebo y equilibrio lipídico',
+    'Usar activos calmantes de alta pureza (niacinamida 5%, cica)',
+    'Evitar sobre-exfoliación química o frotado abrasivo',
+    'Protección solar mineral o fluido ultraligero SPF 50+ diario',
+  ]);
+
+  // Modal para actualizar perfil
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [editBiotipo, setEditBiotipo] = useState(biotipo);
+  const [editFitzpatrick, setEditFitzpatrick] = useState(fitzpatrick);
+  const [editTewl, setEditTewl] = useState(tewlValue);
+
+  // Estados de productos y auditoría IA
+  const [products, setProducts] = useState<UserRoutineProduct[]>([]);
   const [isAiAuditingRoutine, setIsAiAuditingRoutine] = useState(false);
+  const [aiRoutineAudit, setAiRoutineAudit] = useState<any | null>(null);
   const [aiRoutineAuditError, setAiRoutineAuditError] = useState<string | null>(null);
 
-  // Share Routine Card State
-  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
-  const [isCopied, setIsCopied] = useState<boolean>(false);
-
-  // New Product Modal State
+  // Modal para agregar producto a rutina
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-  const [selectedPhase, setSelectedPhase] = useState<number>(1);
   const [newProductName, setNewProductName] = useState('');
   const [newProductBrand, setNewProductBrand] = useState('');
-  const [newProductCategory, setNewProductCategory] = useState<UserRoutineProduct['category']>('EXFOLIANT');
+  const [newProductCategory, setNewProductCategory] = useState<UserRoutineProduct['category']>('SERUM');
+  const [selectedPhase, setSelectedPhase] = useState<number>(2);
 
+  // Carga inicial
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
-
-    const savedData = getSavedCustomProtocol();
-    if (savedData && savedData.protocol) {
-      setProtocol(savedData.protocol);
-    } else {
-      const defaultProtocol = generateCustomProtocol({
-        skinType: 'COMBINATION',
-        fitzpatrick: 3,
-        barrierStatus: 'HEALTHY',
-        conditions: ['CLOGGED_PORES'],
-        pregnancyOrNursing: false,
-        experienceLevel: 'INTERMEDIATE',
-      });
-      setProtocol(defaultProtocol);
-    }
 
     const storedProducts = getStoredRoutineProducts();
     if (storedProducts && storedProducts.length > 0) {
       setProducts(storedProducts);
     } else {
-      setProducts([]);
+      setProducts([
+        { id: '1', productName: 'Gel Limpiador Espumoso', brand: 'CeraVe', category: 'CLEANSER', phaseId: 1 },
+        { id: '2', productName: 'Niacinamide 10% + Zinc 1%', brand: 'The Ordinary', category: 'SERUM', phaseId: 2 },
+        { id: '3', productName: 'Cicaplast Baume B5+', brand: 'La Roche-Posay', category: 'MOISTURIZER', phaseId: 3 },
+        { id: '4', productName: 'Fusion Water Magic SPF 50', brand: 'ISDIN', category: 'SPF', phaseId: 0 },
+      ]);
     }
 
-    const savedDaily = getSavedDailyRoutine();
-    if (savedDaily) {
-      setDailyRoutine(savedDaily);
-      if (savedDaily.isDailyFixed) {
-        setActiveTab('DAILY');
+    const savedProfile = localStorage.getItem('allabout_user_dermal_profile');
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.biotipo) setBiotipo(parsed.biotipo);
+        if (parsed.fitzpatrick) setFitzpatrick(parsed.fitzpatrick);
+        if (parsed.tewlValue) setTewlValue(parsed.tewlValue);
+        if (parsed.biotipoChips) setBiotipoChips(parsed.biotipoChips);
+      } catch (e) {
+        console.error(e);
       }
     }
   }, []);
 
-  const cycleLength = protocol?.cycleLength || 4;
+  const handleSaveProfile = () => {
+    setBiotipo(editBiotipo);
+    setFitzpatrick(editFitzpatrick);
+    setTewlValue(editTewl);
+    
+    // Determinar chips
+    const chips = [];
+    if (editBiotipo.toLowerCase().includes('graso')) chips.push('Graso');
+    if (editBiotipo.toLowerCase().includes('sensible')) chips.push('Sensible');
+    if (editBiotipo.toLowerCase().includes('seco')) chips.push('Seco');
+    if (editBiotipo.toLowerCase().includes('mixto')) chips.push('Mixto');
+    if (chips.length === 0) chips.push('Equilibrado');
+    setBiotipoChips(chips);
 
-  const today = new Date();
-  const dayOfYear = Math.floor(
-    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24
-  );
-  const currentNightIndex = (dayOfYear % cycleLength) + 1;
-  const currentNight = protocol?.nights.find((n) => n.nightNumber === currentNightIndex) || protocol?.nights[0];
+    const status = editTewl <= 14 ? 'En rango normal' : editTewl <= 20 ? 'Moderado' : 'Barrera comprometida';
+    setTewlStatus(status);
+
+    localStorage.setItem(
+      'allabout_user_dermal_profile',
+      JSON.stringify({
+        biotipo: editBiotipo,
+        fitzpatrick: editFitzpatrick,
+        tewlValue: editTewl,
+        biotipoChips: chips,
+      })
+    );
+
+    setIsUpdateModalOpen(false);
+  };
 
   const handleAddProduct = () => {
     if (!newProductName.trim()) return;
@@ -137,44 +196,6 @@ export default function MyRoutineDashboardPage() {
     setStoredRoutineProducts(updated);
   };
 
-  const getProductsForPhase = (phaseId: number) => {
-    return products.filter((p) => p.phaseId === phaseId);
-  };
-
-  const next7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(today.getDate() + i);
-    const futureDayOfYear = Math.floor(
-      (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24
-    );
-    const dayNightIndex = (futureDayOfYear % cycleLength) + 1;
-    const nightObj = protocol?.nights.find((n) => n.nightNumber === dayNightIndex);
-
-    return {
-      date,
-      dayName: i === 0 ? 'Hoy' : date.toLocaleDateString('es-ES', { weekday: 'short' }),
-      dayNumber: date.getDate(),
-      nightNumber: dayNightIndex,
-      category: nightObj?.category || 'RECOVERY',
-      title: nightObj?.title || `Noche ${dayNightIndex}`,
-      subtitle: nightObj?.subtitle || '',
-      isToday: i === 0,
-    };
-  });
-
-  const getCategoryLabel = (cat: UserRoutineProduct['category']) => {
-    switch (cat) {
-      case 'CLEANSER': return 'Limpiador';
-      case 'TONER': return 'Tónico / Bruma';
-      case 'SERUM': return 'Suero';
-      case 'EXFOLIANT': return 'Exfoliante';
-      case 'RETINOID': return 'Retinoide';
-      case 'MOISTURIZER': return 'Hidratante';
-      case 'SPF': return 'Protector Solar';
-      default: return 'Producto';
-    }
-  };
-
   const handleRunAiRoutineAudit = async () => {
     if (products.length === 0) {
       setAiRoutineAuditError('Añade al menos un producto a tu rutina para poder auditarla.');
@@ -191,361 +212,674 @@ export default function MyRoutineDashboardPage() {
         category: p.category,
       }));
 
-      const audit = await auditFullRoutineAi(routinePayload, dailyRoutine?.skinType || 'COMBINATION');
+      const audit = await auditFullRoutineAi(routinePayload, biotipo.includes('Graso') ? 'OILY' : 'COMBINATION');
       setAiRoutineAudit(audit);
     } catch (err: any) {
-      setAiRoutineAuditError(err?.message || 'Error al conectar con la IA de Gemini.');
+      setAiRoutineAuditError(err?.message || 'Error al conectar con el motor de IA de Gemini.');
     } finally {
       setIsAiAuditingRoutine(false);
     }
   };
 
-  const currentMonthYear = today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const userName = user?.name || 'María González';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-10 animate-in fade-in">
+    <div className="w-full min-h-screen bg-[#FAFAF7] text-[#2D2825] py-8 pb-24 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in">
         
-        {/* Header Editorial */}
-        <div className="border-b border-[#ECE6DC] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        {/* ========================================================= */}
+        {/* TOPBAR / HERO DEL PERFIL DERMATOLÓGICO                    */}
+        {/* ========================================================= */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E8E1D7] pb-6">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-widest block">
-              Mi Rutina & Protocolo
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C1B1A] tracking-tight">
-              Mi Calendario de Skin Cycling
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E6F4EC] text-[#2E7D5B] text-xs font-bold uppercase tracking-wider mb-1 border border-[#D5E2DB]">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Biometría & Diagnóstico Clínico</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#2D2825] tracking-tight">
+              Mi perfil dermatológico
             </h1>
-            <p className="text-xs text-[#66615C]">
-              Protocoliza tus noches, siente la diferencia...
+            <p className="text-sm text-[#66615C]">
+              Tu información personalizada para una rutina más efectiva.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Streak */}
-            <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#ECE6DC] px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#1C1B1A] shadow-2xs">
-              <Flame className="w-3.5 h-3.5 text-[#B89B7D]" />
-              <span>{streakCount} días en racha</span>
+          <div className="flex items-center gap-3">
+            {/* Selector de Pestañas Perfil vs Rutina */}
+            <div className="flex bg-[#EFECE6] p-1 rounded-full border border-[#E8E1D7]">
+              <button
+                type="button"
+                onClick={() => setActiveTab('perfil')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition cursor-pointer ${
+                  activeTab === 'perfil'
+                    ? 'bg-white text-[#2E7D5B] shadow-2xs'
+                    : 'text-[#66615C] hover:text-[#2D2825]'
+                }`}
+              >
+                Perfil Clínico
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rutina')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition cursor-pointer ${
+                  activeTab === 'rutina'
+                    ? 'bg-white text-[#2E7D5B] shadow-2xs'
+                    : 'text-[#66615C] hover:text-[#2D2825]'
+                }`}
+              >
+                Mis Productos ({products.length})
+              </button>
             </div>
 
-            {/* AI Audit Action */}
+            {/* Botón Actualizar Perfil (Mockup Vista 5) */}
             <button
               type="button"
-              onClick={handleRunAiRoutineAudit}
-              disabled={isAiAuditingRoutine}
-              className="inline-flex items-center gap-1.5 bg-[#2D4A3E] hover:bg-[#2A3B32] disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-full transition active:scale-95 cursor-pointer"
+              onClick={() => {
+                setEditBiotipo(biotipo);
+                setEditFitzpatrick(fitzpatrick);
+                setEditTewl(tewlValue);
+                setIsUpdateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white px-4 py-2 rounded-full text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
             >
-              {isAiAuditingRoutine ? (
-                <>
-                  <Activity className="w-3 h-3 animate-spin" />
-                  <span>Auditando...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 text-[#A2BAAD]" />
-                  <span>Auditar con IA</span>
-                </>
-              )}
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Actualizar perfil</span>
             </button>
-
-            <Link
-              href="/rutinas/skin-cycling"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#66615C] hover:text-[#1C1B1A] bg-[#FFFFFF] px-3.5 py-1.5 rounded-full border border-[#ECE6DC] transition"
-            >
-              <Settings className="w-3 h-3" />
-              <span>Ajustar</span>
-            </Link>
-
-            <Link
-              href="/escaner?mode=ar-mask"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D4A3E] hover:text-[#1E332B] bg-[#EFF5F1] hover:bg-[#E2EDE5] px-3.5 py-1.5 rounded-full border border-[#4F6D60]/20 transition"
-              title="Aprende a masajear y aplicar tus productos en el rostro con AR o Mapa 2D"
-            >
-              <Compass className="w-3 h-3 text-[#4F6D60]" />
-              <span>Guía Facial (AR / 2D)</span>
-            </Link>
           </div>
         </div>
 
-        {/* AI ROUTINE AUDIT CARD (IF PRESENT) */}
-        {aiRoutineAuditError && (
-          <div className="bg-[#FDF2F0] border border-[#D97D75]/40 text-[#943C36] rounded-2xl p-4 flex items-start gap-3 text-xs font-medium">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{aiRoutineAuditError}</span>
-          </div>
-        )}
-
-        {aiRoutineAudit && (
-          <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-7 border border-[#ECE6DC] shadow-editorial space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-3">
-              <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-[#4F6D60]" />
-                <h3 className="font-serif font-bold text-sm text-[#1C1B1A]">
-                  Diagnóstico Clínico de tu Rutina
-                </h3>
-              </div>
-              <span className="text-xs font-bold text-[#2D4A3E] bg-[#EFF5F1] px-3 py-0.5 rounded-full">
-                Seguridad {aiRoutineAudit.routineSafetyScore}%
-              </span>
-            </div>
-
-            <p className="text-xs sm:text-sm text-[#1C1B1A] leading-relaxed">
-              {aiRoutineAudit.verdict}
-            </p>
-
-            {aiRoutineAudit.severeConflicts && aiRoutineAudit.severeConflicts.length > 0 && (
-              <div className="p-3.5 bg-[#FDF2F0] border border-[#D97D75]/40 rounded-xl space-y-1 text-xs text-[#943C36]">
-                <span className="font-bold">⚠️ Precauciones detectadas:</span>
-                {aiRoutineAudit.severeConflicts.map((c: any, i: number) => (
-                  <p key={i}>{c.productsInvolved?.join(' + ')}: {c.risk}. <em>{c.actionableFix}</em></p>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 7-DAY MINIMALIST EDITORIAL CALENDAR */}
-        <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-7 border border-[#ECE6DC] shadow-editorial space-y-5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-serif font-bold text-base text-[#1C1B1A]">
-              Próximos 7 días
-            </h3>
-            <div className="flex items-center gap-3 text-[11px] text-[#736E67]">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#B89B7D]" /> Exfoliación
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#4F6D60]" /> Retinoide
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#ECE6DC]" /> Recuperación
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center">
-            {next7Days.map((day, idx) => {
-              const pillColor = day.category === 'EXFOLIATION' ? 'bg-[#B89B7D] text-white' :
-                               day.category === 'RETINOID' ? 'bg-[#4F6D60] text-white' : 'bg-[#DCD5CA] text-[#1C1B1A]';
-              return (
-                <div
-                  key={idx}
-                  className={`p-4 rounded-xl transition-all flex flex-col items-center justify-center gap-1.5 ${
-                    day.isToday
-                      ? 'bg-[#2D4A3E] text-white shadow-xs border-[#2D4A3E]'
-                      : 'bg-[#FFFFFF] text-[#1C1B1A] border border-[#ECE6DC] shadow-sm'
-                  }`}
-                >
-                  <span className="text-2xl font-serif font-bold leading-none">
-                    {day.dayNumber}
+        {/* ========================================================= */}
+        {/* VISTA 5 MOCKUP: 6 TARJETAS DERMATOLÓGICAS                 */}
+        {/* ========================================================= */}
+        {activeTab === 'perfil' && (
+          <div className="space-y-6">
+            
+            {/* FILA 1: 3 TARJETAS SUPERIORES */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* TARJETA 1: BIOTIPO DE PIEL (BAUMANN) */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                    Biotipo de piel (Baumann)
                   </span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${day.isToday ? 'text-[#A2BAAD]' : 'text-[#99938B]'}`}>
-                    {day.dayName}
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#2D2825] tracking-tight">
+                    {biotipo}
+                  </div>
+                  <p className="text-xs text-[#66615C] leading-relaxed">
+                    Produce más sebo, es propensa a brillos y puede reaccionar a ciertos ingredientes.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  {biotipoChips.map((chip, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB] text-xs font-semibold shadow-2xs"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D5B]" />
+                      <span>{chip}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* TARJETA 2: FOTOTIPO (FITZPATRICK) */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                    Fototipo (Fitzpatrick)
                   </span>
-                  <div className={`px-2 py-0.5 mt-1 text-[9px] font-bold rounded-full ${pillColor}`}>
-                    {day.category === 'EXFOLIATION' ? 'Exfoliación' : day.category === 'RETINOID' ? 'Retinoide' : 'Recuperación'}
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#2D2825] tracking-tight">
+                    {fitzpatrick}
+                  </div>
+                  <p className="text-xs text-[#66615C] leading-relaxed">
+                    Piel morena clara, se quema moderadamente y broncea bien.
+                  </p>
+                </div>
+
+                {/* 6 Color Swatches */}
+                <div className="pt-2">
+                  <div className="flex items-center gap-2.5">
+                    {FITZPATRICK_SWATCHES.map((swatch) => {
+                      const isSelected = swatch.type === fitzpatrick;
+                      return (
+                        <button
+                          key={swatch.type}
+                          type="button"
+                          onClick={() => setFitzpatrick(swatch.type)}
+                          title={`Fototipo ${swatch.type}: ${swatch.label}`}
+                          className={`w-6 h-6 rounded-full border border-black/10 transition cursor-pointer relative ${
+                            isSelected
+                              ? 'ring-2 ring-[#2E7D5B] ring-offset-2 scale-110 shadow-xs'
+                              : 'hover:scale-105 opacity-80'
+                          }`}
+                          style={{ backgroundColor: swatch.color }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] text-[#8C827A] mt-2 block font-medium">
+                    Escala I a VI · Fototipo actual: Tipo {fitzpatrick}
+                  </span>
+                </div>
+              </div>
+
+              {/* TARJETA 3: ESTADO DE LA BARRERA */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                    Estado de la barrera
+                  </span>
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#2D2825] tracking-tight">
+                    TEWL: {tewlValue} g/m²h
+                  </div>
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E6F4EC] text-[#2E7D5B] text-xs font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D5B] animate-pulse" />
+                      {tewlStatus}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* ESTA NOCHE / HOY (CARD PRINCIPAL DESTACADA) */}
-        {currentNight && (
-          <div className="bg-[#FFFFFF] rounded-2xl p-6 sm:p-8 border border-[#4F6D60]/30 shadow-editorial space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#ECE6DC] pb-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[#4F6D60] uppercase tracking-wider">
-                  Esta Noche · Fase {currentNight.nightNumber}
-                </span>
-                <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#1C1B1A] flex items-center gap-2">
-                  <Moon className="w-5 h-5 text-[#2D4A3E]" />
-                  <span>{currentNight.title}</span>
-                </h2>
-                <p className="text-xs text-[#66615C]">
-                  {currentNight.clinicalRationale}
+                {/* Gauge bar de TEWL */}
+                <div className="pt-2 space-y-1.5">
+                  <div className="w-full bg-[#E8E1D7]/50 rounded-full h-2.5 overflow-hidden p-0.5 border border-[#E8E1D7]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#2E7D5B] to-[#10B981] transition-all duration-700"
+                      style={{ width: `${Math.min(100, Math.max(10, ((25 - tewlValue) / 25) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-[#8C827A] font-semibold">
+                    <span>Retención Óptima</span>
+                    <span>Pérdida transepidérmica baja</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* FILA 2: 3 TARJETAS INFERIORES */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* TARJETA 4: FOCOS ACTIVOS */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+                    <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                      Focos activos
+                    </span>
+                    <span className="text-xs font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full">
+                      {focosActivos.length} identificados
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {focosActivos.map((foco) => (
+                      <div
+                        key={foco.id}
+                        className="flex items-center gap-3 p-2.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7]/60"
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full ${foco.color} shrink-0 shadow-2xs`} />
+                        <span className="text-xs font-bold text-[#2D2825]">
+                          {foco.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsUpdateModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition"
+                  >
+                    <span>Editar focos clínicos</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* TARJETA 5: HISTORIAL DE ANÁLISIS */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+                    <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                      Historial de análisis
+                    </span>
+                    <Clock className="w-3.5 h-3.5 text-[#8C827A]" />
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {historialAnalisis.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7]/60 text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-[#2D2825]">{item.date}</div>
+                          <div className="text-[10px] text-[#8C827A]">{item.type}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-extrabold ${
+                            item.score >= 75
+                              ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB]'
+                              : item.score >= 70
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {item.score}/100
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Link
+                    href="/escaner"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition"
+                  >
+                    <span>Ver todos los análisis</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* TARJETA 6: RECOMENDACIONES */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+                    <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider block">
+                      Recomendaciones
+                    </span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#2E7D5B]" />
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {recomendaciones.map((rec, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5 text-xs text-[#2D2825] leading-relaxed">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D5B] mt-1.5 shrink-0" />
+                        <span>{rec}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Link
+                    href="/calendario"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition"
+                  >
+                    <span>Ver recomendaciones completas</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+            </div>
+
+            {/* BANNER INFERIOR DERMATOLÓGICO: CONEXIÓN CON ESCÁNER IA */}
+            <div className="bg-gradient-to-r from-[#1B3D32] to-[#2E7D5B] rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[#E6F4EC] text-xs font-bold uppercase tracking-wider border border-white/20">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Seguimiento Periódico</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+                  ¿Quieres evaluar tu evolución dérmica hoy?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#E6F4EC]/90 max-w-xl">
+                  Realiza un escaneo clínico con tu cámara o sube una foto con luz natural. La IA detectará niveles de hidratación, poros y tolerancia.
                 </p>
               </div>
 
-              {/* AM & PM Quick Habit Check */}
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setIsAmDone(!isAmDone)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
-                    isAmDone
-                      ? 'bg-[#EFF5F1] text-[#2D4A3E] border border-[#4F6D60]/30'
-                      : 'bg-[#FAF8F5] text-[#66615C] border border-[#ECE6DC] hover:bg-[#F7F4EE]'
-                  }`}
+              <div className="flex items-center gap-3 shrink-0">
+                <Link
+                  href="/escaner"
+                  className="bg-white hover:bg-[#FAFAF7] text-[#1B3D32] px-6 py-3 rounded-full text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-2 active:scale-95"
                 >
-                  <Sun className="w-3.5 h-3.5" />
-                  <span>{isAmDone ? 'AM Completada' : 'AM Pendiente'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsPmDone(!isPmDone)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
-                    isPmDone
-                      ? 'bg-[#EFF5F1] text-[#2D4A3E] border border-[#4F6D60]/30'
-                      : 'bg-[#FAF8F5] text-[#66615C] border border-[#ECE6DC] hover:bg-[#F7F4EE]'
-                  }`}
-                >
-                  <Moon className="w-3.5 h-3.5" />
-                  <span>{isPmDone ? 'PM Completada' : 'PM Pendiente'}</span>
-                </button>
+                  <Scan className="w-4 h-4" />
+                  <span>Nuevo escaneo facial</span>
+                </Link>
               </div>
             </div>
 
-            {/* Application Guide */}
-            <div className="bg-[#FAF8F5] p-4 rounded-xl border border-[#ECE6DC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <span className="font-bold text-[#1C1B1A] block">Indicación de aplicación:</span>
-                <span className="text-[#66615C]">
-                  {currentNight.category === 'EXFOLIATION' ? 'Aplica sobre piel limpia y completamente seca. Espera 15 min antes de hidratar.' :
-                   currentNight.category === 'RETINOID' ? 'Aplica una cantidad del tamaño de un guisante después de tu hidratante ligera (técnica sándwich si tu piel es sensible).' :
-                   'Enfócate en lípidos de barrera: ceramidas, pantenol y ácido hialurónico sobre piel húmeda.'}
-                </span>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* PRODUCT INVENTORY BY PHASE */}
-        <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
-                Tus Cosméticos en Uso
-              </h3>
-              <p className="text-xs text-[#66615C]">
-                Fórmulas registradas en tu tocador dérmico
-              </p>
+        {/* ========================================================= */}
+        {/* PESTAÑA 2: PRODUCTOS EN USO & AUDITORÍA IA               */}
+        {/* ========================================================= */}
+        {activeTab === 'rutina' && (
+          <div className="space-y-6">
+            
+            {/* Header de Gestión de Productos */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#E8E1D7] shadow-2xs">
+              <div className="space-y-1">
+                <h2 className="text-lg font-bold text-[#2D2825]">
+                  Productos en tu Tocador Digital
+                </h2>
+                <p className="text-xs text-[#66615C]">
+                  Organiza las fórmulas que aplicas durante tus fases de Skin Cycling y detecta incompatibilidades químicas.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddProductOpen(true)}
+                  className="inline-flex items-center gap-1.5 bg-[#E6F4EC] hover:bg-[#D5E2DB] text-[#2E7D5B] px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Agregar Producto</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRunAiRoutineAudit}
+                  disabled={isAiAuditingRoutine}
+                  className="inline-flex items-center gap-1.5 bg-[#2E7D5B] hover:bg-[#1B3D32] disabled:opacity-50 text-white px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer"
+                >
+                  {isAiAuditingRoutine ? (
+                    <>
+                      <Activity className="w-3.5 h-3.5 animate-spin" />
+                      <span>Auditando con Gemini...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Auditar con IA</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsAddProductOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-[#4F6D60] hover:bg-[#3D5B4E] text-white text-xs font-semibold px-4 py-2 rounded-xl transition active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Añadir Producto</span>
-            </button>
-          </div>
+            {/* Error de Auditoría IA */}
+            {aiRoutineAuditError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-start gap-3 text-xs font-medium">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                <span>{aiRoutineAuditError}</span>
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {protocol?.nights.map((night) => {
-              const phaseProducts = getProductsForPhase(night.nightNumber);
-              return (
+            {/* Resultados de Auditoría IA */}
+            {aiRoutineAudit && (
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E1D7] shadow-xs space-y-4 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-[#2E7D5B]" />
+                    <h3 className="font-bold text-sm text-[#2D2825]">
+                      Diagnóstico Clínico de Fórmulas por IA
+                    </h3>
+                  </div>
+                  <span className="text-xs font-bold text-[#2E7D5B] bg-[#E6F4EC] px-3 py-1 rounded-full border border-[#D5E2DB]">
+                    Seguridad {aiRoutineAudit.routineSafetyScore || 95}%
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-[#2D2825] leading-relaxed">
+                  {aiRoutineAudit.verdict}
+                </p>
+
+                {aiRoutineAudit.severeConflicts && aiRoutineAudit.severeConflicts.length > 0 && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5 text-xs text-amber-900">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      Precauciones detectadas entre activos:
+                    </span>
+                    {aiRoutineAudit.severeConflicts.map((c: any, i: number) => (
+                      <p key={i} className="pl-5">
+                        • {c.productsInvolved?.join(' + ')}: {c.risk}. <em className="font-medium text-amber-800">{c.actionableFix}</em>
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Grid de Productos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {products.map((p) => (
                 <div
-                  key={night.nightNumber}
-                  className="bg-[#FFFFFF] rounded-2xl p-5 border border-[#ECE6DC] shadow-editorial space-y-3"
+                  key={p.id}
+                  className="bg-white rounded-2xl p-4 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-3"
                 >
-                  <div className="flex items-center justify-between border-b border-[#ECE6DC] pb-2">
-                    <span className="text-xs font-serif font-bold text-[#1C1B1A]">
-                      Noche {night.nightNumber} · {night.title}
-                    </span>
-                    <span className="text-[10px] text-[#99938B] font-semibold">
-                      {phaseProducts.length} {phaseProducts.length === 1 ? 'producto' : 'productos'}
-                    </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                        {p.category}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProduct(p.id)}
+                        className="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer"
+                        title="Eliminar de mi tocador"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="font-bold text-xs text-[#2D2825] pt-1">
+                      {p.productName}
+                    </div>
+                    {p.brand && (
+                      <div className="text-[10px] text-[#66615C]">
+                        {p.brand}
+                      </div>
+                    )}
                   </div>
 
-                  {phaseProducts.length > 0 ? (
-                    <div className="space-y-2">
-                      {phaseProducts.map((p) => (
-                        <div
-                          key={p.id}
-                          className="bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC] flex items-center justify-between gap-2"
-                        >
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-[#1C1B1A] block truncate">{p.productName}</span>
-                            <span className="text-[10px] text-[#99938B] block">{p.brand || getCategoryLabel(p.category)}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProduct(p.id)}
-                            className="text-[#99938B] hover:text-[#943C36] p-1 transition cursor-pointer"
-                            title="Eliminar producto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-[#99938B] italic py-2">Sin productos asignados a esta noche.</p>
-                  )}
+                  <div className="pt-2 border-t border-[#F0ECE1] flex items-center justify-between text-[10px] text-[#8C827A]">
+                    <span>Fase asignada:</span>
+                    <span className="font-bold text-[#2E7D5B]">
+                      {p.phaseId === 0 ? 'Rutina AM' : `Noche ${p.phaseId}`}
+                    </span>
+                  </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
           </div>
-        </div>
+        )}
 
-      {/* MODAL: AÑADIR PRODUCTO */}
-      {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 bg-[#1C1B1A]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#FFFFFF] rounded-2xl shadow-editorial-elevated border border-[#ECE6DC] w-full max-w-md p-6 space-y-4">
-            <h3 className="text-base font-serif font-bold text-[#1C1B1A]">
-              Añadir cosmético a tu rutina
-            </h3>
+      </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-[#66615C] block mb-1">Nombre del cosmético *</label>
-                <input
-                  type="text"
-                  value={newProductName}
-                  onChange={(e) => setNewProductName(e.target.value)}
-                  placeholder="ej: Retinol 0.3% en Escualano"
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
-                />
+      {/* ========================================================= */}
+      {/* MODAL: ACTUALIZAR PERFIL DERMATOLÓGICO                    */}
+      {/* ========================================================= */}
+      {isUpdateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-[#E8E1D7] shadow-xl space-y-6 relative">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-4">
+              <div className="space-y-0.5">
+                <h3 className="text-lg font-bold text-[#2D2825]">
+                  Actualizar Perfil Dermatológico
+                </h3>
+                <p className="text-xs text-[#66615C]">
+                  Ajusta los parámetros para recalibrar tus recomendaciones.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsUpdateModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2D2825] transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div>
-                <label className="text-xs font-semibold text-[#66615C] block mb-1">Marca o Laboratorio</label>
-                <input
-                  type="text"
-                  value={newProductBrand}
-                  onChange={(e) => setNewProductBrand(e.target.value)}
-                  placeholder="ej: The Ordinary"
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[#66615C] block mb-1">Fase / Noche de Uso</label>
+            <div className="space-y-4">
+              {/* Biotipo Baumann */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#2D2825]">
+                  Biotipo Dérmico
+                </label>
                 <select
-                  value={selectedPhase}
-                  onChange={(e) => setSelectedPhase(parseInt(e.target.value))}
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
+                  value={editBiotipo}
+                  onChange={(e) => setEditBiotipo(e.target.value)}
+                  className="w-full bg-[#FAFAF7] border border-[#E8E1D7] rounded-xl px-3 py-2 text-xs text-[#2D2825] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]"
                 >
-                  <option value={0}>☀️ Mañanas (AM)</option>
-                  <option value={1}>🌙 Noche 1: Exfoliación</option>
-                  <option value={2}>🌙 Noche 2: Retinoide</option>
-                  <option value={3}>🌙 Noche 3 & 4: Recuperación de Barrera</option>
+                  <option value="Graso / Sensible">Graso / Sensible (OSPW / OSPT)</option>
+                  <option value="Graso / Resistente">Graso / Resistente (ORPW / ORNT)</option>
+                  <option value="Seco / Sensible">Seco / Sensible (DSPW / DSPT)</option>
+                  <option value="Seco / Resistente">Seco / Resistente (DRPW / DRNT)</option>
+                  <option value="Mixto / Sensible">Mixto / Sensible</option>
+                  <option value="Normal / Equilibrado">Normal / Equilibrado</option>
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-[#66615C] block mb-1">Categoría</label>
-                <select
-                  value={newProductCategory}
-                  onChange={(e) => setNewProductCategory(e.target.value as any)}
-                  className="w-full bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl px-3.5 py-2 text-xs focus:bg-white focus:border-[#4F6D60] focus:outline-none"
-                >
-                  <option value="CLEANSER">Limpiador</option>
-                  <option value="SERUM">Sérum / Activo Concentrado</option>
-                  <option value="EXFOLIANT">Exfoliante Químico</option>
-                  <option value="RETINOID">Retinoide</option>
-                  <option value="MOISTURIZER">Crema Hidratante</option>
-                  <option value="SPF">Protector Solar</option>
-                </select>
+              {/* Fototipo Fitzpatrick */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#2D2825]">
+                  Fototipo (Fitzpatrick)
+                </label>
+                <div className="grid grid-cols-6 gap-2 pt-1">
+                  {FITZPATRICK_SWATCHES.map((s) => (
+                    <button
+                      key={s.type}
+                      type="button"
+                      onClick={() => setEditFitzpatrick(s.type)}
+                      className={`h-10 rounded-xl border flex flex-col items-center justify-center text-xs font-bold transition cursor-pointer ${
+                        editFitzpatrick === s.type
+                          ? 'border-[#2E7D5B] ring-2 ring-[#2E7D5B] shadow-2xs font-extrabold'
+                          : 'border-[#E8E1D7] opacity-80'
+                      }`}
+                      style={{ backgroundColor: s.color }}
+                    >
+                      <span className="text-[#2D2825] drop-shadow-xs">{s.type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* TEWL Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs font-bold text-[#2D2825]">
+                  <label>Pérdida Transepidérmica (TEWL)</label>
+                  <span className="text-[#2E7D5B]">{editTewl} g/m²h</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="35"
+                  step="0.5"
+                  value={editTewl}
+                  onChange={(e) => setEditTewl(parseFloat(e.target.value))}
+                  className="w-full accent-[#2E7D5B]"
+                />
+                <div className="flex justify-between text-[10px] text-[#8C827A]">
+                  <span>5 (Barrera hermética)</span>
+                  <span>14 (Límite normal)</span>
+                  <span>35 (Comprometida)</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#ECE6DC]">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E8E1D7]">
+              <button
+                type="button"
+                onClick={() => setIsUpdateModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-[#66615C] hover:text-[#2D2825] cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                className="px-5 py-2 text-xs font-bold bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full shadow-xs cursor-pointer transition active:scale-95"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: AGREGAR PRODUCTO A TOCADOR                         */}
+      {/* ========================================================= */}
+      {isAddProductOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-[#E8E1D7] shadow-xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <h3 className="text-base font-bold text-[#2D2825]">
+                Agregar Producto a tu Rutina
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsAddProductOpen(false)}
-                className="text-xs font-semibold text-[#66615C] px-3.5 py-1.5 rounded-full hover:bg-[#FAF8F5]"
+                className="text-[#8C827A] hover:text-[#2D2825] p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D2825]">Nombre del Producto</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Niacinamide 10% + Zinc 1%"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  className="w-full bg-[#FAFAF7] border border-[#E8E1D7] rounded-xl px-3 py-2 text-xs text-[#2D2825] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D2825]">Marca o Laboratorio</label>
+                <input
+                  type="text"
+                  placeholder="Ej. The Ordinary, CeraVe, ISDIN"
+                  value={newProductBrand}
+                  onChange={(e) => setNewProductBrand(e.target.value)}
+                  className="w-full bg-[#FAFAF7] border border-[#E8E1D7] rounded-xl px-3 py-2 text-xs text-[#2D2825] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D2825]">Categoría</label>
+                  <select
+                    value={newProductCategory}
+                    onChange={(e) => setNewProductCategory(e.target.value as any)}
+                    className="w-full bg-[#FAFAF7] border border-[#E8E1D7] rounded-xl px-3 py-2 text-xs text-[#2D2825] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]"
+                  >
+                    <option value="CLEANSER">Limpiador</option>
+                    <option value="TONER">Tónico</option>
+                    <option value="SERUM">Sérum</option>
+                    <option value="EXFOLIANT">Exfoliante</option>
+                    <option value="RETINOID">Retinoide</option>
+                    <option value="MOISTURIZER">Hidratante</option>
+                    <option value="SPF">Protector Solar</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D2825]">Fase</label>
+                  <select
+                    value={selectedPhase}
+                    onChange={(e) => setSelectedPhase(parseInt(e.target.value, 10))}
+                    className="w-full bg-[#FAFAF7] border border-[#E8E1D7] rounded-xl px-3 py-2 text-xs text-[#2D2825] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]"
+                  >
+                    <option value={0}>Rutina AM (Día)</option>
+                    <option value={1}>Noche 1 (Exfoliación)</option>
+                    <option value={2}>Noche 2 (Retinoides)</option>
+                    <option value={3}>Noche 3 (Recuperación)</option>
+                    <option value={4}>Noche 4 (Recuperación)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E8E1D7]">
+              <button
+                type="button"
+                onClick={() => setIsAddProductOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-[#66615C] hover:text-[#2D2825] cursor-pointer"
               >
                 Cancelar
               </button>
@@ -553,14 +887,15 @@ export default function MyRoutineDashboardPage() {
                 type="button"
                 onClick={handleAddProduct}
                 disabled={!newProductName.trim()}
-                className="bg-[#4F6D60] hover:bg-[#3D5B4E] disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-xl"
+                className="px-5 py-2 text-xs font-bold bg-[#2E7D5B] hover:bg-[#1B3D32] disabled:opacity-50 text-white rounded-full shadow-xs cursor-pointer transition"
               >
-                Guardar
+                Agregar
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -19,7 +19,7 @@ class AdminScraperController extends Controller
     /**
      * Obtiene el estado actual del motor de scraping, métricas y últimos logs.
      */
-    public function status(): JsonResponse
+    public function status(Request $request): JsonResponse
     {
         $logPath = storage_path('logs/scraper.log');
         $logContent = '';
@@ -37,15 +37,35 @@ class AdminScraperController extends Controller
         $totalBranches = StoreBranch::count();
         $totalStores = AffiliateStore::count();
 
-        $recentOffers = ProductStoreOffer::with(['store', 'product.brand', 'product.ingredients', 'branch'])
-            ->latest('updated_at')
-            ->take(20)
+        $query = ProductStoreOffer::with(['store', 'product.brand', 'product.ingredients', 'branch'])
+            ->latest('updated_at');
+
+        $countryFilter = $request->query('country');
+        if (!empty($countryFilter) && $countryFilter !== 'ALL') {
+            $query->whereHas('store', function ($sq) use ($countryFilter) {
+                $sq->where('country_code', strtoupper($countryFilter));
+            });
+        }
+
+        $exchangeService = app(\App\Services\Currency\ExchangeRateService::class);
+
+        $recentOffers = $query->take(30)
             ->get()
-            ->map(function ($offer) {
+            ->map(function ($offer) use ($exchangeService) {
+                $store = $offer->store;
+                $countryCode = $store?->country_code ?? 'GLOBAL';
+                $countryName = $store?->country_name ?? 'Internacional';
+                $countryFlag = $store?->country_flag ?? '🌐';
+                $currencyLocal = $offer->currency_local ?: $exchangeService->getCurrencyForCountry($countryCode);
+                $priceLocal = (float) ($offer->price_local ?? $exchangeService->fromUsd((float) $offer->price, $currencyLocal));
+
                 return [
                     'id' => $offer->id,
-                    'store_name' => $offer->store->name ?? 'Tienda',
+                    'store_name' => $store->name ?? 'Tienda',
                     'branch_name' => $offer->branch->name ?? 'Catálogo General',
+                    'country_code' => $countryCode,
+                    'country_name' => $countryName,
+                    'country_flag' => $countryFlag,
                     'product_id' => $offer->product_id,
                     'product_name' => $offer->product->name ?? 'Producto',
                     'product_slug' => $offer->product->slug ?? null,
@@ -55,8 +75,12 @@ class AdminScraperController extends Controller
                     'barcode_ean' => $offer->product->barcode_ean ?? null,
                     'brand_name' => $offer->product?->brand?->name ?? 'N/A',
                     'price' => (float) $offer->price,
-                    'price_ves' => (float) ($offer->price_ves ?? 0),
-                    'currency' => $offer->currency,
+                    'price_ves' => $offer->price_ves !== null ? (float) $offer->price_ves : null,
+                    'price_local' => $priceLocal,
+                    'currency' => $offer->currency ?: 'USD',
+                    'currency_local' => $currencyLocal,
+                    'formatted_price_usd' => '$' . number_format((float) $offer->price, 2, '.', ',') . ' USD',
+                    'formatted_price_local' => $exchangeService->formatPrice($priceLocal, $currencyLocal),
                     'in_stock' => (bool) $offer->in_stock,
                     'product_url' => $offer->product_url,
                     'last_checked_at' => $offer->last_checked_at?->diffForHumans() ?? 'Reciente',

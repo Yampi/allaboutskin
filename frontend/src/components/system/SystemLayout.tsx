@@ -21,6 +21,7 @@ import {
   Activity,
   UserCheck,
   Building2,
+  FlaskConical,
 } from 'lucide-react';
 import { getCurrentUser, logoutUser, StoredUser, isUserAdmin } from '@/lib/api';
 
@@ -88,6 +89,14 @@ export default function SystemLayout({
     {
       group: 'Inventario & Ciencia',
       items: [
+        {
+          id: 'ingredients',
+          name: 'Componentes & Fichas INCI',
+          href: '/admin?tab=ingredients',
+          icon: FlaskConical,
+          badge: 'Ciencia',
+          active: pathname === '/admin' && effectiveSection === 'ingredients',
+        },
         {
           id: 'catalog',
           name: 'Catálogo & Precios USD/Bs',

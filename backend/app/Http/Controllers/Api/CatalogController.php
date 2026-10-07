@@ -16,7 +16,9 @@ class CatalogController extends Controller
      */
     public function ingredients(Request $request): JsonResponse
     {
-        $query = Ingredient::query()->with(['indications', 'pubmedStudies']);
+        $query = Ingredient::query()
+            ->with(['indications', 'pubmedStudies'])
+            ->withCount('products');
 
         if ($request->filled('q')) {
             $search = $request->q;
@@ -31,10 +33,31 @@ class CatalogController extends Controller
             $query->where('is_active', true);
         }
 
+        if ($request->filled('evidence_level')) {
+            $query->where('evidence_level', strtoupper($request->evidence_level));
+        }
+
+        if ($request->filled('timing')) {
+            $timing = strtoupper($request->timing);
+            $query->where(function ($q) use ($timing) {
+                $q->where('recommended_timing', $timing)
+                  ->orWhere('recommended_timing', 'BOTH');
+            });
+        }
+
         if ($request->filled('indication')) {
             $query->whereHas('indications', function ($q) use ($request) {
                 $q->where('slug', $request->indication);
             });
+        }
+
+        $sortBy = $request->query('sort_by', 'inci_name');
+        $order = strtolower($request->query('order', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        if (in_array($sortBy, ['inci_name', 'common_name', 'evidence_level', 'comedogenic_rating', 'irritation_rating', 'products_count'])) {
+            $query->orderBy($sortBy, $order);
+        } else {
+            $query->orderBy('inci_name', 'asc');
         }
 
         $ingredients = $query->paginate($request->integer('per_page', 20));

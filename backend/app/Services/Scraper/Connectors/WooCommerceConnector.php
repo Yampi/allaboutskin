@@ -47,25 +47,27 @@ class WooCommerceConnector implements StoreConnectorInterface
                         $divisor = pow(10, $minorUnit);
                         $priceValue = $divisor > 0 ? $rawPrice / $divisor : $rawPrice;
 
-                        $storeCurrency = $this->exchangeRateService->getCurrencyForCountry($store->country_code);
-                        $currencyCode = strtoupper($prices['currency_code'] ?? $storeCurrency);
-                        $priceUsd = $this->exchangeRateService->toUsd($priceValue, $currencyCode);
-                        $priceVes = ($currencyCode === 'VES' || $currencyCode === 'BS') ? $priceValue : null;
+                        $currencyCode = strtoupper($prices['currency_code'] ?? '');
+                        $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                            rawPrice: $priceValue,
+                            currency: $currencyCode,
+                            countryCode: $store->country_code
+                        );
 
                         $inStock = (bool) ($item['is_in_stock'] ?? true);
 
                         $offers[] = new ScrapedProductOfferDTO(
                             storeSlug: $store->slug,
                             productName: html_entity_decode($name, ENT_QUOTES | ENT_HTML5),
-                            price: $priceUsd,
+                            price: $normalized['price_usd'],
                             currency: 'USD',
                             inStock: $inStock,
                             productUrl: $permalink,
                             brandName: $store->name,
                             category: 'SKINCARE',
-                            priceVes: $priceVes,
-                            priceLocal: $priceValue,
-                            currencyLocal: $currencyCode
+                            priceVes: $normalized['price_ves'],
+                            priceLocal: $normalized['price_local'],
+                            currencyLocal: $normalized['currency_local']
                         );
                     }
 
@@ -93,25 +95,30 @@ class WooCommerceConnector implements StoreConnectorInterface
                             $fullUrl = str_starts_with($link, 'http') ? $link : $baseUrl . $link;
                             $title = html_entity_decode(trim($tm[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-                            $priceVes = null;
+                            $rawVes = null;
                             if (preg_match('/<bdi>.*?Bs\.\s*<\/span>\s*([0-9.,]+)<\/bdi>/is', $p, $prm)) {
-                                $rawVes = str_replace('.', '', trim($prm[1]));
-                                $rawVes = (float) str_replace(',', '.', $rawVes);
-                                $priceVes = $rawVes > 0 ? $rawVes : null;
+                                $rawVes = app(\App\Services\Currency\PriceNormalizerService::class)->parseAmount($prm[1], 'VES', 'VE');
                             }
 
-                            $priceUsd = $priceVes ? $this->exchangeRateService->vesToUsd($priceVes) : 15.00;
+                            $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                                rawPrice: $rawVes,
+                                currency: 'VES',
+                                countryCode: $store->country_code,
+                                rawVes: $rawVes
+                            );
 
                             $offers[] = new ScrapedProductOfferDTO(
                                 storeSlug: $store->slug,
                                 productName: $title,
-                                price: $priceUsd,
+                                price: $normalized['price_usd'],
                                 currency: 'USD',
                                 inStock: true,
                                 productUrl: $fullUrl,
                                 brandName: $store->name,
                                 category: 'SKINCARE',
-                                priceVes: $priceVes
+                                priceVes: $normalized['price_ves'],
+                                priceLocal: $normalized['price_local'],
+                                currencyLocal: $normalized['currency_local']
                             );
                         }
                     }

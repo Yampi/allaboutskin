@@ -1,781 +1,641 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Sparkles,
-  ShieldCheck,
-  Calendar,
-  Scan,
-  Plus,
-  Moon,
-  Sun,
-  Flame,
-  Check,
-  CheckCircle2,
-  Trash2,
-  AlertTriangle,
-  ChevronRight,
   ArrowRight,
-  Search,
-  SlidersHorizontal,
-  Layers,
-  Microscope,
-  Maximize2,
-  Clock,
-  Droplets,
-  Activity,
-  Feather
+  Play,
+  Scan,
+  Calendar,
+  ShieldCheck,
+  TrendingUp,
+  MapPin,
+  Check,
+  Star,
+  ChevronRight,
+  CheckCircle2,
+  ExternalLink,
+  Apple,
+  ShoppingBag,
 } from 'lucide-react';
-import { useSkincare } from '@/context/SkincareContext';
-import IngredientDetailModal from '@/components/mobile/IngredientDetailModal';
-import ProfileModal from '@/components/mobile/ProfileModal';
-import MicroscopyModal from '@/components/mobile/MicroscopyModal';
-import { ActiveIngredient } from '@/components/mobile/types';
-import { activeIngredientsList } from '@/components/mobile/skincareData';
 
-export default function HomePage() {
-  const {
-    userProfile,
-    shelfItems,
-    conflicts,
-    activeNightData,
-    completeNightRitual,
-    removeProductFromShelf,
-    assignProductPhase,
-    updateProfile,
-    getProductsForPhase,
-  } = useSkincare();
-
-  const [selectedIngredient, setSelectedIngredient] = useState<ActiveIngredient | null>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isMicroscopyModalOpen, setIsMicroscopyModalOpen] = useState(false);
-  const [quickSearchQuery, setQuickSearchQuery] = useState('');
-  const [activeShelfFilter, setActiveShelfFilter] = useState<number | 'ALL'>('ALL');
-  const [celebrationToast, setCelebrationToast] = useState<string | null>(null);
-
-  // Biotypes summary
-  const facialBiotypes = [
-    {
-      id: 'mixta-grasa',
-      name: 'Piel Mixta / Grasa',
-      description: 'Control de sebo en zona T y afinamiento de poros.',
-      heroActives: ['Niacinamida 10%', 'Zinc PCA', 'Ácido Salicílico 2%'],
-      icon: Droplets,
-      accentColor: '#8FA89B',
-      isCurrent: userProfile.skinType?.includes('Mixta') || userProfile.skinType?.includes('Grasa'),
-    },
-    {
-      id: 'seca-deshidratada',
-      name: 'Piel Seca / Deshidratada',
-      description: 'Reposición lipídica y retención de agua transepidérmica.',
-      heroActives: ['Ceramidas NP', 'Ácido Hialurónico', 'Escualano'],
-      icon: Feather,
-      accentColor: '#4A6B5B',
-      isCurrent: userProfile.skinType?.includes('Seca'),
-    },
-    {
-      id: 'sensible-reactiva',
-      name: 'Piel Sensible / Reactiva',
-      description: 'Calmante vascular, refuerzo de barrera y alta tolerancia.',
-      heroActives: ['Centella Asiática (Cica)', 'Pantenol B5', 'Alantoína'],
-      icon: Activity,
-      accentColor: '#D8A899',
-      isCurrent: userProfile.skinType?.includes('Sensible'),
-    },
-    {
-      id: 'madura-renovacion',
-      name: 'Piel con Foto-Envejecimiento',
-      description: 'Recambio celular acelerado y síntesis de colágeno.',
-      heroActives: ['Retinol 0.3%', 'Vitamina C Pura', 'Ácido Glicólico'],
-      icon: Sun,
-      accentColor: '#DFCAAC',
-      isCurrent: userProfile.conditions?.includes('Foto-Envejecimiento'),
-    },
-  ];
-
-  const handleOpenIngredient = (slugOrName: string) => {
-    const found = activeIngredientsList.find(
-      (item) =>
-        item.id.toLowerCase().includes(slugOrName.toLowerCase()) ||
-        item.name.toLowerCase().includes(slugOrName.toLowerCase())
-    );
-    if (found) {
-      setSelectedIngredient(found);
-    }
-  };
-
-  const handleCompleteTonight = () => {
-    completeNightRitual(activeNightData.nightNumber);
-    setCelebrationToast(`¡Ritual de ${activeNightData.phaseName} registrado! Tu racha aumentó.`);
-    setTimeout(() => setCelebrationToast(null), 3500);
-  };
-
-  const filteredShelf = activeShelfFilter === 'ALL'
-    ? shelfItems
-    : shelfItems.filter((p) => p.assignedPhase === activeShelfFilter);
-
+export default function LandingPage() {
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-8 animate-in fade-in duration-300">
+    <div className="w-full bg-[#FAFAF7] text-[#2D2825] overflow-hidden">
       
-      {/* 1. ALERTA DE CONFLICTOS QUÍMICOS (SI EXISTEN EN EL NECESER) */}
-      {conflicts.length > 0 && (
-        <div className="space-y-3">
-          {conflicts.map((conflict) => (
-            <div
-              key={conflict.id}
-              className={`p-4 sm:p-5 rounded-[24px] glass-panel border flex items-start gap-4 shadow-lg animate-in slide-in-from-top-2 ${
-                conflict.severity === 'CRITICAL'
-                  ? 'bg-[#FAF0ED]/90 border-[#D8A899] text-[#943C36]'
-                  : 'bg-[#FAF5EE]/90 border-[#DFCAAC] text-[#7A5832]'
-              }`}
-            >
-              <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shrink-0 shadow-xs">
-                <AlertTriangle className="w-5 h-5 text-current" />
-              </div>
-              <div className="flex-1 text-[13px]">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white/90">
-                    Alerta Dermatológica
-                  </span>
-                  <h4 className="font-bold text-[16px]">
-                    {conflict.title}
-                  </h4>
-                </div>
-                <p className="mt-1 leading-relaxed opacity-95">
-                  {conflict.description}
-                </p>
-                <div className="mt-2 text-[12px] bg-white/80 p-2.5 rounded-[14px] font-medium inline-block">
-                  💡 <strong>Recomendación:</strong> {conflict.recommendation}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ========================================================= */}
+      {/* 1. HERO SECTION                                           */}
+      {/* ========================================================= */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 lg:pt-14 lg:pb-24">
+        
+        {/* Subtle decorative background organic shape */}
+        <div className="absolute top-12 right-6 w-96 h-96 lg:w-[540px] lg:h-[540px] bg-[#E6F4EC]/60 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      {/* 2. HERO SPLIT-SCREEN GLASSMÓRFICO: EVALUACIÓN + RITUAL DE HOY */}
-      <div className="glass-panel p-6 sm:p-8 lg:p-10 rounded-[32px] relative overflow-hidden shadow-2xl">
-        {/* Orbes de luz ambiental */}
-        <div className="absolute -top-24 -left-24 w-80 h-80 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-300/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           
-          {/* COLUMNA IZQUIERDA: "¿QUÉ VAMOS A EVALUAR HOY?" (lg:col-span-7) */}
-          <div className="lg:col-span-7 space-y-6 text-center">
+          {/* Columna Izquierda: Mensaje principal y CTAs */}
+          <div className="lg:col-span-7 space-y-8">
             
-            <div className="space-y-1.5 max-w-lg mx-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-900 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wider mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Auditoría Dermatológica con IA</span>
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Ciencia real para tu piel</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-extrabold tracking-tight text-slate-900 leading-tight">
-                ¿Qué vamos a evaluar hoy?
+
+              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-extrabold text-[#2D2825] tracking-tight leading-[1.12]">
+                Tu piel merece <br className="hidden sm:inline" />
+                <span className="text-[#2E7D5B]">más que marketing.</span>
               </h1>
-              <p className="text-sm sm:text-base text-slate-500 font-medium">
-                Elige una opción para comenzar
+
+              <p className="text-base sm:text-lg text-[#5D6B63] leading-relaxed max-w-xl font-normal">
+                En Allabout.skin combinamos ciencia dermatológica, inteligencia artificial y productos reales para que tomes decisiones informadas sobre tu piel.
               </p>
             </div>
 
-            {/* TARJETAS DE ACCIÓN CON ICONOS GRANDES Y CENTRADAS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-              
-              {/* Tarjeta 1: Escanear Producto */}
+            {/* CTAs */}
+            <div className="flex flex-wrap items-center gap-4 pt-1">
               <Link
-                href="/escaner?mode=product"
-                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-emerald-500/20 hover:border-emerald-500/50 flex flex-col items-center text-center transition duration-300"
+                href="/escaner"
+                className="px-7 py-3.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white font-bold text-sm shadow-md hover:shadow-lg transition flex items-center gap-2.5 group cursor-pointer"
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs">
-                  <svg className="w-12 h-12 sm:w-14 sm:h-14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="26" fill="#10B981" fillOpacity="0.12" />
-                    <rect x="7" y="23" width="28" height="22" rx="5" stroke="#1E3A2B" strokeWidth="2.4" fill="#FFFFFF" fillOpacity="0.9" />
-                    <path d="M14 23V19C14 17.8954 14.8954 17 16 17H22C23.1046 17 24 17.8954 24 19V23" stroke="#1E3A2B" strokeWidth="2.4" />
-                    <circle cx="21" cy="34" r="5.5" stroke="#1E3A2B" strokeWidth="2.4" fill="#E8F3EB" />
-                    <circle cx="21" cy="34" r="2.2" fill="#10B981" />
-                    <circle cx="12" cy="28" r="1.3" fill="#1E3A2B" />
-                    <rect x="42" y="14" width="8" height="6" rx="2" fill="#2E5540" />
-                    <rect x="44" y="9" width="4" height="5" rx="1.5" fill="#10B981" />
-                    <rect x="36" y="20" width="18" height="27" rx="5" stroke="#1E3A2B" strokeWidth="2.4" fill="#FFFFFF" />
-                    <rect x="39" y="31" width="12" height="13" rx="2" fill="#10B981" fillOpacity="0.25" />
-                    <line x1="41" y1="25.5" x2="49" y2="25.5" stroke="#2E5540" strokeWidth="1.8" strokeLinecap="round" />
-                    <line x1="41" y1="28.5" x2="47" y2="28.5" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d="M53 10L54 12.5L56.5 13.5L54 14.5L53 17L52 14.5L49.5 13.5L52 12.5L53 10Z" fill="#10B981" />
-                  </svg>
-                </div>
-                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-emerald-900 transition">
-                  <span>Escanear producto</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-emerald-700" />
-                </div>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
-                  Envase o lista INCI
-                </p>
+                <span>Comienza ahora</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
 
-              {/* Tarjeta 2: Analizar Piel */}
-              <Link
-                href="/escaner?mode=face"
-                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-amber-500/20 hover:border-amber-500/50 flex flex-col items-center text-center transition duration-300"
+              <a
+                href="#como-funciona"
+                className="px-6 py-3.5 rounded-full bg-white hover:bg-[#F2ECE4] border border-[#E8E1D7] text-[#2D2825] font-bold text-sm shadow-2xs transition flex items-center gap-2.5 cursor-pointer"
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs">
-                  <svg className="w-12 h-12 sm:w-14 sm:h-14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="26" fill="#F59E0B" fillOpacity="0.1" />
-                    <path d="M12 21V15C12 13.3431 13.3431 12 15 12H21" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
-                    <path d="M43 12H49C50.6569 12 52 13.3431 52 15V21" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
-                    <path d="M12 43V49C12 50.6569 13.3431 52 15 52H21" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
-                    <path d="M43 52H49C50.6569 52 52 50.6569 52 49V43" stroke="#B45309" strokeWidth="2.4" strokeLinecap="round" />
-                    <path d="M22 28C22 21 26 17 32 17C38 17 42 21 42 28C42 35 37 42 32 42C27 42 22 35 22 28Z" fill="#FFFBEB" stroke="#78350F" strokeWidth="2.2" />
-                    <path d="M22 25C24 20 28 18 32 18C37 18 40 21 42 24C39 21 34 21 32 23C30 25 25 24 22 25Z" fill="#78350F" />
-                    <circle cx="28" cy="28.5" r="1.5" fill="#78350F" />
-                    <circle cx="36" cy="28.5" r="1.5" fill="#78350F" />
-                    <path d="M29.5 34.5C30.8 35.8 33.2 35.8 34.5 34.5" stroke="#78350F" strokeWidth="1.8" strokeLinecap="round" />
-                    <path d="M30 42V45.5H34V42" stroke="#78350F" strokeWidth="2" />
-                    <path d="M20 52C21 47 25 45 28 45H36C39 45 43 47 44 52" stroke="#78350F" strokeWidth="2" strokeLinecap="round" fill="#FEF3C7" />
-                    <line x1="14" y1="30" x2="50" y2="30" stroke="#10B981" strokeWidth="2" strokeDasharray="2 3" strokeLinecap="round" />
-                    <circle cx="32" cy="30" r="3" fill="#10B981" fillOpacity="0.3" />
-                    <circle cx="32" cy="30" r="1.3" fill="#10B981" />
-                  </svg>
+                <div className="w-6 h-6 rounded-full bg-[#E6F4EC] flex items-center justify-center text-[#2E7D5B]">
+                  <Play className="w-3 h-3 fill-current ml-0.5" />
                 </div>
-                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-amber-900 transition">
-                  <span>Analizar piel</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-amber-700" />
-                </div>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
-                  Selfie con diagnóstico IA
-                </p>
-              </Link>
-
-              {/* Tarjeta 3: Mascarilla AR & Rutinas Guiadas (Filtro Social TikTok/IG) */}
-              <Link
-                href="/escaner?mode=ar-mask"
-                className="glass-action-card rounded-3xl p-5 sm:p-6 cursor-pointer relative group border border-teal-500/30 hover:border-teal-500/60 bg-gradient-to-b from-teal-500/5 to-emerald-500/10 flex flex-col items-center text-center transition duration-300"
-              >
-                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono text-[9px] font-bold uppercase tracking-wider">
-                  Filtro AR
-                </div>
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-300 shadow-xs text-teal-700">
-                  <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 group-hover:rotate-12 transition-transform" />
-                </div>
-                <div className="flex items-center justify-center gap-1 text-slate-900 font-bold text-base sm:text-lg group-hover:text-teal-900 transition">
-                  <span>Mascarilla Virtual</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition text-teal-700" />
-                </div>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">
-                  Desmaquillado y rutinas en vivo
-                </p>
-              </Link>
-
+                <span>Ver cómo funciona</span>
+              </a>
             </div>
 
-            {/* BUSCADOR INCI CENTRADO Y CHIPS FRECUENTES */}
-            <div className="pt-2 max-w-lg mx-auto w-full">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (quickSearchQuery.trim()) {
-                    window.location.href = `/escaner?q=${encodeURIComponent(quickSearchQuery)}`;
-                  }
-                }}
-                className="p-1.5 sm:p-2 rounded-full glass-subcard flex items-center gap-2 shadow-xs border border-white"
-              >
-                <div className="flex items-center gap-3 pl-4 w-full">
-                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={quickSearchQuery}
-                    onChange={(e) => setQuickSearchQuery(e.target.value)}
-                    placeholder="O escribe un cosmético o activo..."
-                    className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none py-1 font-medium"
-                  />
+            {/* 3 Badges de confianza en fila */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E8E1D7]">
+              <div className="flex items-center gap-2.5 text-xs text-[#2D2825] font-semibold bg-white p-2.5 rounded-2xl border border-[#E8E1D7] shadow-2xs">
+                <div className="w-7 h-7 rounded-xl bg-[#E6F4EC] text-[#2E7D5B] flex items-center justify-center shrink-0">
+                  <Scan className="w-3.5 h-3.5" />
                 </div>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-full text-xs font-bold text-white glass-button shrink-0 shadow-xs cursor-pointer"
-                >
-                  Buscar
-                </button>
-              </form>
+                <span>Análisis de piel con IA</span>
+              </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-3.5 text-xs">
-                <span className="font-bold text-[#1E3A2B] text-[11px]">Frecuentes:</span>
-                {['Niacinamida 10%', 'Retinol 0.3%', 'Ceramidas NP', 'Ácido Salicílico 2%'].map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      const key = tag.toLowerCase().includes('niacin') ? 'niacinamida' :
-                                  tag.toLowerCase().includes('retin') ? 'retinol' :
-                                  tag.toLowerCase().includes('salic') ? 'acido-salicilico' : 'ceramidas';
-                      handleOpenIngredient(key);
-                    }}
-                    className="px-3.5 py-1 rounded-full bg-white/70 hover:bg-white border border-white text-slate-600 hover:text-slate-900 transition cursor-pointer text-[11px] font-medium shadow-2xs"
-                  >
-                    {tag}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2.5 text-xs text-[#2D2825] font-semibold bg-white p-2.5 rounded-2xl border border-[#E8E1D7] shadow-2xs">
+                <div className="w-7 h-7 rounded-xl bg-[#E6F4EC] text-[#2E7D5B] flex items-center justify-center shrink-0">
+                  <Calendar className="w-3.5 h-3.5" />
+                </div>
+                <span>Rutina personalizada (Skin Cycling)</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-xs text-[#2D2825] font-semibold bg-white p-2.5 rounded-2xl border border-[#E8E1D7] shadow-2xs">
+                <div className="w-7 h-7 rounded-xl bg-[#E6F4EC] text-[#2E7D5B] flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+                <span>Productos verificados (INCI)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Mockup Visual con Foto y Cards Flotantes */}
+          <div className="lg:col-span-5 relative flex items-center justify-center">
+            
+            {/* Foto de rostro limpio con contenedor redondeado */}
+            <div className="relative w-full max-w-md aspect-4/5 rounded-[40px] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-tr from-[#E6F4EC] to-[#F5EBE1]">
+              <img
+                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
+                alt="Salud de la piel dermatológica"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+            </div>
+
+            {/* Card Flotante 1: Salud de la piel (Radial Gauge 78/100) */}
+            <div className="absolute -top-4 -left-4 sm:-left-6 bg-white/95 backdrop-blur-md border border-[#E8E1D7] rounded-3xl p-4 shadow-xl space-y-2 animate-in fade-in slide-in-from-left-4 duration-500 max-w-[170px]">
+              <span className="text-[11px] font-bold text-[#7E756F] block">
+                Tu salud de piel
+              </span>
+              <div className="flex flex-col items-center justify-center py-1">
+                <div className="relative w-16 h-16 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-[#E6F4EC]"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className="text-[#2E7D5B]"
+                      strokeDasharray="78, 100"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="text-sm font-extrabold text-[#2D2825] leading-none">
+                      78<span className="text-[9px] text-[#7E756F]">/100</span>
+                    </span>
+                  </div>
+                </div>
+                <span className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#2E7D5B] bg-[#E6F4EC] px-2.5 py-0.5 rounded-full">
+                  Buena
+                </span>
+              </div>
+            </div>
+
+            {/* Card Flotante 2: Biotipo & Focos Activos */}
+            <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-white/95 backdrop-blur-md border border-[#E8E1D7] rounded-3xl p-4 shadow-xl space-y-2.5 animate-in fade-in slide-in-from-right-4 duration-500 max-w-[210px]">
+              <div>
+                <span className="text-[11px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                  Tu biotipo
+                </span>
+                <p className="text-xs font-extrabold text-[#2D2825] mt-0.5">
+                  Baumann: Tipo 4 • Fototipo III
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-[#E8E1D7] space-y-1.5">
+                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                  Focos activos
+                </span>
+                <ul className="text-[11px] space-y-1 font-medium text-[#2D2825]">
+                  <li className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                    <span>Deshidratación leve</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                    <span>Poros dilatados</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                    <span>Manchas post-acné</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
           </div>
 
-          {/* COLUMNA DERECHA: RITUAL DE ESTA NOCHE (lg:col-span-5) */}
-          <div className="lg:col-span-5">
-            <div className="p-6 sm:p-7 rounded-[30px] glass-subcard relative overflow-hidden space-y-5 border border-white/80 shadow-lg">
-              
-              {/* Encabezado del Ritual */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-white/70">
-                <div className="flex items-center gap-3.5">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xs"
-                    style={{ backgroundColor: activeNightData.accentColor || '#1E3A2B' }}
-                  >
-                    <Moon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-emerald-900 block">
-                      Protocolo • Noche Activa {activeNightData.nightNumber} de 4
-                    </span>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
-                      {activeNightData.phaseName}: {activeNightData.phaseTitle}
-                    </h3>
-                    <span className="text-xs text-slate-500 font-medium block mt-0.5">
-                      {activeNightData.phaseName === 'Exfoliación' ? 'Renovación Dérmica & Exfoliación Química' : 'Fisiología y Cuidado Activo'}
-                    </span>
-                  </div>
-                </div>
+        </div>
+      </section>
 
-                <div className="text-right shrink-0">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold glass-panel text-[#1E3A2B] border border-white">
-                    <Flame className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{userProfile.cycleStreakDays} Días</span>
-                  </div>
-                </div>
+      {/* ========================================================= */}
+      {/* 2. CÓMO FUNCIONA (4 PASOS)                                */}
+      {/* ========================================================= */}
+      <section id="como-funciona" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 border-t border-[#E8E1D7]">
+        
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold uppercase tracking-wider">
+            <span>Cómo funciona</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#2D2825] tracking-tight">
+            Tu piel, paso a paso
+          </h2>
+          <p className="text-sm sm:text-base text-[#5D6B63] font-normal leading-relaxed">
+            Tecnología y ciencia trabajando para ti, desde el análisis hasta la rutina.
+          </p>
+        </div>
+
+        {/* 4 Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          {/* Paso 1: Analiza */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6 group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#E6F4EC] text-[#2E7D5B] flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
+                <Scan className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[#2D2825]">
+                1. Analiza
+              </h3>
+              <p className="text-xs sm:text-[13px] text-[#5D6B63] leading-relaxed">
+                Escanea tu piel o completa tu perfil para conocer tu biotipo, necesidades y estado actual.
+              </p>
+            </div>
+            <Link
+              href="/escaner"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] group-hover:gap-2.5 transition"
+            >
+              <span>Saber más</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Paso 2: Personaliza */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6 group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[#2D2825]">
+                2. Personaliza
+              </h3>
+              <p className="text-xs sm:text-[13px] text-[#5D6B63] leading-relaxed">
+                Recibe tu rutina de 4 noches (Skin Cycling) con productos compatibles y recomendaciones específicas.
+              </p>
+            </div>
+            <Link
+              href="/calendario"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] group-hover:gap-2.5 transition"
+            >
+              <span>Saber más</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Paso 3: Cuida */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6 group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[#2D2825]">
+                3. Cuida
+              </h3>
+              <p className="text-xs sm:text-[13px] text-[#5D6B63] leading-relaxed">
+                Sigue tu progreso, recibe alertas de PAO y reabastecimiento, y evita incompatibilidades moleculares.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/usuario"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] group-hover:gap-2.5 transition"
+            >
+              <span>Saber más</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Paso 4: Mejora */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6 group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[#2D2825]">
+                4. Mejora
+              </h3>
+              <p className="text-xs sm:text-[13px] text-[#5D6B63] leading-relaxed">
+                Tu piel evoluciona. Nuestra IA analiza tus resultados y ajusta la rutina para mejores resultados clínicos.
+              </p>
+            </div>
+            <Link
+              href="/mi-rutina"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] group-hover:gap-2.5 transition"
+            >
+              <span>Saber más</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* 3. PRODUCTOS Y TIENDAS (BENEFICIO COMERCIAL)              */}
+      {/* ========================================================= */}
+      <section className="bg-[#E6F4EC]/40 border-y border-[#D5E2DB] py-16 lg:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            
+            {/* Texto y CTA */}
+            <div className="lg:col-span-5 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold uppercase tracking-wider">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Productos y tiendas</span>
               </div>
 
-              {/* Cosméticos de esta noche */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold uppercase tracking-wide text-slate-500 text-[10.5px]">
-                    Cosméticos de esta noche:
-                  </span>
-                  <span className="text-slate-500 font-medium">
-                    ({activeNightData.products.length} {activeNightData.products.length === 1 ? 'fórmula' : 'fórmulas'})
-                  </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#2D2825] tracking-tight leading-tight">
+                Lo que necesitas, <br />
+                <span className="text-[#2E7D5B]">cerca de ti</span>
+              </h2>
+
+              <p className="text-sm sm:text-base text-[#5D6B63] leading-relaxed font-normal">
+                Encuentra tus productos en farmacias y tiendas de confianza en tu ciudad, al mejor precio y con stock en tiempo real.
+              </p>
+
+              <div>
+                <Link
+                  href="/tiendas"
+                  className="px-6 py-3.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white font-bold text-sm shadow-md transition inline-flex items-center gap-2 group cursor-pointer"
+                >
+                  <span>Explorar tiendas</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Mockup Interactivo de Producto + Tiendas Cercanas */}
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Card de Producto CeraVe */}
+              <div className="bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-lg flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-center p-4 bg-[#FAF8F5] rounded-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=300&q=80"
+                    alt="CeraVe Loción Hidratante"
+                    className="h-32 object-contain"
+                  />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#7E756F]">
+                      CeraVe
+                    </span>
+                    <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5" />
+                      89% Compatible
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[#2D2825]">
+                    Loción Hidratante
+                  </h4>
+                  <div className="flex items-baseline gap-2 pt-1">
+                    <span className="text-base font-extrabold text-[#2E7D5B]">
+                      $12.50
+                    </span>
+                    <span className="text-xs text-[#7E756F]">
+                      | Bs 652,50
+                    </span>
+                  </div>
                 </div>
 
-                {activeNightData.products.length === 0 ? (
-                  <div className="p-5 rounded-2xl glass-panel border border-dashed border-emerald-500/30 text-center space-y-2">
-                    <Layers className="w-6 h-6 text-emerald-700 mx-auto" />
-                    <h4 className="text-sm font-bold text-slate-900">
-                      Sin fórmulas para la {activeNightData.phaseName}
-                    </h4>
-                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                      Escanea el envase con la cámara o asígnalo desde tu estantería.
-                    </p>
-                    <Link
-                      href="/escaner?mode=product"
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white text-xs font-bold glass-button shadow-xs"
-                    >
-                      <Scan className="w-3.5 h-3.5" />
-                      <span>Escanear Producto</span>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {activeNightData.products.map((product) => (
-                      <div
-                        key={product.id}
-                        className="p-3.5 rounded-2xl glass-panel flex items-center justify-between gap-3 border border-white/80 hover:bg-white/80 transition"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-white shadow-2xs shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-500 block truncate">
-                              {product.brand}
-                            </span>
-                            <h4 className="text-sm font-bold text-slate-900 truncate">
-                              {product.name}
-                            </h4>
-                          </div>
-                        </div>
+                <Link
+                  href="/tiendas"
+                  className="w-full py-2.5 rounded-xl bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold text-center transition block shadow-2xs"
+                >
+                  Ver en tienda
+                </Link>
+              </div>
 
-                        <div className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-1.5 text-xs font-bold text-emerald-900 shadow-2xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span>{product.inciScore}% INCI</span>
+              {/* Card de Tiendas Cercanas */}
+              <div className="bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-lg flex flex-col justify-between space-y-4">
+                <div>
+                  <span className="text-xs font-bold text-[#2D2825] block mb-3">
+                    Tiendas cercanas con stock
+                  </span>
+                  
+                  <div className="space-y-2.5">
+                    
+                    {/* Tienda 1: Farmatodo */}
+                    <Link
+                      href="/tiendas"
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#F2ECE4] border border-[#E8E1D7] transition group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          F
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#2D2825] block group-hover:text-[#2E7D5B] transition">
+                            Farmatodo
+                          </span>
+                          <span className="text-[10px] text-[#7E756F]">
+                            2.1 km • <span className="text-[#2E7D5B] font-semibold">En stock</span>
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <ChevronRight className="w-4 h-4 text-[#7E756F] group-hover:translate-x-0.5 transition" />
+                    </Link>
 
-              {/* CTA Completar Ritual */}
-              <div className="pt-3 border-t border-white/70 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed font-medium">
-                    💡 Tu calendario avanza automáticamente a la siguiente fase.
-                  </p>
-                  <Link
-                    href="/calendario"
-                    className="text-xs font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1 whitespace-nowrap"
-                  >
-                    <span>Matriz 4 Fases</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCompleteTonight}
-                  className="w-full py-3.5 rounded-full text-xs sm:text-sm font-bold text-white glass-button transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                  <span>Completar Ritual de Esta Noche</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* 3. EXPEDIENTE DERMATOLÓGICO & BARRERA (2 COLUMNAS GLASSMÓRFICAS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        
-        {/* Columna 1: Expediente Cutáneo */}
-        <div className="glass-panel p-6 sm:p-7 border border-white/80 rounded-[28px] flex flex-col justify-between shadow-xl">
-          <div>
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block">
-                  Expediente Cutáneo Calibrado
-                </span>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
-                  {userProfile.name || 'Mi Perfil Dermatológico'}
-                </h3>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">
-                  Biotipo: <strong className="text-slate-800">{userProfile.skinType || 'Sin calibrar'}</strong>
-                </p>
-              </div>
-
-              <button
-                onClick={() => setIsProfileModalOpen(true)}
-                className="p-2.5 rounded-2xl glass-subcard text-[#1E3A2B] border border-white hover:bg-white transition shadow-xs cursor-pointer"
-                title="Ajustar Biotipo"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {userProfile.conditions?.map((cond, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 rounded-full glass-subcard border border-white text-[11px] text-slate-700 font-medium"
-                >
-                  {cond}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-white/60 grid grid-cols-2 gap-3 text-center">
-            <div className="p-3.5 rounded-2xl glass-subcard border border-white/80">
-              <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
-                Racha en Curso
-              </span>
-              <span className="text-lg font-bold text-emerald-900">
-                {userProfile.cycleStreakDays} Días Activos
-              </span>
-            </div>
-            <div className="p-3.5 rounded-2xl glass-subcard border border-white/80">
-              <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
-                Adherencia 4 Fases
-              </span>
-              <span className="text-lg font-bold text-emerald-900">
-                {userProfile.cycleStreakDays > 0 ? '96% (Óptima)' : 'Sin iniciar'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Columna 2: Barrera Lipídica & Microscopía */}
-        <div
-          onClick={() => setIsMicroscopyModalOpen(true)}
-          className="glass-panel p-6 sm:p-7 border border-white/80 rounded-[28px] flex flex-col justify-between hover:border-emerald-500/40 hover:shadow-2xl transition cursor-pointer group shadow-xl"
-        >
-          <div>
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block">
-                  ESTADO DE BARRERA EPIDÉRMICA
-                </span>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
-                  {userProfile.barrierStatus || 'Barrera Estable'}
-                </h3>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">
-                  Pérdida Transepidérmica (TEWL): <strong className="text-emerald-800">{userProfile.tewlScore || '8.4 g/m²h (Óptimo)'}</strong>
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-900 group-hover:scale-110 transition shadow-xs">
-                <Maximize2 className="w-4 h-4" />
-              </div>
-            </div>
-
-            <p className="text-[12.5px] text-slate-600 mt-3 leading-relaxed font-medium">
-              Manto hidrolipídico íntegro con ratio fisiológico óptimo de ceramidas, colesterol y ácidos grasos libres.
-            </p>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-white/60 flex items-center gap-3.5">
-            <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-emerald-500/30 shrink-0 shadow-xs">
-              <img
-                src="/stratum-corneum-microscopy.jpg"
-                alt="Microscopía Estrato Córneo"
-                className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-              />
-            </div>
-            <div className="text-[12px]">
-              <span className="font-bold text-emerald-900 block group-hover:underline">
-                Abrir Ficha Óptica del Estrato Córneo &gt;
-              </span>
-              <span className="text-slate-500 text-[11px] font-medium">
-                Validado con espectrometría lipídica y biomarcadores
-              </span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 4. SECCIÓN: TU NECESER INTELIGENTE (ESTANTERÍA ACTIVA) */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-emerald-800" />
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                Tu Neceser Inteligente
-              </h3>
-            </div>
-            <p className="text-[12.5px] text-slate-500 font-medium">
-              Fórmulas verificadas con base oficial CosIng UE asignadas a tu rutina
-            </p>
-          </div>
-
-          {/* Phase Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {[
-              { id: 'ALL', label: 'Todos' },
-              { id: 1, label: 'N1: Exfoliación' },
-              { id: 2, label: 'N2: Retinoides' },
-              { id: 3, label: 'N3-4: Recuperación' },
-              { id: 0, label: 'AM: Día' },
-            ].map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setActiveShelfFilter(f.id as any)}
-                className={`px-3.5 py-1.5 rounded-full text-[11.5px] font-semibold transition cursor-pointer border ${
-                  activeShelfFilter === f.id
-                    ? 'glass-button text-white shadow-xs'
-                    : 'glass-subcard text-slate-600 border-white hover:text-slate-900'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Shelf Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-          {/* Card: Escanear Nuevo Producto */}
-          <Link
-            href="/escaner?mode=product"
-            className="glass-subcard p-4 border-2 border-dashed border-emerald-500/30 rounded-[24px] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/80 transition min-h-[220px] group shadow-xs"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-900 shadow-xs mb-2 group-hover:scale-110 transition">
-              <Scan className="w-5 h-5" />
-            </div>
-            <span className="text-sm font-bold text-slate-900">
-              Escanear Nuevo
-            </span>
-            <span className="text-[11px] text-slate-500 font-medium mt-0.5">
-              Cámara AR / INCI
-            </span>
-          </Link>
-
-          {filteredShelf.map((product) => (
-            <div
-              key={product.id}
-              className="glass-panel p-3.5 border border-white/80 rounded-[24px] flex flex-col justify-between group hover:border-emerald-500/40 hover:shadow-xl transition"
-            >
-              <div>
-                <div className="relative h-28 w-full rounded-[16px] overflow-hidden bg-white/60 border border-white mb-2.5">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs text-emerald-900 text-[9.5px] font-bold shadow-2xs">
-                    {product.inciScore}% INCI
-                  </span>
-                </div>
-
-                <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block truncate">
-                  {product.brand}
-                </span>
-
-                <h4 className="text-xs sm:text-[13px] font-bold text-slate-900 line-clamp-1 mt-0.5">
-                  {product.name}
-                </h4>
-
-                {/* Phase Selection Dropdown */}
-                <div className="mt-2">
-                  <select
-                    value={product.assignedPhase}
-                    onChange={(e) => assignProductPhase(product.id, parseInt(e.target.value))}
-                    className="w-full text-[10.5px] font-semibold bg-white/80 border border-white/90 rounded-xl px-2 py-1 text-emerald-950 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  >
-                    <option value={0}>☀️ Rutina AM (Día)</option>
-                    <option value={1}>🌙 Noche 1: Exfoliación</option>
-                    <option value={2}>🌙 Noche 2: Retinoide</option>
-                    <option value={3}>🌙 Noche 3: Recuperación</option>
-                    <option value={4}>🌙 Noche 4: Recuperación</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-white/60 flex items-center justify-between text-[11px] text-slate-500">
-                <span className="font-medium">PAO: {product.paoMonths}M</span>
-                <button
-                  type="button"
-                  onClick={() => removeProductFromShelf(product.id)}
-                  className="text-slate-400 hover:text-red-600 transition p-1 cursor-pointer"
-                  title="Eliminar de mi estantería"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. GUÍA DE BIOTIPOS FACIALES */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block">
-              CALIBRACIÓN DERMATOLÓGICA
-            </span>
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Guía de Biotipos y Activos Compatibles
-            </h3>
-          </div>
-          <button
-            onClick={() => setIsProfileModalOpen(true)}
-            className="text-xs font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1 cursor-pointer transition"
-          >
-            <span>Cambiar mi Biotipo</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {facialBiotypes.map((bio) => {
-            const Icon = bio.icon;
-            return (
-              <div
-                key={bio.id}
-                onClick={() => setIsProfileModalOpen(true)}
-                className={`glass-panel p-5 border rounded-[26px] transition cursor-pointer flex flex-col justify-between hover:shadow-xl group ${
-                  bio.isCurrent
-                    ? 'border-2 border-emerald-500/60 bg-emerald-500/5 shadow-md'
-                    : 'border-white/80 hover:border-emerald-500/30'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs"
-                      style={{ backgroundColor: bio.accentColor }}
+                    {/* Tienda 2: Locatel */}
+                    <Link
+                      href="/tiendas"
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#F2ECE4] border border-[#E8E1D7] transition group cursor-pointer"
                     >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    {bio.isCurrent && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-900 border border-emerald-500/25 text-[10px] font-bold">
-                        Tu Biotipo
-                      </span>
-                    )}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          L
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#2D2825] block group-hover:text-[#2E7D5B] transition">
+                            Locatel
+                          </span>
+                          <span className="text-[10px] text-[#7E756F]">
+                            3.1 km • <span className="text-[#2E7D5B] font-semibold">En stock</span>
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#7E756F] group-hover:translate-x-0.5 transition" />
+                    </Link>
+
+                    {/* Tienda 3: Río */}
+                    <Link
+                      href="/tiendas"
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#F2ECE4] border border-[#E8E1D7] transition group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          R
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#2D2825] block group-hover:text-[#2E7D5B] transition">
+                            Río Supermarket
+                          </span>
+                          <span className="text-[10px] text-[#7E756F]">
+                            4.2 km • <span className="text-[#2E7D5B] font-semibold">En stock</span>
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#7E756F] group-hover:translate-x-0.5 transition" />
+                    </Link>
+
                   </div>
-
-                  <h4 className="text-base font-bold text-slate-900 leading-tight">
-                    {bio.name}
-                  </h4>
-
-                  <p className="text-xs text-slate-500 mt-1.5 leading-snug font-medium">
-                    {bio.description}
-                  </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-white/60">
-                  <span className="text-[9.5px] font-bold uppercase text-slate-400 tracking-wider block mb-1.5">
-                    Activos Clave:
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {bio.heroActives.map((act, i) => (
-                      <span
-                        key={i}
-                        className="px-2.5 py-0.5 rounded-full glass-subcard border border-white text-slate-800 text-[10.5px] font-medium"
-                      >
-                        {act}
-                      </span>
-                    ))}
-                  </div>
+                <div className="p-3 bg-[#E6F4EC] rounded-2xl border border-[#D5E2DB] text-[11px] text-[#2E7D5B] font-semibold text-center">
+                  Tasa oficial sincronizada en tiempo real
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Global Toast Notification */}
-      {celebrationToast && (
-        <div className="fixed top-24 left-4 right-4 z-50 max-w-sm mx-auto animate-in slide-in-from-top duration-300">
-          <div className="p-4 rounded-full bg-[#4A6B5B] text-white shadow-2xl flex items-center justify-between px-5 border border-[#8FA89B]">
-            <span className="text-[13px] font-medium flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#DFCAAC]" />
-              {celebrationToast}
-            </span>
+            </div>
+
           </div>
+
         </div>
-      )}
+      </section>
 
-      {/* Modales Globales */}
-      <IngredientDetailModal
-        ingredient={selectedIngredient}
-        onClose={() => setSelectedIngredient(null)}
-      />
+      {/* ========================================================= */}
+      {/* 4. TESTIMONIOS (SOCIAL PROOF)                             */}
+      {/* ========================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+        
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold uppercase tracking-wider">
+            <span>Testimonios</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#2D2825] tracking-tight">
+            Historias reales, resultados reales
+          </h2>
+          <p className="text-sm sm:text-base text-[#5D6B63] font-normal leading-relaxed">
+            Miles de personas ya están cuidando su piel con Allabout.skin.
+          </p>
+        </div>
 
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        userProfile={userProfile}
-        onUpdateProfile={updateProfile}
-      />
+        {/* 3 Cards de Testimonios */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Testimonio 1 */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm flex flex-col justify-between space-y-6">
+            <p className="text-sm text-[#5D6B63] leading-relaxed italic">
+              "Por fin una app que realmente entiende mi piel. Mi acné ha mejorado mucho y la rutina es súper fácil de seguir."
+            </p>
+            <div className="flex items-center gap-3 pt-3 border-t border-[#E8E1D7]">
+              <div className="w-10 h-10 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-sm flex items-center justify-center shrink-0">
+                LG
+              </div>
+              <div className="flex-1">
+                <span className="text-xs font-bold text-[#2D2825] block">
+                  Laura G.
+                </span>
+                <span className="text-[10px] text-[#7E756F] block">
+                  Usuario Premium
+                </span>
+                <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <MicroscopyModal
-        isOpen={isMicroscopyModalOpen}
-        onClose={() => setIsMicroscopyModalOpen(false)}
-        userProfile={userProfile}
-      />
+          {/* Testimonio 2 */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm flex flex-col justify-between space-y-6">
+            <p className="text-sm text-[#5D6B63] leading-relaxed italic">
+              "La información es muy completa y confiable. Me encanta poder ver dónde comprar mis productos cerca y al precio correcto."
+            </p>
+            <div className="flex items-center gap-3 pt-3 border-t border-[#E8E1D7]">
+              <div className="w-10 h-10 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-sm flex items-center justify-center shrink-0">
+                CM
+              </div>
+              <div className="flex-1">
+                <span className="text-xs font-bold text-[#2D2825] block">
+                  Carlos M.
+                </span>
+                <span className="text-[10px] text-[#7E756F] block">
+                  Usuario Estándar
+                </span>
+                <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonio 3 */}
+          <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm flex flex-col justify-between space-y-6">
+            <p className="text-sm text-[#5D6B63] leading-relaxed italic">
+              "La IA me alertó sobre una incompatibilidad que no había notado. Gracias a eso evité irritación severa en mi barrera cutánea."
+            </p>
+            <div className="flex items-center gap-3 pt-3 border-t border-[#E8E1D7]">
+              <div className="w-10 h-10 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-sm flex items-center justify-center shrink-0">
+                VR
+              </div>
+              <div className="flex-1">
+                <span className="text-xs font-bold text-[#2D2825] block">
+                  Valentina R.
+                </span>
+                <span className="text-[10px] text-[#7E756F] block">
+                  Usuario Premium
+                </span>
+                <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* 5. CTA FINAL (BANNER VERDE OSCURO MOCKUP)                 */}
+      {/* ========================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="bg-[#1B3D32] text-white rounded-[36px] p-8 sm:p-12 lg:p-14 relative overflow-hidden shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-8">
+          
+          <div className="space-y-4 max-w-xl text-center lg:text-left">
+            <div className="flex items-center justify-center lg:justify-start gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#2E7D5B] flex items-center justify-center text-white shadow-xs">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <span className="text-2xl font-bold tracking-tight">
+                allabout<span className="text-[#8FA89B]">.skin</span>
+              </span>
+            </div>
+
+            <p className="text-sm font-semibold text-[#8FA89B] uppercase tracking-wider">
+              Tu piel. Nuestra ciencia.
+            </p>
+
+            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Descarga la app y comienza hoy
+            </h3>
+
+            <p className="text-xs sm:text-sm text-[#A4B5AC] leading-relaxed">
+              Lleva tu tocador clínico digital en el bolsillo, con alertas de ingredientes y compras geolocalizadas.
+            </p>
+
+            {/* Badges de App Store y Google Play */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
+              <button
+                type="button"
+                className="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold flex items-center gap-2.5 transition"
+              >
+                <Apple className="w-4 h-4" />
+                <div className="text-left leading-tight">
+                  <span className="text-[9px] block text-[#A4B5AC]">Disponible en</span>
+                  <span className="text-xs font-bold block">App Store</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold flex items-center gap-2.5 transition"
+              >
+                <div className="w-4 h-4 flex items-center justify-center">
+                  ▶
+                </div>
+                <div className="text-left leading-tight">
+                  <span className="text-[9px] block text-[#A4B5AC]">Disponible en</span>
+                  <span className="text-xs font-bold block">Google Play</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Mini Mockup Visual de Smartphone */}
+          <div className="w-48 sm:w-56 bg-white/10 p-3 rounded-[32px] border border-white/20 shadow-2xl shrink-0 backdrop-blur-sm">
+            <div className="bg-white text-[#2D2825] rounded-[24px] p-4 text-center space-y-2">
+              <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                Salud de la piel
+              </span>
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#E6F4EC] border-2 border-[#2E7D5B] flex items-center justify-center text-sm font-extrabold text-[#2E7D5B]">
+                78/100
+              </div>
+              <span className="text-[9px] font-bold uppercase text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full inline-block">
+                Buena
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </div>
   );
 }

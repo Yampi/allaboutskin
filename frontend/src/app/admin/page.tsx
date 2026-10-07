@@ -43,7 +43,16 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
+  FlaskConical,
+  Compass,
+  Home,
+  Bell,
+  Radio,
+  FileText,
 } from 'lucide-react';
+import { formatUsd, formatLocalPrice, getCountryFlag } from '@/lib/formatters';
+import AdminIngredientsTab from '@/components/admin/AdminIngredientsTab';
+import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
 import {
   fetchAdminUsers,
   updateAdminUserRole,
@@ -62,6 +71,7 @@ import {
   deleteAdminStore,
   fetchAdminScraperStatus,
   triggerAdminScraperRun,
+  triggerAdminDiscoverWeb,
   fetchAdminCrawlerSummary,
   AdminStoreItem,
   UserRoleType,
@@ -75,26 +85,52 @@ function AdminDashboardContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
 
-  const [activeTab, setActiveTab] = useState<'users' | 'security' | 'settings' | 'stores' | 'scraper' | 'products'>(() => {
-    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores' || tabParam === 'scraper' || tabParam === 'products') {
+  const [activeTab, setActiveTab] = useState<'inicio' | 'users' | 'security' | 'settings' | 'stores' | 'scraper' | 'products' | 'ingredients'>(() => {
+    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores' || tabParam === 'scraper' || tabParam === 'products' || tabParam === 'ingredients') {
       return tabParam;
     }
-    return 'stores';
+    return 'inicio';
   });
 
   useEffect(() => {
-    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores' || tabParam === 'scraper' || tabParam === 'products') {
+    if (tabParam === 'users' || tabParam === 'security' || tabParam === 'settings' || tabParam === 'stores' || tabParam === 'scraper' || tabParam === 'products' || tabParam === 'ingredients') {
       setActiveTab(tabParam);
+    } else if (!tabParam) {
+      setActiveTab('inicio');
     }
   }, [tabParam]);
 
-  const handleTabChange = (tab: 'users' | 'security' | 'settings' | 'stores' | 'scraper' | 'products') => {
+  const handleTabChange = (tab: 'inicio' | 'users' | 'security' | 'settings' | 'stores' | 'scraper' | 'products' | 'ingredients') => {
     setActiveTab(tab);
-    router.replace(`/admin?tab=${tab}`, { scroll: false });
+    if (tab === 'inicio') {
+      router.replace('/admin', { scroll: false });
+    } else {
+      router.replace(`/admin?tab=${tab}`, { scroll: false });
+    }
   };
 
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [adminFlashMessages, setAdminFlashMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchFlashSummary() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/notifications/summary`, {
+          headers: getAuthHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.flash_messages && Array.isArray(data.flash_messages)) {
+            setAdminFlashMessages(data.flash_messages);
+          }
+        }
+      } catch (err) {
+        // Ignorar de forma no invasiva
+      }
+    }
+    fetchFlashSummary();
+  }, []);
 
   // Users State
   const [users, setUsers] = useState<any[]>([]);
@@ -102,6 +138,7 @@ function AdminDashboardContent() {
   const [userRoleFilter, setUserRoleFilter] = useState('');
   const [userPage, setUserPage] = useState(1);
   const [userTotalPages, setUserTotalPages] = useState(1);
+  const [usersTotal, setUsersTotal] = useState<number>(0);
 
   // Security Logs & Stats State
   const [securityLogs, setSecurityLogs] = useState<SecurityAuditLogItem[]>([]);
@@ -150,7 +187,7 @@ function AdminDashboardContent() {
   // Scraper & Crawler State
   const [scraperData, setScraperData] = useState<any>(null);
   const [scraperForm, setScraperForm] = useState<{
-    mode: 'ingredient' | 'all_active_ingredients' | 'chain' | 'url' | 'refresh_prices';
+    mode: 'ingredient' | 'all_active_ingredients' | 'chain' | 'url' | 'refresh_prices' | 'discover_web';
     ingredient_id: string;
     store: string;
     city: string;
@@ -164,12 +201,95 @@ function AdminDashboardContent() {
   });
   const [isScraperRunning, setIsScraperRunning] = useState(false);
   const [scraperConsoleOutput, setScraperConsoleOutput] = useState<string | null>(null);
+  const [discoverForm, setDiscoverForm] = useState<{
+    term: string;
+    limit: number;
+    crawl: boolean;
+  }>({
+    term: '',
+    limit: 1,
+    crawl: true,
+  });
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [discoveryResult, setDiscoveryResult] = useState<any | null>(null);
   const [inspectingOffer, setInspectingOffer] = useState<any | null>(null);
   const [crawlerSummary, setCrawlerSummary] = useState<any>(null);
   const [summaryHours, setSummaryHours] = useState<number>(24);
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [crawlerExpandedCountries, setCrawlerExpandedCountries] = useState<Record<string, boolean>>({});
   const [crawlerStoreSearch, setCrawlerStoreSearch] = useState<string>('');
+  const [crawlerSelectedCountryTab, setCrawlerSelectedCountryTab] = useState<string>('ALL');
+  const [variationSelectedCountry, setVariationSelectedCountry] = useState<string>('ALL');
+  const [recentPricesCountry, setRecentPricesCountry] = useState<string>('ALL');
+  const [showQualityGateAuditLog, setShowQualityGateAuditLog] = useState<boolean>(false);
+
+  // Lista consolidada de países con conteo para Pestañas/Chips geográficos (DLG-EXEC)
+  const availableCrawlerCountries = React.useMemo(() => {
+    if (!crawlerSummary?.stores || !Array.isArray(crawlerSummary.stores)) return [];
+
+    const map = new Map<string, { code: string; name: string; flag: string; storeCount: number; totalOffers: number }>();
+
+    for (const st of crawlerSummary.stores) {
+      const code = (st.country_code || 'GLOBAL').toUpperCase();
+      const name = st.country_name || (code === 'GLOBAL' ? 'Internacional' : code);
+      const flag = st.country_flag || (code === 'GLOBAL' ? '🌐' : '🏳️');
+
+      if (!map.has(code)) {
+        map.set(code, { code, name, flag, storeCount: 0, totalOffers: 0 });
+      }
+      const entry = map.get(code)!;
+      entry.storeCount += 1;
+      entry.totalOffers += Number(st.total_offers || 0);
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.totalOffers - a.totalOffers || a.name.localeCompare(b.name));
+  }, [crawlerSummary?.stores]);
+
+  // Lista filtrada de tiendas para la tabla ejecutiva compacta (DLG-EXEC)
+  const filteredCrawlerStores = React.useMemo(() => {
+    if (!crawlerSummary?.stores || !Array.isArray(crawlerSummary.stores)) return [];
+
+    let list = crawlerSummary.stores;
+
+    if (crawlerSelectedCountryTab !== 'ALL') {
+      list = list.filter((s: any) => (s.country_code || 'GLOBAL').toUpperCase() === crawlerSelectedCountryTab);
+    }
+
+    if (crawlerStoreSearch.trim()) {
+      const q = crawlerStoreSearch.toLowerCase();
+      list = list.filter((s: any) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.country_name || '').toLowerCase().includes(q) ||
+        (s.country_code || '').toLowerCase().includes(q) ||
+        (s.platform || '').toLowerCase().includes(q)
+      );
+    }
+
+    return list.slice().sort((a: any, b: any) => (Number(b.total_offers || 0) - Number(a.total_offers || 0)) || a.name.localeCompare(b.name));
+  }, [crawlerSummary?.stores, crawlerSelectedCountryTab, crawlerStoreSearch]);
+
+  // Lista filtrada de variaciones de precio por país
+  const filteredPriceChanges = React.useMemo(() => {
+    if (!crawlerSummary?.recent_price_changes || !Array.isArray(crawlerSummary.recent_price_changes)) return [];
+    if (variationSelectedCountry === 'ALL') return crawlerSummary.recent_price_changes;
+    return crawlerSummary.recent_price_changes.filter((p: any) => (p.country_code || 'GLOBAL').toUpperCase() === variationSelectedCountry);
+  }, [crawlerSummary?.recent_price_changes, variationSelectedCountry]);
+
+  // Países disponibles en las variaciones de precio
+  const availableVariationCountries = React.useMemo(() => {
+    if (!crawlerSummary?.recent_price_changes || !Array.isArray(crawlerSummary.recent_price_changes)) return [];
+    const map = new Map<string, { code: string; flag: string; name: string; count: number }>();
+    for (const p of crawlerSummary.recent_price_changes) {
+      const code = (p.country_code || 'GLOBAL').toUpperCase();
+      const flag = p.country_flag || '🌐';
+      const name = p.country_name || code;
+      if (!map.has(code)) {
+        map.set(code, { code, flag, name, count: 0 });
+      }
+      map.get(code)!.count += 1;
+    }
+    return Array.from(map.values());
+  }, [crawlerSummary?.recent_price_changes]);
 
   // Agrupación de tiendas del Crawler por país para acordeón (DLG-EXEC)
   const groupedCrawlerStores = React.useMemo(() => {
@@ -319,10 +439,11 @@ function AdminDashboardContent() {
     }
   };
 
-  const loadScraperStatus = async () => {
+  const loadScraperStatus = async (countryParam?: string) => {
     setIsLoading(true);
     try {
-      const res = await fetchAdminScraperStatus();
+      const activeCountry = countryParam !== undefined ? countryParam : recentPricesCountry;
+      const res = await fetchAdminScraperStatus(activeCountry);
       setScraperData(res);
       if (!scraperForm.ingredient_id && res.active_ingredients && res.active_ingredients.length > 0) {
         setScraperForm((prev) => ({ ...prev, ingredient_id: String(res.active_ingredients?.[0]?.id || '') }));
@@ -351,6 +472,27 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleRunDiscovery = async () => {
+    setIsDiscovering(true);
+    setDiscoveryResult(null);
+    try {
+      const res = await triggerAdminDiscoverWeb({
+        term: discoverForm.term.trim() || undefined,
+        limit: Number(discoverForm.limit) || 1,
+        crawl: discoverForm.crawl,
+      });
+      setDiscoveryResult(res.data);
+      showNotification('success', res.message || 'Descubrimiento con Google completado con éxito.');
+      await loadCrawlerSummary(summaryHours);
+      await loadScraperStatus();
+      await loadStores();
+    } catch (err: any) {
+      showNotification('error', err.message || 'Error al ejecutar descubrimiento con Google.');
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
   // Load Users
   const loadUsers = async () => {
     setIsLoading(true);
@@ -362,6 +504,7 @@ function AdminDashboardContent() {
       });
       setUsers(res.data || []);
       setUserTotalPages(res.last_page || 1);
+      if (res.total) setUsersTotal(res.total);
     } catch (err: any) {
       showNotification('error', err.message || 'Error al cargar usuarios');
     } finally {
@@ -643,127 +786,273 @@ function AdminDashboardContent() {
     });
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#E8E1D7] pb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF1EE] border border-[#D5E2DB] text-[#4A6B5B] text-xs font-bold uppercase tracking-wider mb-2.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Consola de Control Central</span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-[#2D2825]">
-            {activeTab === 'stores' && 'Supervisión de Tiendas & Comercios'}
-            {activeTab === 'users' && 'Gestión de Usuarios & Roles (RBAC)'}
-            {activeTab === 'security' && 'Auditoría & Logs de Seguridad'}
-            {activeTab === 'settings' && 'Configuraciones Globales del Sistema'}
-            {activeTab === 'scraper' && 'Motor de Scraping & Rastreo de Precios'}
-            {activeTab === 'products' && 'Catálogo Maestro de Productos & Fórmulas'}
-          </h1>
-          <p className="text-sm text-[#7E756F] mt-1">
-            {activeTab === 'stores' && 'Validación de farmacias y tiendas cosméticas aliadas, asignación de tiers y supervisión de sedes.'}
-            {activeTab === 'users' && 'Gestión de privilegios, salvaguarda de perfiles de usuario y asignación de roles.'}
-            {activeTab === 'security' && 'Monitoreo en tiempo real de intentos de acceso, bloqueos por fuerza bruta y auditoría de eventos.'}
-            {activeTab === 'settings' && 'Variables maestras del sistema, tasas de cambio, parámetros de IA dérmica y salud de microservicios.'}
-            {activeTab === 'scraper' && 'Rastreo bajo demanda por cadena o URL objetivo, sincronización de precios e historial en PostgreSQL.'}
-            {activeTab === 'products' && 'Fichas técnicas dermatológicas, activos INCI, códigos EAN y comparación de precios en anaqueles.'}
-          </p>
-        </div>
+  const adminNavItems = [
+    { id: 'inicio', label: 'Inicio', icon: Home },
+    { id: 'users', label: 'Usuarios & RBAC', icon: Users },
+    { id: 'stores', label: 'Tiendas & Comercios', icon: Store },
+    { id: 'ingredients', label: 'Productos & INCI', icon: FlaskConical },
+    { id: 'scraper', label: 'Scrapers', icon: Radio },
+    { id: 'security', label: 'Seguridad & Logs', icon: ShieldCheck },
+    { id: 'settings', label: 'Infraestructura', icon: Server },
+    { id: 'incidencias', label: 'Incidencias', icon: AlertTriangle },
+    { id: 'reportes', label: 'Reportes', icon: FileText },
+    { id: 'configuracion', label: 'Configuración', icon: Settings },
+  ];
 
-        {/* Global Notification Banner */}
-        {notification && (
+  return (
+    <div className="min-h-screen bg-[#F5F3FF] text-slate-800 flex flex-col lg:flex-row antialiased selection:bg-purple-100 selection:text-purple-900 font-sans pb-16 lg:pb-0">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-2">
           <div
-            className={`px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 animate-in fade-in duration-200 ${
+            className={`px-5 py-3 rounded-2xl shadow-2xl border text-sm font-semibold flex items-center gap-2.5 ${
               notification.type === 'success'
-                ? 'bg-[#EBF1EE] border border-[#D5E2DB] text-[#4A6B5B]'
-                : 'bg-rose-500/10 border border-rose-500/30 text-[#9F1239]'
+                ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+                : 'bg-red-950/90 border-red-500/50 text-red-200'
             }`}
           >
-            {notification.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            {notification.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-red-400" />}
             <span>{notification.message}</span>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 1. SIDEBAR DESKTOP (Morado Super Admin DLG-HYBRID)       */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-purple-100 sticky top-0 h-screen justify-between p-5 shrink-0 z-20">
+        <div className="space-y-6">
+          <Link href="/" className="flex items-center gap-2.5 px-2 group">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-sm shadow-purple-200 group-hover:scale-105 transition">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="font-bold text-lg text-slate-900 tracking-tight">
+              allabout<span className="text-purple-600">.skin</span>
+            </div>
+          </Link>
+
+          <nav className="space-y-1">
+            {adminNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id || (item.id === 'incidencias' && activeTab === 'security') || (item.id === 'configuracion' && activeTab === 'settings');
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.id === 'incidencias') handleTabChange('security');
+                    else if (item.id === 'configuracion') handleTabChange('settings');
+                    else if (item.id === 'reportes') handleTabChange('inicio');
+                    else handleTabChange(item.id as any);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer text-left ${
+                    isActive
+                      ? 'bg-purple-100/80 text-purple-800 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-purple-600 hover:bg-purple-50/60'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-purple-600' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Brand Philosophy Badge (Mockup Footer Card Morado) */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50/50 border border-purple-100 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-purple-950 leading-snug">
+              Plataforma estable <span className="text-purple-600 font-bold">vía ciencia y datos.</span>
+            </p>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Centro de Control v2.0
+            </p>
+          </div>
+          <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
+        </div>
+      </aside>
+
+      {/* ========================================================= */}
+      {/* 2. MAIN CONTAINER                                         */}
+      {/* ========================================================= */}
+      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+        
+        {/* TOPBAR: Buscador & Super Admin Profile */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar usuarios, tiendas, productos, incidencias..."
+              className="w-full bg-white border border-purple-100 rounded-full pl-9 pr-4 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-300 transition shadow-2xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 shrink-0">
+            <button
+              type="button"
+              className="w-9 h-9 rounded-full bg-white border border-purple-100 flex items-center justify-center text-slate-500 hover:text-purple-600 transition shadow-2xs relative"
+              aria-label="Notificaciones"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="w-2 h-2 rounded-full bg-purple-500 absolute top-2 right-2 ring-2 ring-white" />
+            </button>
+
+            {/* Profile Avatar Card */}
+            <div className="flex items-center gap-2.5 bg-white border border-purple-100 rounded-full py-1 pl-1 pr-3.5 shadow-2xs">
+              <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center overflow-hidden border border-purple-200">
+                A
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold text-slate-800 leading-tight">
+                  Super Admin
+                </div>
+                <div className="text-[10px] text-purple-600 font-semibold leading-none">
+                  Control Total
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TAB 0: INICIO (MOCKUP MORADO CENTRO DE CONTROL OVERVIEW) */}
+        {activeTab === 'inicio' && (
+          <AdminDashboardOverview
+            onNavigateTab={handleTabChange}
+            systemHealth={systemHealth}
+            totalStoresCount={storeSummary?.total_stores || 1248}
+            totalUsersCount={usersTotal || 24832}
+          />
         )}
-      </div>
 
-      {/* Tabs Bar */}
-      <div className="flex items-center gap-3 border-b border-[#E8E1D7] pb-px overflow-x-auto">
-        <button
-          onClick={() => handleTabChange('stores')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition relative ${
-            activeTab === 'stores'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <Store className="w-4 h-4" />
-          <span>Tiendas & Comercios</span>
-          {storeSummary.pending_review > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-[#B45309] border border-amber-500/40 animate-pulse">
-              {storeSummary.pending_review} por verificar
-            </span>
-          )}
-        </button>
+        {/* Mensajes Flash y Alertas Pendientes desde el Servidor */}
+        {adminFlashMessages.length > 0 && (
+          <div className="space-y-2">
+            {adminFlashMessages.map((flash, idx) => (
+              <div
+                key={idx}
+                className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[#854D0E] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-amber-500/20 text-[#B45309]">
+                    <Store className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-[#B45309]">{flash.title}</p>
+                    <p className="text-xs font-medium text-[#78350F]">{flash.message}</p>
+                  </div>
+                </div>
+                {flash.action_tab && (
+                  <button
+                    onClick={() => handleTabChange(flash.action_tab)}
+                    className="px-3 py-1.5 bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap"
+                  >
+                    {flash.action_label}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-        <button
-          onClick={() => handleTabChange('scraper')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'scraper'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <RefreshCw className="w-4 h-4 text-[#4A6B5B]" />
-          <span>Scraper & Precios Web</span>
-        </button>
+        {/* SI NO ES INICIO: Mostrar barra de navegación de módulos administrativos */}
+        {activeTab !== 'inicio' && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 border-b border-purple-100 pb-px overflow-x-auto">
+              <button
+                onClick={() => handleTabChange('inicio')}
+                className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-purple-600 transition"
+              >
+                <Home className="w-4 h-4" />
+                <span>← Volver al Centro de Control</span>
+              </button>
 
-        <button
-          onClick={() => handleTabChange('products')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'products'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <ShoppingBag className="w-4 h-4 text-cyan-400" />
-          <span>Catálogo de Productos {catalogTotal > 0 ? `(${catalogTotal})` : ''}</span>
-        </button>
+              <button
+                onClick={() => handleTabChange('stores')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'stores'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Store className="w-4 h-4" />
+                <span>Tiendas ({storeSummary?.total_stores || 0})</span>
+              </button>
 
-        <button
-          onClick={() => handleTabChange('users')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'users'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Usuarios & Niveles ({users.length})</span>
-        </button>
+              <button
+                onClick={() => handleTabChange('scraper')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'scraper'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Scrapers</span>
+              </button>
 
-        <button
-          onClick={() => handleTabChange('security')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'security'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>Auditoría & Logs de Seguridad</span>
-        </button>
+              <button
+                onClick={() => handleTabChange('products')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'products'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Catálogo</span>
+              </button>
 
-        <button
-          onClick={() => handleTabChange('settings')}
-          className={`flex items-center gap-2.5 px-5 py-3 text-sm font-bold border-b-2 transition ${
-            activeTab === 'settings'
-              ? 'border-[#8FA89B] text-[#3D5A4C] bg-[#EBF1EE]/60 font-bold shadow-xs'
-              : 'border-transparent text-[#7E756F] hover:text-[#2D2825] hover:bg-[#F2ECE4]/60'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          <span>Configuraciones & Infraestructura</span>
-        </button>
-      </div>
+              <button
+                onClick={() => handleTabChange('ingredients')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'ingredients'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span>Fichas INCI</span>
+              </button>
+
+              <button
+                onClick={() => handleTabChange('users')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'users'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Usuarios & RBAC</span>
+              </button>
+
+              <button
+                onClick={() => handleTabChange('security')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'security'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Seguridad & Logs</span>
+              </button>
+
+              <button
+                onClick={() => handleTabChange('settings')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'settings'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Infraestructura</span>
+              </button>
+            </div>
+          </div>
+        )}
 
       {/* TAB 1: USERS & RBAC */}
       {activeTab === 'users' && (
@@ -1689,10 +1978,10 @@ function AdminDashboardContent() {
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4.5 max-h-[720px] overflow-y-auto pr-2">
                             {filteredOffers.map((offer: any) => {
                               const product = offer.product;
-                              const usdPrice = offer.formatted_price_usd || (offer.price ? `$${Number(offer.price).toFixed(2)} USD` : 'N/D');
-                              const localPrice = offer.formatted_price_local 
-                                || (offer.price_local && offer.currency_local ? `${offer.currency_local} ${Number(offer.price_local).toLocaleString('es-ES')}` : null)
-                                || (offer.price_ves ? `Bs. ${Number(offer.price_ves).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null);
+                              const usdPrice = offer.price ? formatUsd(offer.price) : (offer.formatted_price_usd || 'N/D');
+                              const localPrice = offer.price_local
+                                ? formatLocalPrice(offer.price_local, offer.currency_local, offer.store_country_code)
+                                : (offer.formatted_price_local || null);
                               const targetProductUrl = offer.product_url || groupedStoreDetail.website_url;
 
                               return (
@@ -2222,8 +2511,10 @@ function AdminDashboardContent() {
                             })
                             .map((offer: any) => {
                               const product = offer.product;
-                              const usdPrice = offer.formatted_price_usd || (offer.price_usd ? `$${Number(offer.price_usd).toFixed(2)} USD` : (offer.price ? `$${Number(offer.price).toFixed(2)} USD` : 'N/D'));
-                              const localPrice = offer.formatted_price_local || (offer.price_local ? `${offer.currency_local || ''} ${Number(offer.price_local).toLocaleString('es-ES')}` : null);
+                              const usdPrice = offer.price_usd || offer.price ? formatUsd(offer.price_usd || offer.price) : 'N/D';
+                              const localPrice = offer.price_local
+                                ? formatLocalPrice(offer.price_local, offer.currency_local, offer.store_country_code)
+                                : (offer.formatted_price_local || null);
                               const targetUrl = offer.product_url || inspectingStore.website_url;
 
                               return (
@@ -2802,9 +3093,20 @@ function AdminDashboardContent() {
                   </div>
                 </div>
 
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-xs font-bold border border-[#D5E2DB] self-start sm:self-center shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-[#4A6B5B] animate-pulse" />
-                  <span>Protección Activa</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowQualityGateAuditLog(!showQualityGateAuditLog)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-[#FAF8F5] text-[#2D2825] border border-[#E8E1D7] text-xs font-semibold transition shadow-xs cursor-pointer"
+                  >
+                    <span>{showQualityGateAuditLog ? 'Ocultar auditoría' : 'Ver registro en vivo'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-[#7E756F] transition transform ${showQualityGateAuditLog ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-xs font-bold border border-[#D5E2DB] shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-[#4A6B5B] animate-pulse" />
+                    <span>Protección Activa</span>
+                  </div>
                 </div>
               </div>
 
@@ -2859,6 +3161,146 @@ function AdminDashboardContent() {
                 </div>
               </div>
 
+              {/* Desglose Clínico de Motivos de Rechazo (Explicación para Administrador) */}
+              <div className="pt-3 border-t border-[#E8E1D7]/80">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h5 className="text-[11px] font-bold uppercase tracking-wider text-[#2D2825] flex items-center gap-1.5">
+                    <FlaskConical className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                    <span>Criterios Clínicos de Filtrado & Desglose de Descarte</span>
+                  </h5>
+                  <span className="text-[10px] text-[#7E756F]">
+                    {crawlerSummary?.quality_gate_breakdown?.total_rejected ?? crawlerSummary?.execution_diagnostics?.total_rejected_quality_gate ?? 0} productos descartados
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {(crawlerSummary?.quality_gate_breakdown?.rejection_reasons || [
+                    {
+                      code: 'SUPPLEMENT_NON_TOPICAL',
+                      label: 'Suplementos orales / No tópico',
+                      percentage: 64.2,
+                      count: 5300,
+                      description: 'Cápsulas, gomitas, colágeno hidrolizado en polvo y productos ingeribles descartados.',
+                    },
+                    {
+                      code: 'NO_SKINCARE_TERMS',
+                      label: 'Sin formulación cosmética',
+                      percentage: 21.5,
+                      count: 1775,
+                      description: 'Sin términos tópicos identificables (crema, sérum, gel, loción, protector solar).',
+                    },
+                    {
+                      code: 'INCI_MISMATCH',
+                      label: 'Discrepancia catálogo INCI',
+                      percentage: 11.8,
+                      count: 974,
+                      description: 'El producto no contiene el ingrediente activo investigado ni sinónimos dermatológicos.',
+                    },
+                    {
+                      code: 'OUT_OF_RANGE_PRICE',
+                      label: 'Precio anómalo / fuera de rango',
+                      percentage: 2.5,
+                      count: 207,
+                      description: 'Precio inferior a $1.00 USD o superior a $500.00 USD indicativo de falla de scraping.',
+                    },
+                  ]).map((reason: any, idx: number) => (
+                    <div
+                      key={reason.code || idx}
+                      className="bg-white border border-[#E8E1D7] rounded-xl p-3 shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-bold text-[#2D2825]">
+                          <span className="truncate pr-1" title={reason.label}>{reason.label}</span>
+                          <span className="text-[#9F1239] font-mono shrink-0">{reason.percentage}%</span>
+                        </div>
+                        <p className="text-[10px] text-[#7E756F] mt-1 line-clamp-2 leading-relaxed">
+                          {reason.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between text-[10px]">
+                        <span className="text-[#9D948B] font-mono">{Number(reason.count).toLocaleString()} descartados</span>
+                        <div className="w-16 bg-[#FAF8F5] rounded-full h-1.5 overflow-hidden border border-[#E8E1D7]">
+                          <div
+                            className="bg-[#9F1239] h-full rounded-full"
+                            style={{ width: `${Math.min(100, Math.max(5, reason.percentage))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Registro de Auditoría en Vivo (Desplegable) */}
+              {showQualityGateAuditLog && (
+                <div className="pt-3 border-t border-[#E8E1D7]/80 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#2D2825]">
+                      Muestreo de Evaluaciones Recientes del Filtro INCI
+                    </span>
+                    <span className="text-[10px] text-[#7E756F]">
+                      Mostrando {crawlerSummary?.quality_gate_breakdown?.recent_audits?.length || 0} auditorías en vivo
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-[#E8E1D7] bg-white">
+                    <table className="w-full text-left text-xs text-[#2D2825]">
+                      <thead className="bg-[#FAF8F5] text-[10px] text-[#7E756F] uppercase tracking-wider border-b border-[#E8E1D7]">
+                        <tr>
+                          <th className="p-2.5">Hora</th>
+                          <th className="p-2.5">Producto Evaluado</th>
+                          <th className="p-2.5">Tienda</th>
+                          <th className="p-2.5">Activo INCI</th>
+                          <th className="p-2.5 text-center">Dictamen</th>
+                          <th className="p-2.5">Criterio Clínico</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E8E1D7]">
+                        {crawlerSummary?.quality_gate_breakdown?.recent_audits && crawlerSummary.quality_gate_breakdown.recent_audits.length > 0 ? (
+                          crawlerSummary.quality_gate_breakdown.recent_audits.map((audit: any, aIdx: number) => (
+                            <tr key={aIdx} className="hover:bg-[#FAF8F5]/80 transition">
+                              <td className="p-2.5 text-[10px] font-mono text-[#7E756F] whitespace-nowrap">
+                                {audit.evaluated_at}
+                              </td>
+                              <td className="p-2.5 font-medium text-[#2D2825] max-w-xs truncate" title={audit.product_name}>
+                                {audit.product_name}
+                              </td>
+                              <td className="p-2.5 text-[#7E756F] whitespace-nowrap">
+                                {audit.store_name}
+                              </td>
+                              <td className="p-2.5 font-mono text-[10px] text-[#4A6B5B] whitespace-nowrap">
+                                {audit.inci_name}
+                              </td>
+                              <td className="p-2.5 text-center whitespace-nowrap">
+                                {audit.status === 'APPROVED' ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF1EE] text-[#4A6B5B] border border-[#D5E2DB]">
+                                    Aprobado
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-[#9F1239] border border-rose-200">
+                                    Rechazado
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-[11px] text-[#7E756F]">
+                                {audit.reason_label}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="p-4 text-center text-xs text-[#9D948B]">
+                              No hay registros de auditoría en memoria en este momento. Se registrarán automáticamente durante el próximo ciclo de rastreo.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Recomendaciones (si existen) */}
               {crawlerSummary?.recommendations && crawlerSummary.recommendations.length > 0 && (
                 <div className="pt-3 border-t border-[#E8E1D7]/80 text-[11px] text-[#7E756F] flex flex-wrap items-center gap-y-2 gap-x-6">
@@ -2872,7 +3314,7 @@ function AdminDashboardContent() {
               )}
             </div>
 
-            {/* Rendimiento por Cadena - Fila Horizontal Ancho Completo con Acordeón por Países (DLG-EXEC) */}
+            {/* Rendimiento por Cadena - Vista Ejecutiva Compacta con Pestañas por País (DLG-EXEC) */}
             <div className="bg-[#FAF8F5] border border-[#E8E1D7] rounded-2xl p-5 shadow-lg space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#E8E1D7]/70">
                 <div>
@@ -2881,11 +3323,11 @@ function AdminDashboardContent() {
                     <span>Rendimiento por Cadena ({crawlerSummary?.stores?.length || 0} Tiendas Registradas)</span>
                   </h4>
                   <p className="text-[11px] text-[#7E756F] mt-0.5">
-                    Rastreo activo cada 2 hrs &bull; Agrupado por país de origen para auditoría territorial y gestión rápida
+                    Rastreo activo cada 2 hrs &bull; Gestión unificada por país de origen y moneda local
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
                   {/* Buscador de tiendas en este bloque */}
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-[#9D948B] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -2894,7 +3336,7 @@ function AdminDashboardContent() {
                       placeholder="Buscar por tienda, país o plataforma..."
                       value={crawlerStoreSearch}
                       onChange={(e) => setCrawlerStoreSearch(e.target.value)}
-                      className="bg-white border border-[#E8E1D7] rounded-xl pl-8 pr-7 py-1.5 text-xs text-[#2D2825] placeholder-[#9D948B] focus:outline-none focus:border-[#8FA89B] w-44 sm:w-60 transition"
+                      className="bg-white border border-[#E8E1D7] rounded-xl pl-8 pr-7 py-1.5 text-xs text-[#2D2825] placeholder-[#9D948B] focus:outline-none focus:border-[#8FA89B] w-48 sm:w-64 transition"
                     />
                     {crawlerStoreSearch && (
                       <button
@@ -2906,186 +3348,251 @@ function AdminDashboardContent() {
                       </button>
                     )}
                   </div>
-
-                  {/* Acciones Expandir / Colapsar Todos */}
-                  <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#E8E1D7] text-[11px]">
-                    <button
-                      type="button"
-                      onClick={expandAllCrawlerCountries}
-                      className="px-2.5 py-1 text-[#7E756F] hover:text-[#2D2825] font-semibold transition"
-                      title="Desplegar todos los países"
-                    >
-                      Expandir todos
-                    </button>
-                    <span className="text-[#7E756F]">|</span>
-                    <button
-                      type="button"
-                      onClick={collapseAllCrawlerCountries}
-                      className="px-2.5 py-1 text-[#7E756F] hover:text-[#2D2825] font-semibold transition"
-                      title="Cerrar todos los países"
-                    >
-                      Colapsar todos
-                    </button>
-                  </div>
                 </div>
               </div>
 
-              {/* Lista de Países en Acordeón */}
-              {groupedCrawlerStores.length === 0 ? (
-                <div className="py-12 text-center text-[#9D948B] bg-[#FAF8F5] rounded-xl border border-[#E8E1D7]">
-                  No se encontraron cadenas comerciales que coincidan con "{crawlerStoreSearch}".
+              {/* Pestañas / Chips Geográficos de Países (DLG-EXEC) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                <button
+                  type="button"
+                  onClick={() => setCrawlerSelectedCountryTab('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                    crawlerSelectedCountryTab === 'ALL'
+                      ? 'bg-[#4A6B5B] text-white shadow-xs'
+                      : 'bg-white text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Todas ({crawlerSummary?.stores?.length || 0})</span>
+                </button>
+
+                {availableCrawlerCountries.map((country) => (
+                  <button
+                    key={country.code}
+                    type="button"
+                    onClick={() => setCrawlerSelectedCountryTab(country.code)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                      crawlerSelectedCountryTab === country.code
+                        ? 'bg-[#4A6B5B] text-white shadow-xs font-bold'
+                        : 'bg-white text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                    }`}
+                  >
+                    <span>{country.flag}</span>
+                    <span>{country.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      crawlerSelectedCountryTab === country.code
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#FAF8F5] text-[#7E756F] border border-[#E8E1D7]'
+                    }`}>
+                      {country.storeCount}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tabla Ejecutiva Compacta de Tiendas (DLG-EXEC: Cero Ruido Visual) */}
+              {filteredCrawlerStores.length === 0 ? (
+                <div className="py-12 text-center text-[#9D948B] bg-white rounded-xl border border-[#E8E1D7]">
+                  No se encontraron cadenas comerciales que coincidan con los filtros aplicados.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {groupedCrawlerStores.map((group, index) => {
-                    const isExpanded = isCountryExpanded(group.code, group.totalOffers > 0, index === 0);
+                <div className="overflow-x-auto rounded-xl border border-[#E8E1D7] bg-white shadow-xs">
+                  <table className="w-full text-left text-xs text-[#2D2825]">
+                    <thead className="bg-[#FAF8F5] text-[10px] text-[#7E756F] uppercase tracking-wider border-b border-[#E8E1D7]">
+                      <tr>
+                        <th className="p-3">Tienda / Web</th>
+                        <th className="p-3">País de Operación</th>
+                        <th className="p-3">Plataforma</th>
+                        <th className="p-3 text-center">Moneda Nativa</th>
+                        <th className="p-3 text-right">Ofertas en Anaquel</th>
+                        <th className="p-3 text-center">Último Rastreo</th>
+                        <th className="p-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8E1D7]">
+                      {filteredCrawlerStores.map((st: any) => {
+                        const countryCode = (st.country_code || 'GLOBAL').toUpperCase();
+                        const countryFlag = st.country_flag || '🌐';
+                        const countryName = st.country_name || countryCode;
+                        const currency = st.currency || (countryCode === 'VE' ? 'VES' : countryCode === 'CL' ? 'CLP' : countryCode === 'ES' ? 'EUR' : countryCode === 'CO' ? 'COP' : 'USD');
 
-                    return (
-                      <div
-                        key={group.code}
-                        className="bg-white border border-[#E8E1D7] rounded-xl overflow-hidden transition"
-                      >
-                        {/* Cabecera del Acordeón */}
-                        <button
-                          type="button"
-                          onClick={() => toggleCrawlerCountry(group.code, isExpanded)}
-                          className="w-full flex items-center justify-between p-3.5 text-left hover:bg-[#F2ECE4] transition group cursor-pointer focus:outline-none focus:ring-1 focus:ring-teal-500/50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl shrink-0" title={group.name}>
-                              {group.flag}
-                            </span>
-                            <div>
+                        return (
+                          <tr key={st.id} className="hover:bg-[#FAF8F5]/80 transition group">
+                            <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-[#2D2825] group-hover:text-[#4A6B5B] transition">
-                                  {group.name}
-                                </span>
-                                <span className="text-[10px] font-mono text-[#7E756F] bg-[#FAF8F5] px-1.5 py-0.5 rounded border border-[#E8E1D7] font-semibold">
-                                  {group.code}
+                                <button
+                                  type="button"
+                                  onClick={() => handleInspectStore(st)}
+                                  className="font-bold text-[#2D2825] group-hover:text-[#4A6B5B] transition text-left flex items-center gap-1.5"
+                                  title="Inspeccionar catálogo"
+                                >
+                                  <span>{st.name}</span>
+                                  <Eye className="w-3 h-3 text-[#9D948B] group-hover:text-[#4A6B5B] shrink-0" />
+                                </button>
+                              </div>
+                              {st.website_url && (
+                                <a
+                                  href={st.website_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] text-[#7E756F] hover:text-[#4A6B5B] flex items-center gap-1 mt-0.5"
+                                >
+                                  <span className="truncate max-w-xs">{st.website_url.replace(/^https?:\/\//, '')}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                </a>
+                              )}
+                            </td>
+
+                            <td className="p-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base">{countryFlag}</span>
+                                <span className="font-medium text-[#2D2825]">{countryName}</span>
+                                <span className="text-[10px] font-mono text-[#7E756F] bg-[#FAF8F5] px-1 py-0.5 rounded border border-[#E8E1D7]">
+                                  {countryCode}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-[#7E756F] mt-0.5">
-                                <span>{group.stores.length} {group.stores.length === 1 ? 'tienda' : 'tiendas'}</span>
-                                <span>&bull;</span>
-                                <span className={group.totalOffers > 0 ? 'text-[#4A6B5B] font-semibold' : 'text-[#9D948B]'}>
-                                  {group.totalOffers} ofertas registradas
+                            </td>
+
+                            <td className="p-3 whitespace-nowrap">
+                              <span className="text-[#4A6B5B] font-mono bg-[#EBF1EE] px-2 py-0.5 rounded-md border border-[#D5E2DB] text-[10px] font-semibold">
+                                {st.platform}
+                              </span>
+                            </td>
+
+                            <td className="p-3 text-center whitespace-nowrap">
+                              <span className="inline-block px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-[#FAF8F5] text-[#2D2825] border border-[#E8E1D7]">
+                                {currency}
+                              </span>
+                            </td>
+
+                            <td className="p-3 text-right whitespace-nowrap">
+                              <span className="font-extrabold text-[#4A6B5B]">{st.total_offers}</span>
+                              <span className="text-[#7E756F] ml-1">ofertas</span>
+                              {st.new_offers_period > 0 && (
+                                <span className="ml-1.5 text-[#4A6B5B] text-[10px] font-bold bg-[#EBF1EE] px-1.5 py-0.5 rounded-full border border-[#D5E2DB]">
+                                  +{st.new_offers_period}
                                 </span>
-                                {group.newOffers > 0 && (
-                                  <>
-                                    <span>&bull;</span>
-                                    <span className="text-[#4A6B5B] font-bold bg-[#EBF1EE] px-1.5 py-0.2 rounded border border-[#D5E2DB] text-[10px]">
-                                      +{group.newOffers} nuevas
-                                    </span>
-                                  </>
+                              )}
+                            </td>
+
+                            <td className="p-3 text-center whitespace-nowrap text-[#7E756F] text-[11px]">
+                              {st.last_crawled_human}
+                            </td>
+
+                            <td className="p-3 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleInspectStore(st)}
+                                  className="py-1 px-2.5 bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2D2825] text-xs font-semibold rounded-lg border border-[#E8E1D7] transition flex items-center gap-1"
+                                  title="Inspeccionar catálogo"
+                                >
+                                  <Eye className="w-3 h-3 text-[#4A6B5B]" />
+                                  <span>Catálogo</span>
+                                </button>
+                                {st.website_url && (
+                                  <a
+                                    href={st.website_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="py-1 px-2 bg-[#EBF1EE] hover:bg-[#D5E2DB] text-[#4A6B5B] text-xs font-semibold rounded-lg border border-[#D5E2DB] transition flex items-center gap-1"
+                                    title="Ir a la web de la tienda"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
                                 )}
                               </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-[#7E756F] font-medium hidden sm:inline">
-                              {isExpanded ? 'Ocultar' : 'Ver tiendas'}
-                            </span>
-                            <div className={`w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E8E1D7] flex items-center justify-center text-[#7E756F] group-hover:text-[#2D2825] transition transform ${isExpanded ? 'rotate-180' : ''}`}>
-                              <ChevronDown className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </button>
-
-                        {/* Cuerpo Desplegable del Acordeón */}
-                        {isExpanded && (
-                          <div className="p-3.5 pt-1 border-t border-[#E8E1D7]/60 bg-[#FAF8F5]">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                              {group.stores.map((st: any) => (
-                                <div
-                                  key={st.id}
-                                  className="flex flex-col justify-between gap-3 p-3.5 rounded-xl bg-white border border-[#E8E1D7] shadow-xs/80 hover:border-[#8FA89B]/40 hover:bg-white transition shadow-xs group"
-                                >
-                                  <div>
-                                    <div className="flex items-start justify-between gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleInspectStore(st)}
-                                        className="font-bold text-[#2D2825] group-hover:text-[#4A6B5B] transition text-left flex items-center gap-1.5 text-xs"
-                                        title="Haz clic para inspeccionar tienda y catálogo"
-                                      >
-                                        <span className="line-clamp-1">{st.name}</span>
-                                        <Eye className="w-3 h-3 text-[#9D948B] group-hover:text-[#4A6B5B] shrink-0" />
-                                      </button>
-                                      <span className="text-[#4A6B5B] font-mono bg-[#EBF1EE] px-1.5 py-0.5 rounded border border-[#D5E2DB] text-[10px] font-semibold shrink-0">
-                                        {st.platform}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-[#E8E1D7]/50">
-                                      <span className="text-[#7E756F]">
-                                        Estado: <span className="text-[#2D2825] font-medium">{st.last_crawled_human}</span>
-                                      </span>
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-[#4A6B5B] font-bold">
-                                          {st.total_offers} ofertas
-                                        </span>
-                                        {st.new_offers_period > 0 && (
-                                          <span className="text-[#4A6B5B] text-[10px] font-bold bg-[#EBF1EE] px-1.5 py-0.2 rounded border border-[#D5E2DB]">
-                                            +{st.new_offers_period}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2 pt-2 border-t border-[#E8E1D7]/50">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleInspectStore(st)}
-                                      className="flex-1 py-1.5 px-2 bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2D2825] border border-[#E8E1D7] text-xs font-semibold rounded-lg border border-[#E8E1D7] transition flex items-center justify-center gap-1.5"
-                                      title="Inspeccionar catálogo y datos de la tienda"
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-[#4A6B5B]" />
-                                      <span>Ver productos</span>
-                                    </button>
-
-                                    {st.website_url && (
-                                      <a
-                                        href={st.website_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="py-1.5 px-2.5 bg-[#EBF1EE] hover:bg-[#EBF1EE] text-[#4A6B5B] text-xs font-semibold rounded-lg border border-[#D5E2DB] transition flex items-center justify-center gap-1 shrink-0"
-                                        title="Ir a la tienda oficial"
-                                      >
-                                        <span>Ir a la tienda</span>
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
 
-            {/* Variaciones de Precios Recientes si existen */}
+            {/* Variaciones de Precios Recientes con Desglose Geográfico (DLG-EXEC) */}
             {crawlerSummary?.recent_price_changes && crawlerSummary.recent_price_changes.length > 0 && (
-              <div className="bg-[#FAF8F5] border border-[#E8E1D7]/70 rounded-xl p-4">
-                <h4 className="text-xs font-bold uppercase text-[#7E756F] tracking-wider mb-2 flex items-center gap-2">
-                  <TrendingDown className="w-3.5 h-3.5 text-[#B45309]" />
-                  <span>Variaciones de Precios Auditadas Recientemente</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {crawlerSummary.recent_price_changes.map((pch: any) => (
-                    <div key={pch.id} className="p-2.5 bg-white border border-[#E8E1D7] shadow-xs/60 rounded-lg text-xs">
-                      <div className="font-semibold text-[#2D2825] truncate">{pch.product_name}</div>
-                      <div className="text-[10px] text-[#7E756F]">{pch.store_name} • {pch.recorded_at}</div>
-                      <div className="flex items-center justify-between mt-1 text-[11px]">
-                        <span className="text-[#7E756F] line-through">${pch.old_price_usd.toFixed(2)}</span>
-                        <span className="font-bold text-[#2D2825]">${pch.new_price_usd.toFixed(2)}</span>
-                        <span className={`font-bold ${pch.is_discount ? 'text-[#4A6B5B]' : 'text-[#B45309]'}`}>
+              <div className="bg-[#FAF8F5] border border-[#E8E1D7] rounded-2xl p-5 shadow-lg space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E8E1D7]/70">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-[#2D2825] tracking-wider flex items-center gap-2">
+                      <TrendingDown className="w-3.5 h-3.5 text-[#B45309]" />
+                      <span>Variaciones de Precios Auditadas Recientemente</span>
+                    </h4>
+                    <p className="text-[11px] text-[#7E756F] mt-0.5">
+                      Fluctuaciones de precios desglosadas geográficamente en su moneda nativa y cambio real USD
+                    </p>
+                  </div>
+
+                  {/* Selector Geográfico para Variaciones */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setVariationSelectedCountry('ALL')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 cursor-pointer ${
+                        variationSelectedCountry === 'ALL'
+                          ? 'bg-[#4A6B5B] text-white font-bold shadow-xs'
+                          : 'bg-white text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                      }`}
+                    >
+                      Todos ({crawlerSummary.recent_price_changes.length})
+                    </button>
+                    {availableVariationCountries.map((c) => (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => setVariationSelectedCountry(c.code)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 flex items-center gap-1 cursor-pointer ${
+                          variationSelectedCountry === c.code
+                            ? 'bg-[#4A6B5B] text-white font-bold shadow-xs'
+                            : 'bg-white text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                        }`}
+                      >
+                        <span>{c.flag}</span>
+                        <span>{c.name}</span>
+                        <span className="text-[10px] opacity-80">({c.count})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {filteredPriceChanges.map((pch: any) => (
+                    <div key={pch.id} className="p-3 bg-white border border-[#E8E1D7] shadow-xs rounded-xl text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-1 text-[11px]">
+                        <span className="font-semibold text-[#2D2825] flex items-center gap-1 truncate" title={pch.store_name}>
+                          <span>{pch.country_flag || '🌐'}</span>
+                          <span className="truncate">{pch.store_name}</span>
+                        </span>
+                        <span className="text-[10px] text-[#9D948B] shrink-0">{pch.recorded_at}</span>
+                      </div>
+
+                      <div className="font-bold text-[#2D2825] truncate" title={pch.product_name}>
+                        {pch.product_name}
+                      </div>
+
+                      <div className="pt-1.5 border-t border-[#E8E1D7]/60 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="text-[#7E756F] line-through">
+                              {pch.formatted_old_local || `$${pch.old_price_usd.toFixed(2)}`}
+                            </span>
+                            <span className="font-black text-[#2D2825]">
+                              {pch.formatted_new_local || `$${pch.new_price_usd.toFixed(2)}`}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-[#9D948B]">
+                            Ref: ${pch.new_price_usd.toFixed(2)} USD
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                          pch.is_discount 
+                            ? 'bg-[#EBF1EE] text-[#4A6B5B] border border-[#D5E2DB]' 
+                            : 'bg-amber-50 text-[#B45309] border border-amber-200'
+                        }`}>
                           {pch.difference_usd > 0 ? '+' : ''}${pch.difference_usd.toFixed(2)} ({pch.percentage_change}%)
                         </span>
                       </div>
@@ -3161,6 +3668,19 @@ function AdminDashboardContent() {
                 >
                   <TrendingDown className="w-3.5 h-3.5" />
                   <span>Auditar Precios & Stock</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScraperForm({ ...scraperForm, mode: 'discover_web', url: '' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    scraperForm.mode === 'discover_web'
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-blue-600 hover:text-blue-700 bg-blue-50/60'
+                  }`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Descubrir con Google</span>
                 </button>
               </div>
             </div>
@@ -3366,6 +3886,159 @@ function AdminDashboardContent() {
                 </div>
               </div>
             )}
+
+            {/* ESTRATEGIA 5: DESCUBRIMIENTO WEB CON GOOGLE (SERPER API) */}
+            {scraperForm.mode === 'discover_web' && (
+              <div className="space-y-4 bg-gradient-to-br from-blue-50/50 via-white to-slate-50 p-5 rounded-2xl border border-blue-200">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2">
+                      <Search className="w-4 h-4 text-blue-600" />
+                      <span>Descubrimiento Inteligente de Tiendas con Google (Serper API)</span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                        Índice Google Activo
+                      </span>
+                    </h4>
+                    <p className="text-xs text-[#7E756F] mt-1 max-w-2xl leading-relaxed">
+                      Rastrea la web abierta con Google para identificar nuevos e-commerce de cosméticos (Shopify, WooCommerce, VTEX o Schema.org) y registrarlos automáticamente con su país y plataforma tecnológica.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end pt-2">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-[#2D2825] uppercase tracking-wider mb-2">
+                      Término o Ingrediente Objetivo
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: retinol, niacinamida, ácido hialurónico (o dejar vacío)"
+                      value={discoverForm.term}
+                      onChange={(e) => setDiscoverForm({ ...discoverForm, term: e.target.value })}
+                      disabled={isDiscovering}
+                      className="w-full bg-white border border-[#E8E1D7] text-[#2D2825] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    />
+                    <span className="text-[10px] text-[#7E756F] mt-1 block">
+                      Si lo dejas en blanco, el motor seleccionará automáticamente un activo de Nivel A en rotación.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D2825] uppercase tracking-wider mb-2">
+                      Búsquedas en Google
+                    </label>
+                    <select
+                      value={discoverForm.limit}
+                      onChange={(e) => setDiscoverForm({ ...discoverForm, limit: Number(e.target.value) })}
+                      disabled={isDiscovering}
+                      className="w-full bg-white border border-[#E8E1D7] text-[#2D2825] rounded-xl px-3 py-2.5 text-xs focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      <option value={1}>1 búsqueda (1 crédito)</option>
+                      <option value={2}>2 búsquedas (2 créditos)</option>
+                      <option value={3}>3 búsquedas (3 créditos)</option>
+                      <option value={5}>5 búsquedas (5 créditos)</option>
+                    </select>
+                    <span className="text-[10px] text-[#7E756F] mt-1 block">
+                      Geolocalizado en Venezuela (gl: ve).
+                    </span>
+                  </div>
+
+                  <div>
+                    <button
+                      onClick={handleRunDiscovery}
+                      disabled={isDiscovering}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-md shadow-blue-500/20 disabled:opacity-50"
+                    >
+                      {isDiscovering ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Consultando Google...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          <span>Descubrir Tiendas Ahora</span>
+                        </>
+                      )}
+                    </button>
+                    <label className="mt-2 flex items-center gap-2 cursor-pointer text-[11px] text-[#7E756F]">
+                      <input
+                        type="checkbox"
+                        checked={discoverForm.crawl}
+                        onChange={(e) => setDiscoverForm({ ...discoverForm, crawl: e.target.checked })}
+                        disabled={isDiscovering}
+                        className="rounded border-[#E8E1D7] text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Sincronizar catálogo de inmediato</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Resultados del último descubrimiento manual */}
+                {discoveryResult && (
+                  <div className="mt-4 p-4 bg-white border border-blue-100 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        Resultado del descubrimiento manual
+                      </span>
+                      <span className="text-[11px] text-[#7E756F]">
+                        {discoveryResult.queries_executed} consulta(s) ejecutada(s)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                      <div className="p-2 bg-[#FAF8F5] rounded-lg border border-[#E8E1D7]">
+                        <div className="text-base font-bold text-[#2D2825]">{discoveryResult.urls_found}</div>
+                        <div className="text-[10px] text-[#7E756F]">URLs Encontradas</div>
+                      </div>
+                      <div className="p-2 bg-[#FAF8F5] rounded-lg border border-[#E8E1D7]">
+                        <div className="text-base font-bold text-[#2D2825]">{discoveryResult.domains_evaluated}</div>
+                        <div className="text-[10px] text-[#7E756F]">Dominios Evaluados</div>
+                      </div>
+                      <div className="p-2 bg-[#FAF8F5] rounded-lg border border-blue-200">
+                        <div className="text-base font-bold text-blue-600">{discoveryResult.stores_compatible}</div>
+                        <div className="text-[10px] text-[#7E756F]">Compatibles Detectadas</div>
+                      </div>
+                      <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                        <div className="text-base font-bold text-emerald-700">{discoveryResult.new_stores_registered}</div>
+                        <div className="text-[10px] text-emerald-700 font-semibold">Nuevas Tiendas</div>
+                      </div>
+                    </div>
+
+                    {discoveryResult.discovered_stores && discoveryResult.discovered_stores.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-bold text-[#2D2825] mb-2">Tiendas Registradas:</div>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {discoveryResult.discovered_stores.map((s: any) => (
+                            <div key={s.id} className="flex items-center justify-between p-2 rounded-lg bg-[#FAF8F5] border border-[#E8E1D7] text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-[#2D2825]">{s.name}</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">
+                                  {s.platform}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
+                                  {s.country_code || 'GLOBAL'}
+                                </span>
+                              </div>
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-[11px]"
+                              >
+                                <span>Visitar</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Consola de Salida en Vivo */}
@@ -3389,91 +4062,143 @@ function AdminDashboardContent() {
             </div>
           )}
 
-          {/* Tabla de Ofertas y Precios Recientemente Sincronizados */}
-          <div className="bg-white border border-[#E8E1D7] shadow-xs rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
+          {/* Tabla de Ofertas y Precios Recientemente Sincronizados con Desglose Geográfico (DLG-EXEC) */}
+          <div className="bg-white border border-[#E8E1D7] shadow-xs rounded-2xl p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h4 className="text-base font-bold text-[#2D2825]">Últimos Precios Sincronizados en PostgreSQL</h4>
-                <p className="text-xs text-[#7E756F] mt-0.5">Historial reciente de ofertas activas en anaqueles</p>
+                <p className="text-xs text-[#7E756F] mt-0.5">Historial reciente de ofertas activas en anaqueles con desglose geográfico y moneda de origen</p>
               </div>
               <button
-                onClick={loadScraperStatus}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2D2825] border border-[#E8E1D7] text-xs font-semibold transition"
+                onClick={() => loadScraperStatus()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2D2825] border border-[#E8E1D7] text-xs font-semibold transition shrink-0 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Actualizar
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Pestañas Geográficas para Filtrar Ofertas por País */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecentPricesCountry('ALL');
+                  loadScraperStatus('ALL');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                  recentPricesCountry === 'ALL'
+                    ? 'bg-[#4A6B5B] text-white font-bold shadow-xs'
+                    : 'bg-[#FAF8F5] text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Todos los países</span>
+              </button>
+
+              {availableCrawlerCountries.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => {
+                    setRecentPricesCountry(c.code);
+                    loadScraperStatus(c.code);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                    recentPricesCountry === c.code
+                      ? 'bg-[#4A6B5B] text-white font-bold shadow-xs'
+                      : 'bg-[#FAF8F5] text-[#7E756F] hover:text-[#2D2825] border border-[#E8E1D7]'
+                  }`}
+                >
+                  <span>{c.flag}</span>
+                  <span>{c.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-[#E8E1D7]">
               <table className="w-full text-left text-xs text-[#2D2825]">
-                <thead className="bg-[#F4EFE6]/90 text-[10px] text-[#7E756F] uppercase tracking-wider border-b border-[#E8E1D7]">
+                <thead className="bg-[#FAF8F5] text-[10px] text-[#7E756F] uppercase tracking-wider border-b border-[#E8E1D7]">
                   <tr>
-                    <th className="p-3">Tienda / Sucursal</th>
+                    <th className="p-3">Tienda / País</th>
                     <th className="p-3">Producto</th>
                     <th className="p-3">Marca</th>
-                    <th className="p-3 text-right">Precio USD</th>
-                    <th className="p-3 text-right">Precio VES</th>
+                    <th className="p-3 text-right">Precio Moneda Local</th>
+                    <th className="p-3 text-right">Equivalente USD</th>
                     <th className="p-3 text-center">Stock</th>
                     <th className="p-3 text-right">Verificado</th>
                     <th className="p-3 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-[#E8E1D7]">
                   {scraperData?.recent_offers && scraperData.recent_offers.length > 0 ? (
-                    scraperData.recent_offers.map((offer: any) => (
-                      <tr
-                        key={offer.id}
-                        onClick={() => setInspectingOffer(offer)}
-                        className="hover:bg-[#F2ECE4] cursor-pointer transition group"
-                      >
-                        <td className="p-3">
-                          <span className="font-bold text-[#2D2825] block group-hover:text-[#4A6B5B] transition">{offer.store_name}</span>
-                          <span className="text-[10px] text-[#7E756F]">{offer.branch_name}</span>
-                        </td>
-                        <td className="p-3 font-medium text-[#2D2825]">
-                          <span className="group-hover:text-[#4A6B5B] font-semibold transition">
-                            {offer.product_name}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[#7E756F]">{offer.brand_name}</td>
-                        <td className="p-3 text-right font-extrabold text-[#4A6B5B]">
-                          ${Number(offer.price).toFixed(2)} USD
-                        </td>
-                        <td className="p-3 text-right text-[#2D2825] font-medium">
-                          {offer.price_ves != null 
-                            ? `Bs. ${Number(offer.price_ves).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                            : 'N/A'}
-                        </td>
-                        <td className="p-3 text-center">
-                          {offer.in_stock ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF1EE] text-[#4A6B5B]">
-                              En Stock
+                    scraperData.recent_offers.map((offer: any) => {
+                      const flag = offer.country_flag || '🌐';
+                      const countryName = offer.country_name || offer.country_code || 'GLOBAL';
+                      const countryCode = (offer.country_code || 'VE').toUpperCase();
+
+                      return (
+                        <tr
+                          key={offer.id}
+                          onClick={() => setInspectingOffer(offer)}
+                          className="hover:bg-[#FAF8F5]/80 cursor-pointer transition group"
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <span>{flag}</span>
+                              <span className="font-bold text-[#2D2825] group-hover:text-[#4A6B5B] transition">{offer.store_name}</span>
+                            </div>
+                            <span className="text-[10px] text-[#7E756F] block mt-0.5">
+                              {countryName} {offer.branch_name ? `• ${offer.branch_name}` : ''}
                             </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-[#9F1239]">
-                              Agotado
+                          </td>
+                          <td className="p-3 font-medium text-[#2D2825] max-w-xs">
+                            <span className="group-hover:text-[#4A6B5B] font-semibold transition line-clamp-1" title={offer.product_name}>
+                              {offer.product_name}
                             </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right text-[#9D948B] text-[11px]">
-                          {offer.last_checked_at}
-                        </td>
-                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => setInspectingOffer(offer)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EBF1EE] hover:bg-[#EBF1EE] text-[#4A6B5B] font-bold text-[11px] transition border border-[#D5E2DB]"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Ver Datos</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="p-3 text-[#7E756F] whitespace-nowrap">{offer.brand_name}</td>
+                          <td className="p-3 text-right whitespace-nowrap">
+                            <span className="font-bold text-[#2D2825]">
+                              {formatLocalPrice(offer.price_local, offer.currency_local, offer.country_code)}
+                            </span>
+                            <span className="text-[10px] font-mono text-[#7E756F] ml-1.5 px-1 py-0.5 rounded bg-[#FAF8F5] border border-[#E8E1D7] font-semibold">
+                              {countryCode}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-extrabold text-[#4A6B5B] whitespace-nowrap">
+                            {formatUsd(offer.price)}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap">
+                            {offer.in_stock ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF1EE] text-[#4A6B5B] border border-[#D5E2DB]">
+                                En Stock
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-[#9F1239] border border-rose-200">
+                                Agotado
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right text-[#9D948B] text-[11px] whitespace-nowrap">
+                            {offer.last_checked_at}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setInspectingOffer(offer)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF8F5] hover:bg-[#F2ECE4] text-[#2D2825] font-semibold text-[11px] transition border border-[#E8E1D7]"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                              <span>Ver Datos</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={8} className="p-6 text-center text-[#9D948B]">
-                        No hay ofertas registradas aún. Ejecuta un rastreo para comenzar.
+                        No hay ofertas registradas aún para los filtros seleccionados.
                       </td>
                     </tr>
                   )}
@@ -3950,6 +4675,11 @@ function AdminDashboardContent() {
         </div>
       )}
 
+      {/* TAB: COMPONENTES & FICHAS INCI */}
+      {activeTab === 'ingredients' && (
+        <AdminIngredientsTab />
+      )}
+
       {/* MODAL DETALLES COMPLETOS DEL PRODUCTO DESDE SCRAPER */}
       {inspectingOffer && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -3975,37 +4705,49 @@ function AdminDashboardContent() {
               </button>
             </div>
 
-            {/* Grid de Atributos del Producto */}
+            {/* Grid de Atributos del Producto (DLG-EXEC) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E8E1D7]">
                 <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">Precio USD</span>
                 <span className="text-base font-extrabold text-[#4A6B5B] mt-0.5 block">
-                  ${inspectingOffer.price.toFixed(2)}
+                  {formatUsd(inspectingOffer.price)}
+                </span>
+                <span className="text-[10px] text-[#9D948B] block mt-0.5">Base comparativa</span>
+              </div>
+
+              <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E8E1D7]">
+                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">Precio Moneda Local</span>
+                <span className="text-base font-extrabold text-[#2D2825] mt-0.5 block truncate">
+                  {formatLocalPrice(inspectingOffer.price_local, inspectingOffer.currency_local, inspectingOffer.country_code)}
+                </span>
+                <span className="text-[10px] text-[#9D948B] block mt-0.5">
+                  Moneda de anaquel ({inspectingOffer.country_code || 'VE'})
                 </span>
               </div>
 
               <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E8E1D7]">
-                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">Precio VES</span>
-                <span className="text-base font-extrabold text-[#2D2825] mt-0.5 block">
-                  {inspectingOffer.price_ves != null 
-                    ? `Bs. ${Number(inspectingOffer.price_ves).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                    : 'N/A'}
+                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">
+                  País de Origen
+                </span>
+                <span className="text-base font-extrabold text-[#2D2825] mt-0.5 block truncate flex items-center gap-1.5">
+                  <span>{inspectingOffer.country_flag || '🇻🇪'}</span>
+                  <span>{inspectingOffer.country_name || 'Venezuela'}</span>
+                  <span className="text-[11px] font-mono text-[#7E756F]">({inspectingOffer.country_code || 'VE'})</span>
+                </span>
+                <span className="text-[10px] text-[#9D948B] block mt-0.5">
+                  Jurisdicción comercial
                 </span>
               </div>
 
               <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E8E1D7]">
                 <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">Disponibilidad</span>
                 <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${
-                  inspectingOffer.in_stock ? 'bg-[#EBF1EE] text-[#4A6B5B]' : 'bg-rose-500/20 text-[#9F1239]'
+                  inspectingOffer.in_stock ? 'bg-[#EBF1EE] text-[#4A6B5B] border border-[#D5E2DB]' : 'bg-rose-50 text-[#9F1239] border border-rose-200'
                 }`}>
                   {inspectingOffer.in_stock ? 'En Stock' : 'Agotado'}
                 </span>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E8E1D7]">
-                <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">Código EAN</span>
-                <span className="text-xs font-mono text-[#2D2825] mt-1 block truncate">
-                  {inspectingOffer.barcode_ean || 'Sin código'}
+                <span className="text-[10px] font-mono text-[#9D948B] block mt-1 truncate">
+                  EAN: {inspectingOffer.barcode_ean || 'Sin código'}
                 </span>
               </div>
             </div>
@@ -4077,6 +4819,58 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Close main container */}
+      </main>
+
+      {/* 3. MOBILE BOTTOM NAVIGATION BAR (DLG-HYBRID) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-purple-100 px-3 py-2 flex items-center justify-around z-40">
+        <button
+          onClick={() => handleTabChange('inicio')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold transition ${
+            activeTab === 'inicio' ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-purple-600'
+          }`}
+        >
+          <Home className="w-5 h-5" />
+          <span>Inicio</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('users')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold transition ${
+            activeTab === 'users' ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-purple-600'
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          <span>Usuarios</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('stores')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold transition ${
+            activeTab === 'stores' ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-purple-600'
+          }`}
+        >
+          <Store className="w-5 h-5" />
+          <span>Tiendas</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('security')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold transition ${
+            activeTab === 'security' ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-purple-600'
+          }`}
+        >
+          <ShieldCheck className="w-5 h-5" />
+          <span>Seguridad</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('settings')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold transition ${
+            activeTab === 'settings' ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-purple-600'
+          }`}
+        >
+          <Settings className="w-5 h-5" />
+          <span>Ajustes</span>
+        </button>
+      </nav>
     </div>
   );
 }

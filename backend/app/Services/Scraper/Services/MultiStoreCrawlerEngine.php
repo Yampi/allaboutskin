@@ -89,8 +89,20 @@ class MultiStoreCrawlerEngine
                         try {
                             // 1. Evaluación en el Clinical Quality Gate
                             $gateResult = $this->qualityGate->evaluate($offerDto, $ingredient);
+                            $isAccepted = $gateResult->isAccepted();
 
-                            if (!$gateResult->isAccepted()) {
+                            // Guardar auditoría reciente para transparencia del admin
+                            $this->recordQualityGateAudit(
+                                $offerDto->productName,
+                                $store->name,
+                                $ingredient->inci_name,
+                                $isAccepted,
+                                $gateResult->confidenceScore,
+                                $gateResult->primaryReasonCode,
+                                $gateResult->reasons[0] ?? ($isAccepted ? 'Aprobado: pureza clínica comprobada' : 'Rechazado por filtro antibasura')
+                            );
+
+                            if (!$isAccepted) {
                                 $totalRejected++;
                                 continue;
                             }
@@ -214,5 +226,44 @@ class MultiStoreCrawlerEngine
         }
 
         return array_unique($terms);
+    }
+
+    /**
+     * Registra una auditoría del Quality Gate en caché para transparencia del administrador.
+     */
+    protected function recordQualityGateAudit(
+        string $productName,
+        string $storeName,
+        string $inciName,
+        bool $isAccepted,
+        int $score,
+        ?string $reasonCode,
+        string $reasonDescription
+    ): void {
+        try {
+            $audits = \Illuminate\Support\Facades\Cache::get('quality_gate_recent_audits', []);
+            array_unshift($audits, [
+                'id' => uniqid('qg_'),
+                'product_name' => $productName,
+                'store_name' => $storeName,
+                'inci_name' => $inciName,
+                'status' => $isAccepted ? 'APPROVED' : 'REJECTED',
+                'confidence_score' => $score,
+                'reason_code' => $reasonCode ?: ($isAccepted ? 'APPROVED' : 'REJECTED'),
+                'reason' => $reasonDescription,
+                'timestamp' => now()->toIso8601String(),
+                'time_human' => now()->diffForHumans(),
+            ]);
+
+            // Mantener un búfer de las últimas 50 auditorías
+            $audits = array_slice($audits, 0, 50);
+            \Illuminate\Support\Facades\Cache::put('quality_gate_recent_audits', $audits, 86400 * 7);
+
+            // Incrementar contador por código de motivo
+            $codeKey = 'qg_tally_' . ($reasonCode ?: ($isAccepted ? 'APPROVED' : 'REJECTED'));
+            \Illuminate\Support\Facades\Cache::increment($codeKey);
+        } catch (\Throwable) {
+            // Silencioso para no interrumpir el rastreo principal
+        }
     }
 }

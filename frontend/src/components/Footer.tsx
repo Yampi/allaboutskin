@@ -1,82 +1,167 @@
+'use client';
+
+import React from 'react';
 import Link from 'next/link';
-import { Microscope, ShieldAlert, Sparkles } from 'lucide-react';
+import { Sparkles, ShieldAlert, Globe } from 'lucide-react';
+
+function InstagramIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
+
+function FacebookIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
+
+function YoutubeIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" />
+      <polygon points="10 15 15 12 10 9 10 15" fill="currentColor" />
+    </svg>
+  );
+}
 
 export default function Footer() {
   return (
-    <footer className="bg-[#1E2822] text-[#B8C2BC] text-xs border-t border-[#2D3C33] mt-24 mb-16 md:mb-0">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-12 mb-10">
-          <div className="md:col-span-5 space-y-3">
-            <div className="flex items-center space-x-2 text-white">
-              <div className="w-7 h-7 rounded-full bg-[#2D3C33] flex items-center justify-center text-[#7A9A8B]">
-                <Sparkles className="w-3.5 h-3.5 text-[#A2BAAD]" />
+    <footer className="bg-[#1B3D32] text-[#B8C7BF] text-xs border-t border-[#264D40] mt-16 pb-16 lg:pb-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        
+        {/* Top Grid: Logo + Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mb-10">
+          
+          {/* Brand Info */}
+          <div className="md:col-span-4 space-y-3">
+            <Link href="/" className="flex items-center gap-2 text-white group">
+              <div className="w-8 h-8 rounded-full bg-[#2E7D5B] flex items-center justify-center text-white shadow-xs">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <span className="text-lg font-serif font-bold tracking-tight">
-                Allabout<span className="text-[#A2BAAD]">.skin</span>
+              <span className="text-xl font-bold tracking-tight">
+                allabout<span className="text-[#8FA89B]">.skin</span>
               </span>
-            </div>
-            <p className="text-[#8E9C93] text-xs leading-relaxed max-w-sm">
-              Plataforma editorial de análisis dermatológico y ciencia cosmética. Normalización frente al inventario europeo CosIng (Reg. CE 1223/2009) e indexación directa con la literatura médica de PubMed (NCBI).
+            </Link>
+            <p className="text-[11px] font-medium text-[#8EA096] uppercase tracking-wider">
+              Ciencia • Tecnología • Tu piel
+            </p>
+            <p className="text-[#A4B5AC] text-xs leading-relaxed max-w-sm pt-1">
+              Plataforma dermatológica de análisis científico, seguimiento de Skin Cycling y conexión directa con inventario real en farmacias y comercios aliados.
             </p>
           </div>
 
+          {/* Col 1: Producto */}
           <div className="md:col-span-3 space-y-2.5">
-            <h4 className="text-white font-serif font-bold text-xs uppercase tracking-wider">Navegación</h4>
-            <ul className="space-y-2 text-xs text-[#8E9C93]">
-              <li><Link href="/" className="hover:text-white transition-colors">Analizador de Fórmulas & OCR</Link></li>
-              <li><Link href="/comparador" className="hover:text-white transition-colors">Comparador de Fórmulas</Link></li>
-              <li><Link href="/mi-rutina" className="hover:text-white transition-colors">Mi Rutina & Calendario</Link></li>
-              <li><Link href="/rutinas/skin-cycling" className="hover:text-white transition-colors">Protocolo Skin Cycling</Link></li>
-              <li><Link href="/ingrediente" className="hover:text-white transition-colors">Biblioteca de Activos</Link></li>
-              <li><Link href="/ofertas" className="hover:text-white transition-colors">Catálogo Curado</Link></li>
-              <li className="pt-1.5 border-t border-[#2D3C33]/60"><Link href="/dashboard/empresa" className="text-teal-400 hover:text-teal-300 font-semibold transition-colors flex items-center gap-1"><span>Portal Comercios & Vitrinas</span></Link></li>
-              <li><Link href="/admin" className="text-slate-400 hover:text-white text-[11px] transition-colors">Administración Central</Link></li>
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider">Producto</h4>
+            <ul className="space-y-2 text-xs text-[#A4B5AC]">
+              <li>
+                <Link href="/#como-funciona" className="hover:text-white transition-colors">
+                  Cómo funciona
+                </Link>
+              </li>
+              <li>
+                <Link href="/tiendas" className="hover:text-white transition-colors">
+                  Tiendas & Farmacias
+                </Link>
+              </li>
+              <li>
+                <Link href="/escaner" className="hover:text-white transition-colors">
+                  Escáner Dermatológico IA
+                </Link>
+              </li>
+              <li>
+                <Link href="/calendario" className="hover:text-white transition-colors">
+                  Calendario Skin Cycling
+                </Link>
+              </li>
+              <li>
+                <Link href="/mi-rutina" className="hover:text-white transition-colors">
+                  Perfil Dermatológico
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="md:col-span-4 space-y-3">
-            <h4 className="text-white font-serif font-bold text-xs uppercase tracking-wider">Marco Legal & Rigor</h4>
-            <div className="bg-[#161F1A] p-3.5 rounded-lg border border-[#2D3C33] text-xs text-[#8E9C93] space-y-2">
-              <div className="flex items-center gap-1.5 text-[#A2BAAD] font-semibold">
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Deslinde Médico & Sanitario</span>
-              </div>
-              <p className="text-[11px] leading-relaxed text-[#7C8A81]">
-                Información de orientación dermocosmética sin carácter prescriptivo ni diagnóstico clínico. Conforme a la Ley de Ejercicio de la Medicina de Venezuela.
-              </p>
-            </div>
+          {/* Col 2: Compañía */}
+          <div className="md:col-span-2 space-y-2.5">
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider">Compañía</h4>
+            <ul className="space-y-2 text-xs text-[#A4B5AC]">
+              <li>
+                <Link href="/aviso-medico" className="hover:text-white transition-colors">
+                  Quiénes somos
+                </Link>
+              </li>
+              <li>
+                <Link href="/terminos" className="hover:text-white transition-colors">
+                  Términos y condiciones
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacidad" className="hover:text-white transition-colors">
+                  Privacidad
+                </Link>
+              </li>
+              <li>
+                <Link href="/estado" className="hover:text-white transition-colors">
+                  Estado de servicios
+                </Link>
+              </li>
+            </ul>
+          </div>
 
-            <ul className="grid grid-cols-2 gap-2 text-[11px] text-[#8E9C93] pt-1">
+          {/* Col 3: Soporte & Portales */}
+          <div className="md:col-span-3 space-y-2.5">
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider">Portales & Soporte</h4>
+            <ul className="space-y-2 text-xs text-[#A4B5AC]">
               <li>
-                <Link href="/aviso-medico" className="hover:text-white transition-colors underline-offset-2 hover:underline">
-                  Aviso Médico Oficial
+                <Link href="/dashboard/usuario" className="text-rose-200 hover:text-white font-medium transition-colors flex items-center gap-1.5">
+                  <span>Portal Paciente («Mi Piel»)</span>
                 </Link>
               </li>
               <li>
-                <Link href="/terminos" className="hover:text-white transition-colors underline-offset-2 hover:underline">
-                  Términos y Portal B2B
+                <Link href="/dashboard/empresa" className="text-sky-200 hover:text-white font-medium transition-colors flex items-center gap-1.5">
+                  <span>Portal Comercios & Farmacias</span>
                 </Link>
               </li>
               <li>
-                <Link href="/privacidad" className="hover:text-white transition-colors underline-offset-2 hover:underline">
-                  Privacidad & OCR/AR
+                <Link href="/admin" className="text-purple-200 hover:text-white font-medium transition-colors flex items-center gap-1.5">
+                  <span>Centro de Control Administrativo</span>
                 </Link>
               </li>
-              <li>
-                <Link href="/estado" className="hover:text-white transition-colors underline-offset-2 hover:underline text-teal-400">
-                  Estado & Uptime
-                </Link>
+              <li className="pt-2">
+                <div className="flex items-center gap-3 text-[#A4B5AC]">
+                  <a href="#" className="hover:text-white transition" aria-label="Instagram">
+                    <InstagramIcon className="w-4 h-4" />
+                  </a>
+                  <a href="#" className="hover:text-white transition" aria-label="Facebook">
+                    <FacebookIcon className="w-4 h-4" />
+                  </a>
+                  <a href="#" className="hover:text-white transition" aria-label="YouTube">
+                    <YoutubeIcon className="w-4 h-4" />
+                  </a>
+                </div>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-[#2D3C33] text-[11px] flex flex-col sm:flex-row justify-between items-center text-[#6E7B73] gap-3">
-          <p>© {new Date().getFullYear()} Allabout.skin. Ciencia, formulación y bienestar dérmico en Venezuela.</p>
-          <div className="flex flex-wrap items-center gap-4 text-[10px] tracking-wider uppercase">
-            <span>CosIng EU Reg. 1223/2009</span>
-            <span>PubMed NCBI</span>
-            <span className="text-teal-400 font-medium">DLG-EXEC 1.0</span>
+        {/* Bottom bar */}
+        <div className="pt-8 border-t border-[#264D40] text-[11px] flex flex-col sm:flex-row justify-between items-center text-[#8EA096] gap-3">
+          <p>© {new Date().getFullYear()} Allabout.skin. Todos los derechos reservados.</p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-xs text-[#A4B5AC]">
+              <Globe className="w-3.5 h-3.5" />
+              <span>Español (VE)</span>
+            </div>
+            <span className="text-[#264D40]">|</span>
+            <span className="font-semibold text-[#8FA89B]">DLG-HYBRID</span>
           </div>
         </div>
       </div>

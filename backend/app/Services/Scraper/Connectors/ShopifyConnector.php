@@ -20,8 +20,11 @@ class ShopifyConnector implements StoreConnectorInterface
     {
         $baseUrl = rtrim($store->website_url, '/');
         $offers = [];
-        $storeCurrency = $this->exchangeRateService->getCurrencyForCountry($store->country_code);
-        $isZeroDecimal = in_array($storeCurrency, ['CLP', 'COP', 'PYG', 'JPY', 'KRW']);
+        $isVe = (($store->country_code ?? 'VE') === 'VE');
+
+        // En Venezuela, Shopify opera en USD debido a pasarelas de pago internacionales
+        $catalogCurrency = $isVe ? 'USD' : $this->exchangeRateService->getCurrencyForCountry($store->country_code);
+        $isZeroDecimal = in_array($catalogCurrency, ['CLP', 'COP', 'PYG', 'JPY', 'KRW']);
 
         try {
             // 1. Intentar el endpoint estándar predictivo de Shopify
@@ -46,32 +49,33 @@ class ShopifyConnector implements StoreConnectorInterface
                     $handle = $p['handle'] ?? '';
                     $productUrl = !empty($handle) ? "{$baseUrl}/products/{$handle}" : ($p['url'] ?? $baseUrl);
                     $brand = $p['vendor'] ?? $store->name;
-                    $rawPrice = (float) ($p['price'] ?? 0);
+                    $rawPrice = $p['price'] ?? 0;
 
                     // Si no es moneda de cero decimales (como CLP/COP) y Shopify devuelve centavos (ej: 2500 para $25.00)
-                    $localPrice = $rawPrice;
-                    if (!$isZeroDecimal && $rawPrice > 1000 && !str_contains((string) ($p['price'] ?? ''), '.')) {
-                        $localPrice = $rawPrice / 100.0;
+                    if (!$isZeroDecimal && is_numeric($rawPrice) && (float)$rawPrice > 1000 && !str_contains((string) $rawPrice, '.')) {
+                        $rawPrice = ((float) $rawPrice) / 100.0;
                     }
 
-                    // Convertir precio local a USD
-                    $priceUsd = $this->exchangeRateService->toUsd($localPrice, $storeCurrency);
-                    $priceVes = $storeCurrency === 'VES' ? $localPrice : null;
+                    $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                        rawPrice: $rawPrice,
+                        currency: $isVe ? 'USD' : $catalogCurrency,
+                        countryCode: $store->country_code
+                    );
 
                     $isAvailable = (bool) ($p['available'] ?? true);
 
                     $offers[] = new ScrapedProductOfferDTO(
                         storeSlug: $store->slug,
                         productName: $title,
-                        price: $priceUsd,
+                        price: $normalized['price_usd'],
                         currency: 'USD',
                         inStock: $isAvailable,
                         productUrl: $productUrl,
                         brandName: $brand,
                         category: 'SKINCARE',
-                        priceVes: $priceVes,
-                        priceLocal: $localPrice,
-                        currencyLocal: $storeCurrency
+                        priceVes: $normalized['price_ves'],
+                        priceLocal: $normalized['price_local'],
+                        currencyLocal: $normalized['currency_local']
                     );
                 }
 
@@ -101,29 +105,32 @@ class ShopifyConnector implements StoreConnectorInterface
                         $productUrl = "{$baseUrl}/products/{$handle}";
                         $brand = $p['vendor'] ?? $store->name;
                         $firstVariant = $p['variants'][0] ?? [];
-                        $rawPrice = (float) ($firstVariant['price'] ?? 0);
+                        $rawPrice = $firstVariant['price'] ?? 0;
 
-                        $localPrice = $rawPrice;
-                        if (!$isZeroDecimal && $rawPrice > 1000 && !str_contains((string) ($firstVariant['price'] ?? ''), '.')) {
-                            $localPrice = $rawPrice / 100.0;
+                        if (!$isZeroDecimal && is_numeric($rawPrice) && (float)$rawPrice > 1000 && !str_contains((string) $rawPrice, '.')) {
+                            $rawPrice = ((float) $rawPrice) / 100.0;
                         }
 
-                        $priceUsd = $this->exchangeRateService->toUsd($localPrice, $storeCurrency);
-                        $priceVes = $storeCurrency === 'VES' ? $localPrice : null;
+                        $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                            rawPrice: $rawPrice,
+                            currency: $isVe ? 'USD' : $catalogCurrency,
+                            countryCode: $store->country_code
+                        );
+
                         $inStock = (bool) ($firstVariant['available'] ?? true);
 
                         $offers[] = new ScrapedProductOfferDTO(
                             storeSlug: $store->slug,
                             productName: $title,
-                            price: $priceUsd,
+                            price: $normalized['price_usd'],
                             currency: 'USD',
                             inStock: $inStock,
                             productUrl: $productUrl,
                             brandName: $brand,
                             category: 'SKINCARE',
-                            priceVes: $priceVes,
-                            priceLocal: $localPrice,
-                            currencyLocal: $storeCurrency
+                            priceVes: $normalized['price_ves'],
+                            priceLocal: $normalized['price_local'],
+                            currencyLocal: $normalized['currency_local']
                         );
                     }
                 }

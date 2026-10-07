@@ -122,18 +122,9 @@ class OfferSyncService
             $branchId = $branch?->id;
         }
 
-        // 3. Resolver precio local y divisa
-        $exchangeService = app(\App\Services\Currency\ExchangeRateService::class);
-        $currencyLocal = $dto->currencyLocal ?: $exchangeService->getCurrencyForCountry($store->country_code);
-        $priceLocal = $dto->priceLocal;
-
-        if ($priceLocal === null || $priceLocal <= 0) {
-            if ($currencyLocal === 'VES' && $dto->priceVes) {
-                $priceLocal = $dto->priceVes;
-            } elseif ($dto->price > 0) {
-                $priceLocal = $exchangeService->fromUsd($dto->price, $currencyLocal);
-            }
-        }
+        // 3. Normalizar de forma estricta precios, divisas y equivalencias según el país de la tienda
+        $priceNormalizer = app(\App\Services\Currency\PriceNormalizerService::class);
+        $dto = $priceNormalizer->normalizeProductOffer($dto, $store);
 
         // Crear o actualizar la oferta de precio y stock
         return ProductStoreOffer::updateOrCreate(
@@ -147,9 +138,9 @@ class OfferSyncService
                 'affiliate_url' => $dto->productUrl ?? $store->website_url,
                 'price' => $dto->price,
                 'price_ves' => $dto->priceVes,
-                'price_local' => $priceLocal,
-                'currency' => $dto->currency,
-                'currency_local' => $currencyLocal,
+                'price_local' => $dto->priceLocal,
+                'currency' => $dto->currency ?: 'USD',
+                'currency_local' => $dto->currencyLocal,
                 'in_stock' => $dto->inStock,
                 'last_checked_at' => now(),
             ]
@@ -208,13 +199,20 @@ class OfferSyncService
             return $store;
         }
 
-        // 2. Si no existe, usar firstOrCreate por name para garantizar que la restricción UNIQUE de PostgreSQL nunca falle
+        // 2. Si no existe, deducir país mediante detector
+        $fallbackUrl = 'https://' . $normalizedSlug . '.com';
+        $countryDetector = app(\App\Services\Scraper\Services\StoreCountryDetectorService::class);
+        $detected = $countryDetector->detectCountry($fallbackUrl);
+        $countryCode = $detected['country_code'] ?? 'GLOBAL';
+
+        // Usar firstOrCreate por name para garantizar que la restricción UNIQUE de PostgreSQL nunca falle
         return AffiliateStore::firstOrCreate(
             ['name' => $storeName],
             [
                 'slug' => $normalizedSlug,
-                'website_url' => 'https://' . $normalizedSlug . '.com.ve',
+                'website_url' => $fallbackUrl,
                 'store_type' => 'HYBRID',
+                'country_code' => $countryCode,
                 'is_active' => true,
             ]
         );

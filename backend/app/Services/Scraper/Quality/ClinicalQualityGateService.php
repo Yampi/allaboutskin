@@ -12,12 +12,14 @@ class QualityGateResult
      * @param int $confidenceScore
      * @param array<string> $reasons
      * @param string|null $detectedCategory
+     * @param string|null $primaryReasonCode
      */
     public function __construct(
         public readonly bool $isValid,
         public readonly int $confidenceScore,
         public readonly array $reasons = [],
-        public readonly ?string $detectedCategory = null
+        public readonly ?string $detectedCategory = null,
+        public readonly ?string $primaryReasonCode = null
     ) {}
 
     public function isAccepted(): bool
@@ -28,6 +30,13 @@ class QualityGateResult
 
 class ClinicalQualityGateService
 {
+    public const REASON_SUPPLEMENT_NON_TOPICAL = 'SUPPLEMENT_NON_TOPICAL';
+    public const REASON_NO_SKINCARE_TERMS = 'NO_SKINCARE_TERMS';
+    public const REASON_OUT_OF_RANGE_PRICE = 'OUT_OF_RANGE_PRICE';
+    public const REASON_INCI_MISMATCH = 'INCI_MISMATCH';
+    public const REASON_SHORT_TITLE = 'SHORT_TITLE';
+    public const REASON_APPROVED = 'APPROVED';
+
     /**
      * Palabras no cosméticas (suplementos orales, medicamentos no tópicos, mascotas, alimentos o ferretería)
      */
@@ -67,12 +76,19 @@ class ClinicalQualityGateService
     {
         $reasons = [];
         $score = 50; // Base neutra
+        $primaryCode = null;
 
         $title = mb_strtolower(trim($dto->productName));
 
         // 1. Longitud básica y contenido del título
         if (mb_strlen($title) < 4) {
-            return new QualityGateResult(false, 0, ['Título del producto excesivamente corto o vacío.']);
+            return new QualityGateResult(
+                false, 
+                0, 
+                ['Título del producto excesivamente corto o vacío.'],
+                null,
+                self::REASON_SHORT_TITLE
+            );
         }
 
         // 2. Filtro estricto de palabras prohibidas (no cosméticos / suplementos)
@@ -81,7 +97,9 @@ class ClinicalQualityGateService
                 return new QualityGateResult(
                     false,
                     0,
-                    ["Rechazado por filtro antibasura: contiene término no tópico/no cosmético '{$badWord}'."]
+                    ["Rechazado por filtro antibasura: contiene término no tópico/no cosmético '{$badWord}'."],
+                    null,
+                    self::REASON_SUPPLEMENT_NON_TOPICAL
                 );
             }
         }
@@ -91,7 +109,9 @@ class ClinicalQualityGateService
             return new QualityGateResult(
                 false,
                 0,
-                ["Precio inválido o nulo (\${$dto->price} USD). Descartado por precaución."]
+                ["Precio inválido o nulo (\${$dto->price} USD). Descartado por precaución."],
+                null,
+                self::REASON_OUT_OF_RANGE_PRICE
             );
         }
 
@@ -99,7 +119,9 @@ class ClinicalQualityGateService
             return new QualityGateResult(
                 false,
                 10,
-                ["Precio anómalo superior a \$600.00 USD (\${$dto->price} USD). Requiere verificación manual."]
+                ["Precio anómalo superior a \$600.00 USD (\${$dto->price} USD). Requiere verificación manual."],
+                null,
+                self::REASON_OUT_OF_RANGE_PRICE
             );
         }
 
@@ -121,6 +143,9 @@ class ClinicalQualityGateService
         if (!$hasSkincareTerm) {
             $score -= 20;
             $reasons[] = 'No se detectaron términos explícitos de cosmética/dermatología tópica en el título.';
+            if (!$primaryCode) {
+                $primaryCode = self::REASON_NO_SKINCARE_TERMS;
+            }
         }
 
         // 5. Coherencia con el ingrediente activo esperado (si la búsqueda provino de un ingrediente)
@@ -132,6 +157,9 @@ class ClinicalQualityGateService
                 // Si la búsqueda era específica por un componente y el título no lo menciona en absoluto
                 $score -= 30;
                 $reasons[] = "El producto no menciona variaciones o alias de '{$expectedIngredient->inci_name}' en su título comercial.";
+                if (!$primaryCode) {
+                    $primaryCode = self::REASON_INCI_MISMATCH;
+                }
             }
         }
 
@@ -141,7 +169,13 @@ class ClinicalQualityGateService
         $finalScore = max(0, min(100, $score));
         $isValid = $finalScore >= 60;
 
-        return new QualityGateResult($isValid, $finalScore, $reasons, $category);
+        return new QualityGateResult(
+            $isValid, 
+            $finalScore, 
+            $reasons, 
+            $category,
+            $isValid ? self::REASON_APPROVED : ($primaryCode ?? self::REASON_NO_SKINCARE_TERMS)
+        );
     }
 
     /**

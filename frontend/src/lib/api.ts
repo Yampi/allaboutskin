@@ -250,6 +250,37 @@ export async function loginUser(email: string, password: string): Promise<Stored
   return storedUser;
 }
 
+export async function registerUser(name: string, email: string, password: string): Promise<StoredUser> {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ name, email, password }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Error al crear la cuenta. Verifica los datos introducidos.');
+  }
+
+  const json = await res.json();
+  const userData = json.user;
+  const storedUser: StoredUser = {
+    id: userData.id,
+    name: userData.name,
+    email: userData.email,
+    role: userData.role || 'standard_user',
+    is_active: userData.is_active ?? true,
+    token: json.access_token,
+  };
+
+  setCurrentUser(storedUser);
+  return storedUser;
+}
+
+
 export async function logoutUser(): Promise<void> {
   try {
     await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -1223,7 +1254,7 @@ export async function fetchOptimizeStoreRoutine(lat: number, lng: number, radius
   return res.json();
 }
 
-export async function fetchAdminScraperStatus(): Promise<{
+export async function fetchAdminScraperStatus(country?: string): Promise<{
   status: string;
   metrics: {
     total_offers: number;
@@ -1242,17 +1273,25 @@ export async function fetchAdminScraperStatus(): Promise<{
     id: number;
     store_name: string;
     branch_name: string;
+    country_code?: string;
+    country_name?: string;
+    country_flag?: string;
     product_name: string;
     brand_name: string;
     price: number;
-    price_ves: number;
+    price_ves: number | null;
+    price_local?: number;
+    currency_local?: string;
+    formatted_price_usd?: string;
+    formatted_price_local?: string;
     currency: string;
     in_stock: boolean;
     last_checked_at: string;
   }>;
   logs: string;
 }> {
-  const res = await fetch(`${API_BASE_URL}/admin/scraper/status`, {
+  const queryParam = country && country !== 'ALL' ? `?country=${encodeURIComponent(country)}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/scraper/status${queryParam}`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) {
@@ -1266,7 +1305,7 @@ export async function triggerAdminScraperRun(payload: {
   store?: string;
   city?: string;
   url?: string;
-  mode?: 'chain' | 'url' | 'ingredient' | 'all_active_ingredients' | 'refresh_prices';
+  mode?: 'chain' | 'url' | 'ingredient' | 'all_active_ingredients' | 'refresh_prices' | 'discover_web';
   ingredient_id?: string | number;
 }): Promise<{
   status: string;
@@ -1282,6 +1321,43 @@ export async function triggerAdminScraperRun(payload: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || 'Error al ejecutar el rastreador');
+  }
+  return res.json();
+}
+
+export async function triggerAdminDiscoverWeb(payload: {
+  term?: string;
+  limit?: number;
+  crawl?: boolean;
+}): Promise<{
+  status: string;
+  message: string;
+  data: {
+    queries_executed: number;
+    urls_found: number;
+    domains_evaluated: number;
+    new_stores_registered: number;
+    stores_compatible: number;
+    new_products_synced?: number;
+    discovered_stores: Array<{
+      id: number;
+      name: string;
+      url: string;
+      platform: string;
+      country_code?: string;
+      confidence?: number;
+    }>;
+    errors?: string[];
+  };
+}> {
+  const res = await fetch(`${API_BASE_URL}/admin/scraper/discover-web`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error en el descubrimiento web');
   }
   return res.json();
 }
@@ -1324,9 +1400,18 @@ export interface CrawlerSummaryData {
     product_name: string;
     brand: string;
     store_name: string;
+    country_code?: string;
+    country_name?: string;
+    country_flag?: string;
+    currency_local?: string;
     old_price_usd: number;
     new_price_usd: number;
     difference_usd: number;
+    old_price_local?: number;
+    new_price_local?: number;
+    difference_local?: number;
+    formatted_old_local?: string;
+    formatted_new_local?: string;
     percentage_change: number;
     is_discount: boolean;
     recorded_at: string;
@@ -1335,8 +1420,13 @@ export interface CrawlerSummaryData {
     id: number;
     name: string;
     slug: string;
+    website_url?: string;
+    country_code?: string;
+    country_name?: string;
+    country_flag?: string;
     platform: string;
     crawler_enabled: boolean;
+    last_crawled_at?: string;
     last_crawled_human: string;
     total_offers: number;
     new_offers_period: number;
@@ -1350,6 +1440,28 @@ export interface CrawlerSummaryData {
     total_new_offers_synced: number;
     logged_errors_count: number;
     detected_anomalies: string[];
+    quality_gate_breakdown?: {
+      reasons: Array<{
+        code: string;
+        title: string;
+        description: string;
+        percentage: number;
+        count: number;
+        color: string;
+      }>;
+      recent_audits: Array<{
+        id: string;
+        product_name: string;
+        store_name: string;
+        inci_name: string;
+        status: 'APPROVED' | 'REJECTED';
+        confidence_score: number;
+        reason_code: string;
+        reason: string;
+        timestamp: string;
+        time_human: string;
+      }>;
+    };
   };
   recommendations: string[];
 }
@@ -1386,6 +1498,170 @@ export async function checkSystemHealth(): Promise<SystemHealthData> {
     throw new Error(`Nodo no disponible (HTTP ${res.status})`);
   }
   return res.json();
+}
+
+export interface AdminIngredientItem {
+  id: number;
+  inci_name: string;
+  common_name: string | null;
+  cas_number: string | null;
+  ec_number: string | null;
+  cosing_id: string | null;
+  description: string | null;
+  cosing_functions: string[] | null;
+  comedogenic_rating: number;
+  irritation_rating: number;
+  optimal_ph_min: number | null;
+  optimal_ph_max: number | null;
+  molecular_weight: number | null;
+  is_active: boolean;
+  is_uv_sensitizing: boolean;
+  requires_sunscreen: boolean;
+  recommended_timing: 'AM' | 'PM' | 'BOTH';
+  layering_category: string | null;
+  clinical_summary: string | null;
+  results_timeline_weeks_min: number | null;
+  results_timeline_weeks_max: number | null;
+  source_name: string | null;
+  source_url: string | null;
+  source_license: string | null;
+  evidence_level: 'A' | 'B' | 'C' | 'D' | null;
+  reviewed_at: string | null;
+  evidence_grade_description: string;
+  products_count?: number;
+  indications?: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+  }>;
+  pubmed_studies?: Array<{
+    id: number;
+    pmid: string;
+    title: string;
+    journal: string | null;
+    publication_year: number | null;
+    study_type: string | null;
+    pivot?: {
+      primary_finding: string | null;
+    };
+  }>;
+}
+
+export interface AdminIngredientDetail extends AdminIngredientItem {
+  aliases?: Array<{
+    id: number;
+    alias_name: string;
+    language: string;
+  }>;
+  conflicts_as_a?: Array<{
+    id: number;
+    ingredient_b_id: number;
+    conflict_type: string;
+    severity: string;
+    interaction_mechanism: string;
+    mitigation_recommendation: string;
+    ingredient_b?: {
+      id: number;
+      inci_name: string;
+      common_name: string | null;
+    };
+  }>;
+  conflicts_as_b?: Array<{
+    id: number;
+    ingredient_a_id: number;
+    conflict_type: string;
+    severity: string;
+    interaction_mechanism: string;
+    mitigation_recommendation: string;
+    ingredient_a?: {
+      id: number;
+      inci_name: string;
+      common_name: string | null;
+    };
+  }>;
+  products?: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    category: string;
+    brand?: {
+      id: number;
+      name: string;
+    };
+    store_offers?: Array<{
+      id: number;
+      price: number;
+      price_usd: number;
+      price_local: number;
+      formatted_price_usd: string;
+      formatted_price_local: string;
+      in_stock: boolean;
+      store?: {
+        name: string;
+      };
+    }>;
+  }>;
+}
+
+export interface AdminIngredientsPaginatedResponse {
+  current_page: number;
+  data: AdminIngredientItem[];
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  links: any[];
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
+}
+
+export async function fetchAdminIngredients(params: {
+  q?: string;
+  is_active?: boolean;
+  evidence_level?: string;
+  timing?: string;
+  sort_by?: string;
+  order?: 'asc' | 'desc';
+  page?: number;
+  per_page?: number;
+} = {}): Promise<AdminIngredientsPaginatedResponse> {
+  const query = new URLSearchParams();
+  if (params.q) query.set('q', params.q);
+  if (params.is_active !== undefined) query.set('actives_only', params.is_active ? '1' : '0');
+  if (params.evidence_level) query.set('evidence_level', params.evidence_level);
+  if (params.timing) query.set('timing', params.timing);
+  if (params.sort_by) query.set('sort_by', params.sort_by);
+  if (params.order) query.set('order', params.order);
+  if (params.page) query.set('page', params.page.toString());
+  if (params.per_page) query.set('per_page', params.per_page.toString());
+
+  const res = await fetch(`${API_BASE_URL}/catalog/ingredients?${query.toString()}`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener ingredientes');
+  }
+  return res.json();
+}
+
+export async function fetchAdminIngredientDetail(identifier: string | number): Promise<AdminIngredientDetail> {
+  const res = await fetch(`${API_BASE_URL}/catalog/ingredients/${identifier}`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener ficha del ingrediente');
+  }
+  const json = await res.json();
+  return json.data;
 }
 
 

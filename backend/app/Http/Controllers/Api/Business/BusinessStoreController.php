@@ -172,6 +172,13 @@ class BusinessStoreController extends Controller
             $user->save();
         }
 
+        // Disparar alerta instantánea al Super Admin vía Telegram (tolerante a fallos)
+        try {
+            app(\App\Services\Telegram\TelegramAlertService::class)->notifyNewStore($store, $branch);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo enviar notificación de Telegram: ' . $e->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => '¡Tienda registrada con éxito! Ya puedes gestionar tus ofertas y sucursales.',

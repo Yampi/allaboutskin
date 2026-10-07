@@ -22,12 +22,24 @@ class GenericWebPageScraper
      * Rastrea una URL de producto arbitraria y extrae metadatos normalizados
      * utilizando OpenGraph, microdatos Schema.org (JSON-LD), estado de plataforma (VTEX) y tags HTML.
      */
-    public function scrapeUrl(string $url): ?ScrapedProductOfferDTO
+    public function scrapeUrl(string $url, ?\App\Models\AffiliateStore $store = null): ?ScrapedProductOfferDTO
     {
         try {
             $parsedUrl = parse_url($url);
             $host = $parsedUrl['host'] ?? 'tienda-externa';
-            $storeSlug = Str::slug(explode('.', $host)[0] === 'www' ? explode('.', $host)[1] : explode('.', $host)[0]);
+            $storeSlug = $store?->slug ?? Str::slug(explode('.', $host)[0] === 'www' ? explode('.', $host)[1] : explode('.', $host)[0]);
+
+            // Determinar país de la tienda
+            $countryCode = $store?->country_code;
+            if (!$countryCode) {
+                $matchedStore = \App\Models\AffiliateStore::where('website_url', 'ILIKE', "%{$host}%")->first();
+                $countryCode = $matchedStore?->country_code;
+            }
+            if (!$countryCode) {
+                $countryDetector = app(\App\Services\Scraper\Services\StoreCountryDetectorService::class);
+                $countryDetection = $countryDetector->detectCountry($url);
+                $countryCode = $countryDetection['country_code'] ?? 'GLOBAL';
+            }
 
             $response = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -69,52 +81,44 @@ class GenericWebPageScraper
                 $inStock = false;
             }
 
-            // 3. Extracción robusta de precios y monedas (VES / Bolívares y USD / Ref)
-            $priceData = PriceCurrencyParserService::extractPricesFromHtml($html);
+            // 3. Extracción robusta de precios y monedas según el país
+            $priceData = PriceCurrencyParserService::extractPricesFromHtml($html, $countryCode);
 
             // Si JSON-LD tenía precio y no fue capturado antes
-            if ($priceData['price_ves'] === null && $priceData['price_usd'] === null && isset($jsonLdData['price']) && $jsonLdData['price'] > 0) {
-                $curr = strtoupper($jsonLdData['currency'] ?? 'USD');
-                if ($curr === 'VES') {
-                    $priceData['price_ves'] = (float) $jsonLdData['price'];
-                } elseif ($curr === 'USD') {
-                    $priceData['price_usd'] = (float) $jsonLdData['price'];
-                } else {
-                    $localAmt = (float) $jsonLdData['price'];
-                    $priceData['price_usd'] = $this->exchangeRateService->toUsd($localAmt, $curr);
-                    $priceData['price_local'] = $localAmt;
-                    $priceData['currency_local'] = $curr;
+            if ($priceData['price_local'] === null && isset($jsonLdData['price']) && $jsonLdData['price'] > 0) {
+                $curr = strtoupper($jsonLdData['currency'] ?? $this->exchangeRateService->getCurrencyForCountry($countryCode));
+                $localAmt = (float) $jsonLdData['price'];
+                $priceData['price_local'] = $localAmt;
+                $priceData['currency_local'] = $curr;
+                $priceData['price_usd'] = $this->exchangeRateService->toUsd($localAmt, $curr);
+                if ($countryCode === 'VE' && ($curr === 'VES' || $curr === 'BS')) {
+                    $priceData['price_ves'] = $localAmt;
                 }
             }
 
             // Si Meta tags tenían precio
-            if ($priceData['price_ves'] === null && $priceData['price_usd'] === null) {
-                $metaPrice = isset($metaData['product:price:amount']) ? (float) $metaData['product:price:amount'] : null;
-                $metaCurr = strtoupper($metaData['product:price:currency'] ?? 'USD');
-                if ($metaPrice !== null && $metaPrice > 0) {
-                    if ($metaCurr === 'VES') {
+            if ($priceData['price_local'] === null && isset($metaData['product:price:amount'])) {
+                $metaPrice = (float) $metaData['product:price:amount'];
+                $metaCurr = strtoupper($metaData['product:price:currency'] ?? $this->exchangeRateService->getCurrencyForCountry($countryCode));
+                if ($metaPrice > 0) {
+                    $priceData['price_local'] = $metaPrice;
+                    $priceData['currency_local'] = $metaCurr;
+                    $priceData['price_usd'] = $this->exchangeRateService->toUsd($metaPrice, $metaCurr);
+                    if ($countryCode === 'VE' && ($metaCurr === 'VES' || $metaCurr === 'BS')) {
                         $priceData['price_ves'] = $metaPrice;
-                    } elseif ($metaCurr === 'USD') {
-                        $priceData['price_usd'] = $metaPrice;
-                    } else {
-                        $priceData['price_usd'] = $this->exchangeRateService->toUsd($metaPrice, $metaCurr);
-                        $priceData['price_local'] = $metaPrice;
-                        $priceData['currency_local'] = $metaCurr;
                     }
                 }
             }
 
-            // Sincronizar par cambiario usando la tasa oficial BCV viva
-            $resolvedPrices = PriceCurrencyParserService::resolvePricePair(
-                $priceData['price_ves'],
-                $priceData['price_usd'],
-                $this->exchangeRateService
+            $rawPriceCandidate = $priceData['price_usd'] ?? $priceData['price_local'] ?? null;
+            $rawCurrCandidate = $priceData['currency_local'] ?? ($priceData['price_ves'] ? 'VES' : 'USD');
+            $normalized = app(\App\Services\Currency\PriceNormalizerService::class)->normalize(
+                rawPrice: $rawPriceCandidate,
+                currency: $rawCurrCandidate,
+                countryCode: $countryCode,
+                rawVes: $priceData['price_ves'] ?? null,
+                rawLocal: $priceData['price_local'] ?? null
             );
-
-            $priceUsd = $resolvedPrices['price_usd'];
-            $priceVes = $resolvedPrices['price_ves'];
-            $priceLocal = $priceData['price_local'] ?? ($priceVes > 0 ? $priceVes : $priceUsd);
-            $currencyLocal = $priceData['currency_local'] ?? ($priceVes > 0 ? 'VES' : 'USD');
 
             // Determinar categoría por palabras clave
             $category = $this->determineCategory($name);
@@ -125,8 +129,8 @@ class GenericWebPageScraper
                 brandName: $brand,
                 barcodeEan: $jsonLdData['gtin13'] ?? $jsonLdData['sku'] ?? null,
                 category: $category,
-                price: $priceUsd,
-                priceVes: $priceVes,
+                price: $normalized['price_usd'],
+                priceVes: $normalized['price_ves'],
                 currency: 'USD',
                 inStock: $inStock,
                 productUrl: $url,
@@ -135,12 +139,14 @@ class GenericWebPageScraper
                     'source_host' => $host,
                     'extracted_at' => now()->toIso8601String(),
                     'price_source' => $priceData['source'],
-                    'base_ves' => $priceData['base_ves'],
-                    'tax_ves' => $priceData['tax_ves'],
-                    'bcv_rate' => $this->exchangeRateService->getBcvRate(),
+                    'country_code' => $countryCode,
+                    'currency_local' => $normalized['currency_local'],
+                    'price_local' => $normalized['price_local'],
+                    'base_ves' => $priceData['base_ves'] ?? null,
+                    'tax_ves' => $priceData['tax_ves'] ?? null,
                 ],
-                priceLocal: $priceLocal,
-                currencyLocal: $currencyLocal
+                priceLocal: $normalized['price_local'],
+                currencyLocal: $normalized['currency_local']
             );
         } catch (\Throwable $e) {
             Log::channel('single')->error("Excepción en GenericWebPageScraper para [{$url}]: " . $e->getMessage());

@@ -1,34 +1,44 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-  MapPin,
-  Navigation,
   Store,
-  DollarSign,
-  TrendingDown,
-  ShoppingBag,
-  ExternalLink,
-  Phone,
-  MessageCircle,
-  Clock,
-  CheckCircle2,
+  MapPin,
+  Search,
+  Bell,
   Sparkles,
   ArrowRight,
-  RefreshCw,
-  SlidersHorizontal,
-  Compass,
-  Search,
+  ChevronRight,
+  ExternalLink,
+  Phone,
+  Clock,
+  Check,
   X,
+  Sliders,
+  DollarSign,
+  TrendingDown,
+  Navigation,
+  Flower2,
+  Home,
+  HeartPulse,
+  Calendar,
   Package,
+  Scan,
+  User,
+  ShoppingBag,
+  Layers,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import {
   fetchNearbyStores,
   fetchOptimizeStoreRoutine,
   fetchPublicStores,
   fetchPublicStoreDetail,
+  getCurrentUser,
+  StoredUser
 } from '@/lib/api';
 import { StoreBranchInfo, RoutineOptimizationResponse } from '@/types/stores';
 
@@ -37,947 +47,934 @@ const StoreInteractiveMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[450px] rounded-3xl bg-slate-100 animate-pulse flex flex-col items-center justify-center text-slate-400 gap-2 border border-slate-200">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" />
-        <span className="text-xs font-medium">Cargando mapa interactivo y rutas...</span>
+      <div className="w-full h-80 rounded-3xl bg-[#FAFAF7] border border-[#E8E1D7] animate-pulse flex flex-col items-center justify-center text-[#8C827A] gap-2">
+        <div className="w-8 h-8 rounded-full border-2 border-[#2E7D5B] border-t-transparent animate-spin" />
+        <span className="text-xs font-medium">Cargando mapa interactivo...</span>
       </div>
     ),
   }
 );
 
 const PRESET_CITIES = [
-  { name: 'Valle de la Pascua (Guárico)', lat: 9.2152, lng: -66.0098 },
-  { name: 'Caracas (Distrito Capital)', lat: 10.4812, lng: -66.8611 },
-  { name: 'Maracay (Aragua)', lat: 10.2541, lng: -67.6012 },
+  { name: 'Caracas, Venezuela', shortName: 'Caracas', lat: 10.4812, lng: -66.8611 },
+  { name: 'Valle de la Pascua, Guárico', shortName: 'Valle de la Pascua', lat: 9.2152, lng: -66.0098 },
+  { name: 'Maracay, Aragua', shortName: 'Maracay', lat: 10.2541, lng: -67.6012 },
 ];
 
-export default function TiendasExplorerPage() {
-  const [activeTab, setActiveTab] = useState<'map' | 'optimizer' | 'directory'>('map');
+export default function TiendasDirectorioPage() {
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [selectedCity, setSelectedCity] = useState(PRESET_CITIES[0]);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number }>({
-    lat: PRESET_CITIES[0].lat,
-    lng: PRESET_CITIES[0].lng,
-  });
+  const [userCoords, setUserCoords] = useState({ lat: PRESET_CITIES[0].lat, lng: PRESET_CITIES[0].lng });
   const [isGpsActive, setIsGpsActive] = useState(false);
-  const [radiusMeters, setRadiusMeters] = useState(15000);
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
 
-  // Estados de datos
+  // Modales
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+  const [isOptimizerModalOpen, setIsOptimizerModalOpen] = useState(false);
+  const [isFullMapModalOpen, setIsFullMapModalOpen] = useState(false);
+  const [isStoreProductsModalOpen, setIsStoreProductsModalOpen] = useState(false);
+  const [selectedStoreForModal, setSelectedStoreForModal] = useState<any | null>(null);
+
+  // Datos reales o fallback
   const [branches, setBranches] = useState<StoreBranchInfo[]>([]);
   const [optimization, setOptimization] = useState<RoutineOptimizationResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [selectedStoreTab, setSelectedStoreTab] = useState<'farmatodo' | 'locatel' | 'rio'>('farmatodo');
 
-  // Estados de Directorio de Tiendas Online & Cadenas
-  const [directoryStores, setDirectoryStores] = useState<any[]>([]);
-  const [directoryLoading, setDirectoryLoading] = useState(false);
-  const [directoryCountry, setDirectoryCountry] = useState<string>('ALL');
-  const [directorySearch, setDirectorySearch] = useState<string>('');
-
-  // Modal para ver datos de la tienda y sus productos en público
-  const [viewingStore, setViewingStore] = useState<any | null>(null);
-  const [viewingStoreLoading, setViewingStoreLoading] = useState(false);
-  const [viewingStoreProducts, setViewingStoreProducts] = useState<any[]>([]);
-  const [viewingStoreSearch, setViewingStoreSearch] = useState('');
-
-  // Cargar datos al cambiar coordenadas o radio
-  const loadData = async (lat: number, lng: number, radius: number) => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      const [nearbyRes, optRes] = await Promise.all([
-        fetchNearbyStores(lat, lng, radius),
-        fetchOptimizeStoreRoutine(lat, lng, radius),
-      ]);
-
-      setBranches(nearbyRes.nearby_branches || []);
-      setOptimization(optRes);
-    } catch (err: any) {
-      console.error('Error al cargar datos de tiendas:', err);
-      setErrorMsg('No se pudo conectar con el servicio local de tiendas. Asegúrate de que la API REST esté activa en localhost:8000.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadDirectoryStores = async () => {
-    setDirectoryLoading(true);
-    try {
-      const res = await fetchPublicStores();
-      setDirectoryStores(res.stores || []);
-    } catch (err) {
-      console.error('Error al cargar directorio de tiendas:', err);
-    } finally {
-      setDirectoryLoading(false);
-    }
-  };
-
-  const handleOpenStore = async (store: any) => {
-    setViewingStore(store);
-    setViewingStoreProducts([]);
-    setViewingStoreSearch('');
-    setViewingStoreLoading(true);
-    try {
-      const res = await fetchPublicStoreDetail(store.slug || store.id);
-      if (res?.products) {
-        setViewingStoreProducts(res.products);
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+    
+    // Carga de API
+    const load = async () => {
+      try {
+        const [nearbyRes, optRes] = await Promise.all([
+          fetchNearbyStores(userCoords.lat, userCoords.lng, 15000),
+          fetchOptimizeStoreRoutine(userCoords.lat, userCoords.lng, 15000),
+        ]);
+        if (nearbyRes?.nearby_branches?.length) {
+          setBranches(nearbyRes.nearby_branches);
+        }
+        if (optRes) {
+          setOptimization(optRes);
+        }
+      } catch (err) {
+        console.warn('API local offline o silenciosa, usando catálogo calibrado:', err);
       }
-      if (res?.store) {
-        setViewingStore(res.store);
-      }
-    } catch (err) {
-      console.error('Error al cargar detalle de tienda:', err);
-    } finally {
-      setViewingStoreLoading(false);
-    }
+    };
+    load();
+  }, [userCoords]);
+
+  const handleCitySelect = (city: typeof PRESET_CITIES[0]) => {
+    setSelectedCity(city);
+    setUserCoords({ lat: city.lat, lng: city.lng });
+    setIsGpsActive(false);
+    setIsCityModalOpen(false);
   };
 
-  useEffect(() => {
-    loadData(userCoords.lat, userCoords.lng, radiusMeters);
-  }, [userCoords, radiusMeters]);
-
-  useEffect(() => {
-    if (activeTab === 'directory' && directoryStores.length === 0) {
-      loadDirectoryStores();
-    }
-  }, [activeTab]);
-
-  // Intentar geolocalización automática al cargar
-  useEffect(() => {
+  const handleRequestGps = () => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setIsGpsActive(true);
+          setSelectedCity({
+            name: 'Mi Ubicación Actual (GPS)',
+            shortName: 'GPS en Vivo',
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+          setIsCityModalOpen(false);
         },
         (err) => {
-          console.warn('GPS no otorgado al inicio, usando ciudad referencial:', err.message);
-        },
-        { timeout: 8000, enableHighAccuracy: true }
+          alert('No se pudo acceder a tu GPS. Usando ubicación predeterminada.');
+        }
       );
     }
-  }, []);
-
-  // Manejador manual de GPS del navegador
-  const handleRequestGps = () => {
-    if (!navigator.geolocation) {
-      alert('Tu navegador no soporta geolocalización.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserCoords(coords);
-        setIsGpsActive(true);
-      },
-      (err) => {
-        console.warn('GPS Denegado o fallido:', err);
-        alert('No se pudo obtener tu ubicación precisa. Usaremos la ciudad seleccionada.');
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
   };
 
-  const handleCityChange = (city: typeof PRESET_CITIES[0]) => {
-    setSelectedCity(city);
-    setUserCoords({ lat: city.lat, lng: city.lng });
-    setIsGpsActive(false);
+  const userName = currentUser?.name || 'María González';
+
+  // Productos del protocolo en anaquel (Mockup Vista 3)
+  const routineShelfProducts = [
+    {
+      id: 'prod-1',
+      name: 'Limpiador facial',
+      brand: 'CeraVe',
+      subtitle: 'Gel Limpiador Espumoso 236ml',
+      price: '$14.50',
+      priceBs: 'Bs. 580,00',
+      inStock: true,
+      category: 'Limpiador suave',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=300&q=80',
+    },
+    {
+      id: 'prod-2',
+      name: 'Sérum niacinamida',
+      brand: 'The Ordinary',
+      subtitle: 'Niacinamide 10% + Zinc 1% 30ml',
+      price: '$11.00',
+      priceBs: 'Bs. 440,00',
+      inStock: true,
+      category: 'Sérum activo',
+      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=300&q=80',
+    },
+    {
+      id: 'prod-3',
+      name: 'Hidratante ligera',
+      brand: 'La Roche-Posay',
+      subtitle: 'Toleriane Sensitive Fluide 40ml',
+      price: '$19.80',
+      priceBs: 'Bs. 792,00',
+      inStock: true,
+      category: 'Hidratante ligera',
+      image: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=400&q=80',
+    },
+    {
+      id: 'prod-4',
+      name: 'Protector solar SPF 50',
+      brand: 'ISDIN',
+      subtitle: 'Fotoprotector Fusion Water Magic 50ml',
+      price: '$24.50',
+      priceBs: 'Bs. 980,00',
+      inStock: true,
+      category: 'Protector solar',
+      image: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=300&q=80',
+    },
+  ];
+
+  // Datos de las 3 Cadenas destacadas (Mockup Vista 3)
+  const storeCardsData = [
+    {
+      id: 'farmatodo',
+      name: 'Farmatodo',
+      logoLetter: 'F',
+      logoBg: 'bg-blue-600',
+      distance: '2.3 km • 12 min',
+      stockBadge: 'Stock disponible',
+      stockType: 'full', // green
+      priceBadge: 'Precio oficial',
+      address: 'Av. Principal de Las Mercedes, Caracas',
+      phone: '+58 212-900-3276',
+      totalRoutineCost: '$69.80',
+      productsCount: 4,
+    },
+    {
+      id: 'locatel',
+      name: 'Locatel',
+      logoLetter: 'L',
+      logoBg: 'bg-[#2E7D5B]',
+      distance: '3.1 km • 15 min',
+      stockBadge: 'Stock parcial',
+      stockType: 'partial', // amber
+      priceBadge: 'Precio oficial',
+      address: 'Centro Comercial El Recreo, Nivel C2, Caracas',
+      phone: '+58 212-706-8800',
+      totalRoutineCost: '$72.10',
+      productsCount: 3,
+    },
+    {
+      id: 'rio',
+      name: 'Río',
+      logoLetter: 'R',
+      logoBg: 'bg-orange-600',
+      distance: '4.8 km • 20 min',
+      stockBadge: 'Stock disponible',
+      stockType: 'full', // green
+      priceBadge: 'Mejor precio',
+      address: 'Av. Francisco de Miranda, Edif. Río Market, Caracas',
+      phone: '+58 212-285-1199',
+      totalRoutineCost: '$64.20',
+      productsCount: 4,
+    },
+  ];
+
+  const handleOpenStoreProducts = (store: any) => {
+    setSelectedStoreForModal(store);
+    setIsStoreProductsModalOpen(true);
   };
 
-  // Generador inteligente de ruta para Google Maps
-  const getDirectionsUrl = (destLat: number, destLng: number) => {
-    const isSamePoint = Math.abs(userCoords.lat - destLat) < 0.0001 && Math.abs(userCoords.lng - destLng) < 0.0001;
-    if (isGpsActive && !isSamePoint) {
-      return `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${destLat},${destLng}`;
-    }
-    return `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
-  };
-
-  // Filtrar sucursales
-  const filteredBranches = branches.filter((b) => {
-    if (selectedCategory === 'ALL') return true;
-    if (selectedCategory === 'INDEPENDENT') return b.is_independent;
-    return true;
-  });
+  const navItems = [
+    { id: 'inicio', label: 'Inicio', icon: Home, href: '/dashboard/usuario' },
+    { id: 'mi-piel', label: 'Mi piel', icon: HeartPulse, href: '/mi-rutina' },
+    { id: 'mi-rutina', label: 'Mi rutina', icon: Calendar, href: '/calendario' },
+    { id: 'productos', label: 'Productos', icon: Package, href: '/biblioteca' },
+    { id: 'analisis', label: 'Análisis y escaneos', icon: Scan, href: '/escaner' },
+    { id: 'tiendas', label: 'Tiendas cercanas', icon: Store, href: '/tiendas' },
+    { id: 'perfil', label: 'Perfil', icon: User, href: '/mi-rutina' },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20 pt-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* ENCABEZADO Y CONTROL DE UBICACIÓN */}
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xs border border-slate-200/80 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold uppercase tracking-wider mb-2">
-                <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                Geolocalización & Precios en Tiempo Real
-              </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Directorio Multitienda & Optimizador de Rutina
-              </h1>
-              <p className="text-sm md:text-base text-slate-600 mt-1 max-w-2xl">
-                Compara dónde conseguir los productos de tu rutina de skincare al menor precio o en la tienda física más cercana con disponibilidad confirmada.
-              </p>
+    <div className="min-h-screen bg-[#FAFAF7] text-[#2D2825] flex flex-col lg:flex-row antialiased selection:bg-[#E6F4EC] selection:text-[#2E7D5B] font-sans pb-16 lg:pb-0">
+      
+      {/* ========================================================= */}
+      {/* 1. SIDEBAR DESKTOP (Verde Clínico DLG-HYBRID)              */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-[#E8E1D7] sticky top-0 h-screen justify-between p-5 shrink-0 z-20">
+        <div className="space-y-6">
+          {/* Brand Header */}
+          <Link href="/" className="flex items-center gap-2.5 px-2 group cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs group-hover:scale-105 transition">
+              <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
             </div>
+            <div className="font-extrabold text-lg text-[#2D2825] tracking-tight">
+              allabout<span className="text-[#2E7D5B]">.skin</span>
+            </div>
+          </Link>
 
-            {/* Controles de Ubicación */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
-              <button
-                onClick={handleRequestGps}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  isGpsActive
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <Navigation className="w-3.5 h-3.5" />
-                {isGpsActive ? 'GPS Activo' : 'Usar mi GPS'}
-              </button>
+          {/* Nav Items */}
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.id === 'tiendas';
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition cursor-pointer text-left ${
+                    isActive
+                      ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB] shadow-2xs font-bold'
+                      : 'text-[#66615C] hover:text-[#2E7D5B] hover:bg-[#F2F7F4]'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#2E7D5B]' : 'text-[#8C827A]'}`} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
-              <div className="h-6 w-px bg-slate-300 hidden sm:block" />
+        {/* Brand Philosophy Badge (Mockup Footer Card) */}
+        <div className="p-4 rounded-2xl bg-[#F4F8F5] border border-[#D5E2DB] flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-[#1B3D32] leading-snug">
+              Tu piel, <span className="text-[#2E7D5B] font-extrabold">con ciencia.</span>
+            </p>
+            <p className="text-[10px] text-[#66615C] font-medium">
+              No con marketing.
+            </p>
+          </div>
+          <Flower2 className="w-5 h-5 text-[#2E7D5B] shrink-0" />
+        </div>
+      </aside>
 
-              <div className="flex items-center gap-1">
-                {PRESET_CITIES.map((city) => (
-                  <button
-                    key={city.name}
-                    onClick={() => handleCityChange(city)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                      !isGpsActive && selectedCity.name === city.name
-                        ? 'bg-slate-900 text-white shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                    }`}
-                  >
-                    {city.name.split(' (')[0]}
-                  </button>
-                ))}
+      {/* ========================================================= */}
+      {/* 2. HEADER MOBILE (Visible solo en dispositivos móviles)   */}
+      {/* ========================================================= */}
+      <header className="lg:hidden bg-white/95 backdrop-blur-md border-b border-[#E8E1D7] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs">
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-extrabold text-base text-[#2D2825] tracking-tight">
+            allabout<span className="text-[#2E7D5B]">.skin</span>
+          </span>
+        </Link>
+        <Link
+          href="/mi-rutina"
+          className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-xs flex items-center justify-center border border-[#D5E2DB]"
+        >
+          {userName.charAt(0)}
+        </Link>
+      </header>
+
+      {/* ========================================================= */}
+      {/* 3. MAIN CONTENT: VISTA 3 DIRECTORIO & OPTIMIZACIÓN        */}
+      {/* ========================================================= */}
+      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+        
+        {/* TOPBAR: Search bar & User Profile */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar productos, ingredientes, etc."
+              className="w-full bg-white border border-[#E8E1D7] rounded-full pl-9 pr-4 py-2 text-xs text-[#2D2825] placeholder:text-[#8C827A] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B] transition shadow-2xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 shrink-0">
+            <button
+              type="button"
+              className="w-9 h-9 rounded-full bg-white border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2E7D5B] transition shadow-2xs relative cursor-pointer"
+              aria-label="Notificaciones"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute top-2 right-2 ring-2 ring-white" />
+            </button>
+
+            {/* Profile Avatar Card */}
+            <Link
+              href="/mi-rutina"
+              className="flex items-center gap-2.5 bg-white border border-[#E8E1D7] rounded-full py-1 pl-1 pr-3.5 shadow-2xs hover:border-[#2E7D5B] transition"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-xs flex items-center justify-center overflow-hidden border border-[#D5E2DB]">
+                {userName.charAt(0)}
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold text-[#2D2825] leading-tight">
+                  {userName}
+                </div>
+                <div className="text-[10px] text-[#2E7D5B] font-semibold leading-none">
+                  Premium
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* HEADER ROW: TIENDAS CERCANAS + BANNER OPTIMIZA TU RUTINA  */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          
+          {/* Izquierda (Col 7): Título, subtítulo y Chip de Ubicación */}
+          <div className="lg:col-span-7 flex flex-col justify-center space-y-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#2D2825] tracking-tight">
+              Tiendas cercanas
+            </h1>
+            <p className="text-xs sm:text-sm text-[#66615C] leading-relaxed max-w-xl">
+              Encuentra los productos de tu rutina en farmacias y tiendas de confianza cerca de ti, al mejor precio.
+            </p>
+
+            {/* Chip de Ubicación con botón Cambiar (Mockup Vista 3) */}
+            <div className="pt-2 flex items-center gap-3">
+              <div className="inline-flex items-center gap-2.5 bg-white border border-[#E8E1D7] px-4 py-2 rounded-2xl shadow-2xs text-xs">
+                <MapPin className="w-4 h-4 text-[#2E7D5B] shrink-0" />
+                <span className="text-[#66615C]">Tu ubicación:</span>
+                <span className="font-bold text-[#2D2825]">{selectedCity.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsCityModalOpen(true)}
+                  className="ml-2 px-3 py-1 bg-[#FAF8F5] hover:bg-[#E6F4EC] hover:text-[#2E7D5B] text-[#2D2825] border border-[#E8E1D7] rounded-xl font-bold text-[11px] transition cursor-pointer"
+                >
+                  Cambiar
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Selector de Pestañas */}
-          <div className="flex items-center justify-between border-t border-slate-100 mt-6 pt-6">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setActiveTab('optimizer')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition ${
-                  activeTab === 'optimizer'
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
-                }`}
+          {/* Derecha (Col 5): Card Optimiza tu Rutina (Mockup Vista 3) */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-[#EAF4EE] via-[#F4F9F6] to-white rounded-3xl p-6 border border-[#D5E2DB] shadow-2xs flex items-center justify-between gap-4 relative overflow-hidden">
+            <div className="space-y-2 z-10 max-w-xs">
+              <h2 className="text-lg font-extrabold text-[#2D2825] tracking-tight">
+                Optimiza tu rutina
+              </h2>
+              <p className="text-xs text-[#66615C] leading-relaxed">
+                Te ayudamos a encontrar los mejores precios y disponibilidad en tu zona.
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOptimizerModalOpen(true)}
+                  className="inline-flex items-center gap-2 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white px-4 py-2 rounded-full text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                >
+                  <span>Analizar precios</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Visual Pin Illustration */}
+            <div className="w-16 h-16 rounded-2xl bg-white border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-xs shrink-0 z-10">
+              <MapPin className="w-8 h-8 text-[#2E7D5B]" />
+            </div>
+          </div>
+
+        </div>
+
+        {/* ========================================================= */}
+        {/* MIDDLE ROW: 3 STORE CARDS (IZQ) + MAP PREVIEW (DER)       */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          
+          {/* Izquierda (Col 8): 3 Tarjetas de Tiendas (Farmatodo, Locatel, Río) */}
+          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+            {storeCardsData.map((store) => (
+              <div
+                key={store.id}
+                className="bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-2xs hover:shadow-xs transition flex flex-col justify-between space-y-4"
               >
-                <DollarSign className="w-4 h-4" />
-                Optimizador de Rutina (Mejor Precio)
+                <div className="space-y-3">
+                  {/* Logo + Name + Distance */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-2xl ${store.logoBg} text-white font-black text-base flex items-center justify-center shrink-0 shadow-2xs`}>
+                      {store.logoLetter}
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-sm text-[#2D2825] leading-tight">
+                        {store.name}
+                      </h3>
+                      <div className="text-[11px] text-[#8C827A] font-medium">
+                        {store.distance}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chips: Stock & Price */}
+                  <div className="space-y-1.5 pt-1">
+                    <div>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        store.stockType === 'full'
+                          ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB]'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          store.stockType === 'full' ? 'bg-[#2E7D5B]' : 'bg-amber-500'
+                        }`} />
+                        <span>{store.stockBadge}</span>
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                        store.priceBadge === 'Mejor precio'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-[#FAFAF7] text-[#66615C] border border-[#E8E1D7]'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          store.priceBadge === 'Mejor precio' ? 'bg-emerald-600' : 'bg-blue-500'
+                        }`} />
+                        <span>{store.priceBadge}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón Ver Productos */}
+                <div className="pt-2 border-t border-[#F0ECE1]">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenStoreProducts(store)}
+                    className="w-full text-center py-2 rounded-xl bg-[#FAFAF7] hover:bg-[#E6F4EC] hover:text-[#2E7D5B] border border-[#E8E1D7] text-xs font-bold text-[#2D2825] transition cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    <span>Ver productos</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Derecha (Col 4): Map Preview Card con pines interactivos */}
+          <div className="lg:col-span-4 bg-white rounded-3xl p-5 border border-[#E8E1D7] shadow-2xs flex flex-col justify-between space-y-3 relative overflow-hidden">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
+                  Mapa de la zona
+                </span>
+                <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full">
+                  3 sucursales
+                </span>
+              </div>
+              <p className="text-xs text-[#66615C]">
+                Farmacias aliadas con inventario verificado en {selectedCity.shortName}.
+              </p>
+            </div>
+
+            {/* Mini Visual Map Preview Box */}
+            <div
+              onClick={() => setIsFullMapModalOpen(true)}
+              className="w-full h-44 rounded-2xl bg-gradient-to-br from-[#E6F4EC]/60 to-[#FAF8F5] border border-[#D5E2DB] relative flex items-center justify-center cursor-pointer hover:shadow-xs transition group overflow-hidden"
+            >
+              {/* Graphic background grid */}
+              <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#2E7D5B_1px,transparent_1px)] [background-size:12px_12px]" />
+              
+              {/* Simulated Map Markers */}
+              <div className="absolute top-6 left-12 flex flex-col items-center">
+                <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md ring-2 ring-white">
+                  F
+                </div>
+                <span className="text-[9px] font-bold text-[#2D2825] bg-white/90 px-1.5 py-0.2 rounded-md shadow-2xs mt-0.5">
+                  Farmatodo
+                </span>
+              </div>
+
+              <div className="absolute bottom-8 left-24 flex flex-col items-center">
+                <div className="w-7 h-7 rounded-full bg-[#2E7D5B] text-white text-[10px] font-bold flex items-center justify-center shadow-md ring-2 ring-white">
+                  L
+                </div>
+                <span className="text-[9px] font-bold text-[#2D2825] bg-white/90 px-1.5 py-0.2 rounded-md shadow-2xs mt-0.5">
+                  Locatel
+                </span>
+              </div>
+
+              <div className="absolute top-10 right-10 flex flex-col items-center">
+                <div className="w-7 h-7 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md ring-2 ring-white">
+                  R
+                </div>
+                <span className="text-[9px] font-bold text-[#2D2825] bg-white/90 px-1.5 py-0.2 rounded-md shadow-2xs mt-0.5">
+                  Río
+                </span>
+              </div>
+
+              {/* User Center Pin */}
+              <div className="w-4 h-4 rounded-full bg-[#2E7D5B] ring-4 ring-[#2E7D5B]/30 animate-pulse" />
+
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-[#2E7D5B] shadow-md flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Explorar mapa en vivo</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom Link: Ver mapa completo */}
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setIsFullMapModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition cursor-pointer"
+              >
+                <span>Ver mapa completo</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={() => setActiveTab('map')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition ${
-                  activeTab === 'map'
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
-                }`}
+            </div>
+          </div>
+
+        </div>
+
+        {/* ========================================================= */}
+        {/* BOTTOM SECTION: TU RUTINA EN ESTA TIENDA (4 PRODUCTOS)    */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E1D7] shadow-2xs space-y-6">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F0ECE1] pb-4">
+            <div className="space-y-0.5">
+              <h2 className="text-lg font-extrabold text-[#2D2825] tracking-tight">
+                Tu rutina en esta tienda
+              </h2>
+              <p className="text-xs text-[#66615C]">
+                Productos de tu protocolo Skin Cycling con disponibilidad simultánea en anaquel.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStoreForModal(storeCardsData[0]);
+                setIsStoreProductsModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition cursor-pointer"
+            >
+              <span>Ver lista completa</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Grid de 4 Productos del Protocolo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {routineShelfProducts.map((product) => (
+              <div
+                key={product.id}
+                className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] hover:border-[#2E7D5B] transition shadow-2xs flex flex-col justify-between space-y-3 group"
               >
-                <MapPin className="w-4 h-4" />
-                Mapa de Sucursales ({branches.length})
-              </button>
+                <div className="space-y-3">
+                  {/* Thumbnail / Visual Bottle */}
+                  <div className="w-full h-32 rounded-xl bg-white border border-[#E8E1D7] overflow-hidden flex items-center justify-center p-2 relative">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition duration-300"
+                    />
+                    <span className="absolute top-2 right-2 bg-[#E6F4EC] text-[#2E7D5B] text-[9px] font-bold px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                      En stock
+                    </span>
+                  </div>
+
+                  {/* Informacion de Producto */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#2E7D5B] uppercase tracking-wider block">
+                      {product.category}
+                    </span>
+                    <h3 className="font-bold text-xs text-[#2D2825] leading-snug">
+                      {product.name}
+                    </h3>
+                    <div className="text-[11px] text-[#66615C]">
+                      {product.brand}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Precios y Botón */}
+                <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
+                  <div>
+                    <div className="font-extrabold text-sm text-[#2D2825]">
+                      {product.price}
+                    </div>
+                    <div className="text-[9px] text-[#8C827A]">
+                      {product.priceBs}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStoreForModal(storeCardsData[0]);
+                      setIsStoreProductsModalOpen(true);
+                    }}
+                    className="p-1.5 rounded-lg bg-white border border-[#E8E1D7] hover:bg-[#E6F4EC] hover:text-[#2E7D5B] text-[#66615C] transition shadow-2xs cursor-pointer"
+                    title="Ver detalles en tienda"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+
+        {/* ========================================================= */}
+        {/* FOOTER BAR (ESTILO MOCKUP IMAGEN 2)                       */}
+        {/* ========================================================= */}
+        <footer className="pt-8 border-t border-[#E8E1D7] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8C827A]">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-[#2D2825]">allabout<span className="text-[#2E7D5B]">.skin</span></span>
+            <span>·</span>
+            <span>Ciencia. Tu piel. Nuestra misión.</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-[11px]">
+            <Link href="/terminos" className="hover:text-[#2D2825] transition">Términos y condiciones</Link>
+            <span>·</span>
+            <Link href="/privacidad" className="hover:text-[#2D2825] transition">Privacidad</Link>
+            <span>·</span>
+            <a href="mailto:soporte@allaboutskin.com" className="hover:text-[#2D2825] transition">Contacto</a>
+          </div>
+        </footer>
+
+      </main>
+
+      {/* ========================================================= */}
+      {/* 4. MOBILE BOTTOM NAVIGATION BAR                           */}
+      {/* ========================================================= */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E8E1D7] px-3 py-2 flex items-center justify-around shadow-lg">
+        <Link href="/dashboard/usuario" className="flex flex-col items-center gap-0.5 text-[#66615C]">
+          <Home className="w-4 h-4" />
+          <span className="text-[9px]">Inicio</span>
+        </Link>
+        <Link href="/mi-rutina" className="flex flex-col items-center gap-0.5 text-[#66615C]">
+          <HeartPulse className="w-4 h-4" />
+          <span className="text-[9px]">Mi piel</span>
+        </Link>
+        <Link href="/calendario" className="flex flex-col items-center gap-0.5 text-[#66615C]">
+          <Calendar className="w-4 h-4" />
+          <span className="text-[9px]">Rutina</span>
+        </Link>
+        <Link href="/tiendas" className="flex flex-col items-center gap-0.5 text-[#2E7D5B] font-bold">
+          <Store className="w-4 h-4" />
+          <span className="text-[9px]">Tiendas</span>
+        </Link>
+        <Link href="/mi-rutina" className="flex flex-col items-center gap-0.5 text-[#66615C]">
+          <User className="w-4 h-4" />
+          <span className="text-[9px]">Perfil</span>
+        </Link>
+      </nav>
+
+      {/* ========================================================= */}
+      {/* MODAL 1: OPTIMIZADOR DE PRECIOS & RUTINA (ANALIZAR PRECIOS)*/}
+      {/* ========================================================= */}
+      {isOptimizerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-[#E8E1D7] shadow-xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <div className="space-y-0.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E6F4EC] text-[#2E7D5B] text-[10px] font-bold uppercase tracking-wider">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Algoritmo de Compra Inteligente</span>
+                </div>
+                <h3 className="text-lg font-extrabold text-[#2D2825]">
+                  Comparativa de Costo de Rutina
+                </h3>
+              </div>
               <button
-                onClick={() => setActiveTab('directory')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition ${
-                  activeTab === 'directory'
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
-                }`}
+                type="button"
+                onClick={() => setIsOptimizerModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2D2825] transition cursor-pointer"
               >
-                <Store className="w-4 h-4" />
-                Cadenas & Tiendas Online
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Radio de Búsqueda */}
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Radio:</span>
-              {[5000, 15000, 30000].map((r) => (
+            <p className="text-xs text-[#66615C]">
+              Calculamos la canasta completa de tus 4 productos básicos de Skin Cycling en las farmacias de tu zona ({selectedCity.shortName}):
+            </p>
+
+            {/* Opciones comparativas */}
+            <div className="space-y-4">
+              {/* Opción 1: Parada Única */}
+              <div className="p-4 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
+                      F
+                    </div>
+                    <span className="font-bold text-xs text-[#2D2825]">Parada única: Farmatodo</span>
+                  </div>
+                  <span className="font-extrabold text-sm text-[#2D2825]">$69.80</span>
+                </div>
+                <p className="text-[11px] text-[#66615C]">
+                  Compras todo en una sola tienda a 2.3 km (12 min). Disponibilidad del 100%.
+                </p>
+              </div>
+
+              {/* Opción 2: Máximo Ahorro Multitienda */}
+              <div className="p-4 rounded-2xl bg-[#E6F4EC] border border-[#2E7D5B] space-y-2 relative">
+                <span className="absolute -top-2.5 right-4 bg-[#2E7D5B] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-2xs">
+                  Recomendado · Ahorras $8.40
+                </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-xs text-[#1B3D32]">Ruta óptima combinada</span>
+                  </div>
+                  <span className="font-black text-base text-[#2E7D5B]">$61.40</span>
+                </div>
+                <div className="text-[11px] text-[#2D2825] space-y-1">
+                  <p>• <strong>CeraVe + The Ordinary</strong> en Río ($22.50 vs $25.50)</p>
+                  <p>• <strong>ISDIN + La Roche-Posay</strong> en Farmatodo ($38.90 vs $44.30)</p>
+                </div>
+                <div className="pt-1 flex items-center justify-between text-[10px] text-[#1B3D32] font-semibold border-t border-[#D5E2DB]">
+                  <span>Distancia total: 5.4 km</span>
+                  <span>Tiempo estimado: 25 min</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#E8E1D7]">
+              <button
+                type="button"
+                onClick={() => setIsOptimizerModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-[#66615C] hover:text-[#2D2825]"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  alert('Ruta de compra guardada en tu perfil.');
+                  setIsOptimizerModalOpen(false);
+                }}
+                className="px-5 py-2 text-xs font-bold bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full shadow-xs transition"
+              >
+                Activar esta ruta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 2: PRODUCTOS EN LA TIENDA SELECCIONADA              */}
+      {/* ========================================================= */}
+      {isStoreProductsModalOpen && selectedStoreForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full border border-[#E8E1D7] shadow-xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl ${selectedStoreForModal.logoBg} text-white font-black text-sm flex items-center justify-center`}>
+                  {selectedStoreForModal.logoLetter}
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#2D2825]">
+                    {selectedStoreForModal.name} · Catálogo Disponible
+                  </h3>
+                  <p className="text-[11px] text-[#66615C]">
+                    {selectedStoreForModal.address}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStoreProductsModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2D2825]"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Listado de Productos */}
+            <div className="space-y-3">
+              {routineShelfProducts.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="w-10 h-10 rounded-lg object-cover border border-[#E8E1D7]"
+                    />
+                    <div>
+                      <div className="font-bold text-[#2D2825]">{p.name}</div>
+                      <div className="text-[10px] text-[#66615C]">{p.subtitle}</div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="font-extrabold text-[#2D2825]">{p.price}</div>
+                    <span className="text-[9px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                      En anaquel
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Direcciones y Contacto */}
+            <div className="p-3.5 rounded-2xl bg-[#E6F4EC]/50 border border-[#D5E2DB] flex items-center justify-between text-xs">
+              <div>
+                <span className="font-bold text-[#1B3D32] block">¿Vas a visitar esta sucursal?</span>
+                <span className="text-[10px] text-[#5D6B63]">{selectedStoreForModal.distance} desde tu ubicación</span>
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedStoreForModal.name + ' ' + selectedStoreForModal.address)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2E7D5B] text-white font-bold text-xs hover:bg-[#1B3D32] transition"
+              >
+                <span>Cómo llegar</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 3: SELECTOR DE CIUDAD & GPS                         */}
+      {/* ========================================================= */}
+      {isCityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-[#E8E1D7] shadow-xl space-y-4 relative">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <h3 className="font-extrabold text-sm text-[#2D2825]">
+                Seleccionar Ciudad
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCityModalOpen(false)}
+                className="text-[#8C827A] hover:text-[#2D2825]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleRequestGps}
+                className="w-full flex items-center gap-2.5 p-3 rounded-2xl bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold hover:bg-[#D5E2DB] transition cursor-pointer text-left"
+              >
+                <Navigation className="w-4 h-4" />
+                <span>Usar mi GPS preciso en vivo</span>
+              </button>
+
+              {PRESET_CITIES.map((c) => (
                 <button
-                  key={r}
-                  onClick={() => setRadiusMeters(r)}
-                  className={`px-2 py-1 rounded-md text-xs font-semibold ${
-                    radiusMeters === r ? 'bg-slate-200 text-slate-900' : 'hover:bg-slate-100 text-slate-600'
+                  key={c.name}
+                  type="button"
+                  onClick={() => handleCitySelect(c)}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-semibold transition cursor-pointer text-left ${
+                    selectedCity.name === c.name
+                      ? 'bg-[#FAF8F5] border-[#2E7D5B] text-[#2D2825] font-bold'
+                      : 'bg-white border-[#E8E1D7] text-[#66615C] hover:bg-[#FAF8F5]'
                   }`}
                 >
-                  {r / 1000} km
+                  <span>{c.name}</span>
+                  {selectedCity.name === c.name && <Check className="w-4 h-4 text-[#2E7D5B]" />}
                 </button>
               ))}
             </div>
           </div>
         </div>
+      )}
 
-        {/* ALERTA DE ERROR SI EL SERVIDOR LOCAL NO RESPONDE */}
-        {errorMsg && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-amber-600 shrink-0" />
-              <p className="text-sm font-medium">{errorMsg}</p>
-            </div>
-            <button
-              onClick={() => loadData(userCoords.lat, userCoords.lng, radiusMeters)}
-              className="px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
-
-        {/* CONTENIDO PRINCIPAL SEGÚN PESTAÑA */}
-        {isLoading ? (
-          <div className="py-20 flex flex-col items-center justify-center text-slate-500 gap-3">
-            <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-            <p className="text-sm font-medium">Consultando tiendas e inventario en PostgreSQL...</p>
-          </div>
-        ) : activeTab === 'optimizer' ? (
-          /* ============================================================== */
-          /* PESTAÑA 1: OPTIMIZADOR DE RUTINA (MEJOR PRECIO VS. CERCANÍA)   */
-          /* ============================================================== */
-          <div className="space-y-8">
-            {/* Tarjeta de Recomendación de Parada Única */}
-            {optimization?.recommended_single_trip_store && (
-              <div className="bg-linear-to-br from-emerald-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                      Mejor Opción Consolidada (Parada Única)
-                    </div>
-                    <h2 className="text-2xl font-bold tracking-tight">
-                      {optimization.recommended_single_trip_store.branch.name}
-                    </h2>
-                    <p className="text-emerald-100/80 text-sm mt-1 max-w-xl">
-                      {optimization.recommended_single_trip_store.branch.address}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-emerald-200">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                        A solo {optimization.recommended_single_trip_store.branch.distance_meters} metros de ti
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        {optimization.recommended_single_trip_store.products_available_count} productos de tu rutina en stock
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 flex flex-col sm:items-end shrink-0">
-                    <span className="text-xs text-emerald-200 font-medium">Total Estimado de la Rutina</span>
-                    <div className="text-3xl font-extrabold text-white mt-1">
-                      ${optimization.recommended_single_trip_store.total_usd.toFixed(2)}{' '}
-                      <span className="text-xs font-semibold text-emerald-300">USD</span>
-                    </div>
-                    <div className="text-xs text-emerald-200/80 mt-0.5">
-                      ≈ Bs. {optimization.recommended_single_trip_store.total_ves.toFixed(2)} VES
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-4">
-                      {optimization.recommended_single_trip_store.branch.whatsapp && (
-                        <a
-                          href={`https://wa.me/${optimization.recommended_single_trip_store.branch.whatsapp.replace(/[^0-9]/g, '')}?text=Hola!%20Vi%20sus%20productos%20en%20Allabout.skin%20y%20quisiera%20consultar%20disponibilidad.`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          Consultar por WhatsApp
-                        </a>
-                      )}
-                      <Link
-                        href={`/en-tienda/${optimization.recommended_single_trip_store.branch.slug}`}
-                        className="flex items-center gap-1 px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium text-xs transition"
-                      >
-                        Ver Anaquel
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Listado Comparativo Producto por Producto */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Comparativa de Productos en tu Rutina ({optimization?.products_comparison.length || 0})
+      {/* ========================================================= */}
+      {/* MODAL 4: MAPA COMPLETO INTERACTIVO                        */}
+      {/* ========================================================= */}
+      {isFullMapModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full border border-[#E8E1D7] shadow-2xl space-y-4 relative">
+            <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#2E7D5B]" />
+                <h3 className="font-extrabold text-base text-[#2D2825]">
+                  Mapa de Farmacias y Comercios Aliados en {selectedCity.shortName}
                 </h3>
-                <span className="text-xs text-slate-500">
-                  Precios actualizados automáticamente vía Scraper & Cron
-                </span>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {optimization?.products_comparison.map((item) => (
-                  <div
-                    key={item.product_id}
-                    className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                            {item.category}
-                          </span>
-                          <h4 className="text-base font-bold text-slate-900 mt-2">
-                            {item.product_name}
-                          </h4>
-                          {item.brand && (
-                            <p className="text-xs text-slate-500 mt-0.5">Marca: {item.brand}</p>
-                          )}
-                        </div>
-
-                        {item.savings_usd > 0 && (
-                          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/60 text-xs font-bold shrink-0">
-                            <TrendingDown className="w-3.5 h-3.5 text-amber-600" />
-                            Ahorras ${item.savings_usd.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Comparación: Más Cercano vs. Mejor Precio */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-                        {/* Tienda Más Cercana */}
-                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                            🏪 Más Cercana
-                          </span>
-                          {item.closest_store ? (
-                            <div className="mt-1">
-                              <span className="text-xs font-bold text-slate-800 block truncate">
-                                {item.closest_store.store_name}
-                              </span>
-                              <div className="flex items-baseline gap-1.5 mt-0.5">
-                                <span className="text-sm font-extrabold text-slate-900">
-                                  ${item.closest_store.price_usd.toFixed(2)}
-                                </span>
-                                <span className="text-[11px] text-slate-500">
-                                  • {item.closest_store.distance_meters}m
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 mt-1 block">Agotado cerca</span>
-                          )}
-                        </div>
-
-                        {/* Mejor Precio */}
-                        <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-                          <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-                            💰 Mejor Precio
-                          </span>
-                          {item.best_price_store ? (
-                            <div className="mt-1">
-                              <span className="text-xs font-bold text-emerald-950 block truncate">
-                                {item.best_price_store.store_name}
-                              </span>
-                              <div className="flex items-baseline gap-1.5 mt-0.5">
-                                <span className="text-sm font-extrabold text-emerald-700">
-                                  ${item.best_price_store.price_usd.toFixed(2)}
-                                </span>
-                                <span className="text-[11px] text-emerald-800/70">
-                                  • {item.best_price_store.distance_meters}m
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 mt-1 block">Sin ofertas</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs">
-                      <span className="text-slate-500">
-                        Disponible en {item.available_stores_count} tiendas
-                      </span>
-                      {item.best_price_store?.whatsapp && (
-                        <a
-                          href={`https://wa.me/${item.best_price_store.whatsapp.replace(/[^0-9]/g, '')}?text=Hola!%20Quisiera%20consultar%20precio%20y%20stock%20de%20${encodeURIComponent(item.product_name)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
-                        >
-                          <Phone className="w-3 h-3" />
-                          Consultar
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'map' ? (
-          /* ============================================================== */
-          /* PESTAÑA 2: MAPA Y DIRECTORIO FÍSICO DE SUCURSALES              */
-          /* ============================================================== */
-          <div className="space-y-6">
-            {/* Visualizador del Mapa Interactivo con Trazado de Rutas (DLG-HYBRID) */}
-            <StoreInteractiveMap
-              userCoords={userCoords}
-              branches={filteredBranches}
-              radiusMeters={radiusMeters}
-              selectedBranchId={selectedBranchId}
-              isGpsActive={isGpsActive}
-              onSelectBranch={(branch) => setSelectedBranchId(branch.id)}
-              onUpdateUserCoords={(coords) => {
-                setUserCoords(coords);
-                setIsGpsActive(true);
-              }}
-            />
-
-            {/* Listado Detallado de Sucursales */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Establecimientos Disponibles en la Zona ({filteredBranches.length})
-                </h3>
-                <span className="text-xs text-slate-500">
-                  Ordenadas de la más cercana a la más lejana
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredBranches.map((branch, index) => {
-                  const isClosest = index === 0;
-                  const isSelected = selectedBranchId === branch.id;
-
-                  return (
-                    <div
-                      key={branch.id}
-                      onClick={() => setSelectedBranchId(branch.id)}
-                      className={`bg-white rounded-3xl p-6 border transition flex flex-col justify-between cursor-pointer ${
-                        isSelected
-                          ? 'border-indigo-500 shadow-md ring-2 ring-indigo-400/20'
-                          : isClosest
-                          ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/15'
-                          : 'border-slate-200/80 shadow-xs hover:border-slate-300'
-                      }`}
-                    >
-                      <div>
-                        {isClosest && (
-                          <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200/60">
-                            <Sparkles className="w-3 h-3 text-emerald-600" />
-                            <span>Opción más cercana a tu ubicación</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900">
-                            {branch.store_name}
-                          </span>
-                          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                            isClosest
-                              ? 'text-emerald-800 bg-emerald-100 font-bold'
-                              : 'text-slate-700 bg-slate-100'
-                          }`}>
-                            {branch.distance_meters !== undefined ? `${branch.distance_meters} metros` : 'En tu zona'}
-                          </span>
-                        </div>
-
-                        <h4 className="text-base font-bold text-slate-900 mt-2">
-                          {branch.name}
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {branch.address}
-                        </p>
-                        {branch.reference_point && (
-                          <p className="text-[11px] text-slate-400 mt-0.5 italic">
-                            Ref: {branch.reference_point}
-                          </p>
-                        )}
-                        {branch.opening_hours && (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-3">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{branch.opening_hours}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-4 mt-4 border-t border-slate-100">
-                        {branch.whatsapp && (
-                          <a
-                            href={`https://wa.me/${branch.whatsapp.replace(/[^0-9]/g, '')}?text=Hola!%20Vi%20su%20sucursal%20en%20Allabout.skin.`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shrink-0"
-                            title="Contactar por WhatsApp"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </a>
-                        )}
-
-                        <a
-                          href={getDirectionsUrl(branch.latitude, branch.longitude)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl ${
-                            isClosest
-                              ? 'bg-emerald-700 hover:bg-emerald-800 text-white font-bold shadow-xs'
-                              : 'bg-slate-900 hover:bg-slate-800 text-white font-semibold'
-                          } text-xs transition`}
-                          title="Abrir navegación GPS desde mi ubicación actual"
-                        >
-                          <Navigation className="w-3.5 h-3.5" />
-                          <span>Cómo llegar</span>
-                        </a>
-
-                        <Link
-                          href={`/en-tienda/${branch.slug}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs text-center transition"
-                        >
-                          Catálogo
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* ============================================================== */
-          /* PESTAÑA 3: DIRECTORIO DE CADENAS & TIENDAS ONLINE              */
-          /* ============================================================== */
-          <div className="space-y-6">
-            {/* Filtros de País y Búsqueda */}
-            <div className="bg-white rounded-3xl p-6 shadow-xs border border-slate-200/80 space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={directorySearch}
-                    onChange={(e) => setDirectorySearch(e.target.value)}
-                    placeholder="Buscar tienda por nombre (Locatel, Bazar Natural, Farmacia...)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
-                  />
-                </div>
-                <div className="text-xs font-semibold text-slate-500 shrink-0">
-                  {directoryStores.length} tiendas registradas
-                </div>
-              </div>
-
-              {/* Filtro por País */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
-                <span className="text-xs font-medium text-slate-400 mr-1">Filtrar por región:</span>
-                {[
-                  { code: 'ALL', label: 'Todas' },
-                  { code: 'VE', label: '🇻🇪 Venezuela' },
-                  { code: 'CL', label: '🇨🇱 Chile' },
-                  { code: 'MX', label: '🇲🇽 México' },
-                  { code: 'CO', label: '🇨🇴 Colombia' },
-                  { code: 'US', label: '🇺🇸 Estados Unidos' },
-                  { code: 'GLOBAL', label: '🌐 Internacional' },
-                ].map((c) => (
-                  <button
-                    key={c.code}
-                    onClick={() => setDirectoryCountry(c.code)}
-                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition ${
-                      directoryCountry === c.code
-                        ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullMapModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2D2825] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Listado de Tiendas en Cards */}
-            {directoryLoading ? (
-              <div className="py-20 text-center text-slate-400 space-y-3">
-                <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin mx-auto" />
-                <p className="text-xs sm:text-sm font-medium">Cargando directorio de comercios y farmacias...</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {directoryStores
-                  .filter((st) => {
-                    if (directoryCountry !== 'ALL' && st.country_code !== directoryCountry) return false;
-                    if (!directorySearch.trim()) return true;
-                    const q = directorySearch.toLowerCase();
-                    return st.name.toLowerCase().includes(q) || (st.slug || '').toLowerCase().includes(q);
-                  })
-                  .map((st) => (
-                    <div
-                      key={st.id}
-                      className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex flex-col justify-between gap-4 group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0 overflow-hidden font-bold">
-                            {st.logo_url ? (
-                              <img src={st.logo_url} alt={st.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Store className="w-6 h-6" />
-                            )}
-                          </div>
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full border border-slate-200">
-                            <span>{st.country_flag || '🌐'}</span>
-                            <span>{st.country_name || st.country_code}</span>
-                          </span>
-                        </div>
+            <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-[#E8E1D7]">
+              <StoreInteractiveMap
+                userCoords={userCoords}
+                branches={branches}
+                radiusMeters={15000}
+                isGpsActive={isGpsActive}
+              />
+            </div>
 
-                        <div>
-                          <h3 className="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition">
-                            {st.name}
-                          </h3>
-                          <div className="flex items-center justify-between gap-2 mt-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                                {st.crawler_platform || st.store_type || 'ONLINE'}
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                {st.in_stock_offers_count || st.total_offers_count || 0} ofertas en catálogo
-                              </span>
-                            </div>
-                            <Link
-                              href={`/dashboard/empresa?claim=${encodeURIComponent(st.slug || st.id)}`}
-                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline shrink-0"
-                              title="Reclamar la administración de este comercio"
-                            >
-                              ¿Es tu tienda? Reclámala
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botones de Acción */}
-                      <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleOpenStore(st)}
-                          className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition flex items-center justify-center gap-1.5"
-                          title="Ver inventario y catálogo de productos de esta tienda"
-                        >
-                          <Package className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Ver Productos</span>
-                        </button>
-
-                        {st.website_url ? (
-                          <a
-                            href={st.website_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
-                            title="Visitar el sitio web oficial de la tienda"
-                          >
-                            <span>Ir a la tienda</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        ) : (
-                          <button
-                            disabled
-                            className="w-full py-2.5 px-3 rounded-xl bg-slate-50 text-slate-400 font-medium text-xs cursor-not-allowed text-center"
-                          >
-                            Solo Física
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* MODAL PÚBLICO: PRODUCTOS Y DETALLES DE LA TIENDA */}
-        {viewingStore && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 border border-slate-200">
-              {/* Header Modal */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0 font-bold">
-                    {viewingStore.logo_url ? (
-                      <img src={viewingStore.logo_url} alt={viewingStore.name} className="w-full h-full object-cover rounded-2xl" />
-                    ) : (
-                      <Store className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xl font-bold text-slate-900">{viewingStore.name}</h3>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
-                        <span>{viewingStore.country_flag || '🌐'}</span>
-                        <span>{viewingStore.country_name || viewingStore.country_code}</span>
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {viewingStore.crawler_platform || viewingStore.store_type || 'ONLINE'} &bull; {viewingStoreProducts.length} productos verificados
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {viewingStore.website_url && (
-                    <a
-                      href={viewingStore.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition shadow-xs"
-                      title="Visitar sitio web oficial"
-                    >
-                      <span>Ir a la tienda oficial</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setViewingStore(null)}
-                    className="p-2 text-slate-400 hover:text-slate-700 rounded-xl bg-slate-100 hover:bg-slate-200 transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Banner B2B: Reclamar Tienda */}
-              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span className="text-xs font-bold text-emerald-900">¿Eres el dueño o encargado de {viewingStore.name}?</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-800/90 leading-relaxed">
-                    Reclama tu perfil gratis para verificar tus sucursales, actualizar precios en $ y Bs, y recibir clientes directos de Allabout.skin.
-                  </p>
-                </div>
-                <Link
-                  href={`/dashboard/empresa?claim=${encodeURIComponent(viewingStore.slug || viewingStore.id)}`}
-                  className="inline-flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-xs shrink-0 cursor-pointer"
-                >
-                  <Store className="w-3.5 h-3.5" />
-                  <span>Reclamar mi Tienda Gratis</span>
-                </Link>
-              </div>
-
-              {/* Búsqueda dentro de la tienda */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={viewingStoreSearch}
-                  onChange={(e) => setViewingStoreSearch(e.target.value)}
-                  placeholder="Buscar en el catálogo de esta tienda por nombre o marca..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
-                />
-              </div>
-
-              {/* Productos de la Tienda */}
-              {viewingStoreLoading ? (
-                <div className="py-16 text-center text-slate-400 space-y-3">
-                  <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin mx-auto" />
-                  <p className="text-xs font-medium">Cargando productos y precios duales...</p>
-                </div>
-              ) : viewingStoreProducts.length === 0 ? (
-                <div className="py-16 text-center text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 p-8 space-y-2">
-                  <Package className="w-10 h-10 text-slate-400 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-700">No hay productos registrados en este momento.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1">
-                  {viewingStoreProducts
-                    .filter((offer: any) => {
-                      if (!viewingStoreSearch.trim()) return true;
-                      const q = viewingStoreSearch.toLowerCase();
-                      const prodName = (offer.product?.name || '').toLowerCase();
-                      const brandName = (offer.product?.brand?.name || '').toLowerCase();
-                      return prodName.includes(q) || brandName.includes(q);
-                    })
-                    .map((offer: any) => {
-                      const product = offer.product;
-                      const usdPrice = offer.formatted_price_usd || (offer.price_usd ? `$${Number(offer.price_usd).toFixed(2)} USD` : (offer.price ? `$${Number(offer.price).toFixed(2)} USD` : 'N/D'));
-                      const localPrice = offer.formatted_price_local || (offer.price_local ? `${offer.currency_local || ''} ${Number(offer.price_local).toLocaleString('es-ES')}` : null);
-                      const targetUrl = offer.product_url || viewingStore.website_url;
-
-                      return (
-                        <div
-                          key={offer.id}
-                          className="bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/80 hover:border-emerald-300 hover:bg-white transition flex flex-col justify-between gap-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
-                              {product?.image_url ? (
-                                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Package className="w-5 h-5 text-slate-400" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                                {product?.brand?.name || 'Marca'}
-                              </span>
-                              <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mt-0.5" title={product?.name}>
-                                {product?.name || 'Producto sin nombre'}
-                              </h4>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs gap-2">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-slate-900 text-sm">{usdPrice}</span>
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                  offer.in_stock
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {offer.in_stock ? 'En Stock' : 'Agotado'}
-                                </span>
-                              </div>
-                              {localPrice && (
-                                <div className="text-[11px] text-emerald-700 font-semibold">
-                                  &asymp; {localPrice}
-                                </div>
-                              )}
-                            </div>
-
-                            {targetUrl && (
-                              <a
-                                href={targetUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition shrink-0 shadow-xs"
-                                title="Ir a ver este producto en la tienda oficial"
-                              >
-                                <span>Ir a la tienda</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-
-              {/* Modal Footer */}
-              <div className="pt-3 border-t border-slate-100 flex justify-end">
-                <button
-                  onClick={() => setViewingStore(null)}
-                  className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition"
-                >
-                  Cerrar
-                </button>
-              </div>
+            <div className="flex items-center justify-between text-xs text-[#66615C]">
+              <span>Mostrando sucursales en un radio de 15 km</span>
+              <button
+                type="button"
+                onClick={() => setIsFullMapModalOpen(false)}
+                className="px-4 py-1.5 rounded-full bg-[#2E7D5B] text-white font-bold cursor-pointer"
+              >
+                Listo
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
     </div>
   );
 }

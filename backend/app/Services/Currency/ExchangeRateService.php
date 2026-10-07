@@ -29,6 +29,7 @@ class ExchangeRateService
         'BRL' => 5.22,
         'GBP' => 0.76,
         'HNL' => 26.85,
+        'DOP' => 60.5,
         'INR' => 96.37,
         'CHF' => 0.83,
     ];
@@ -48,6 +49,7 @@ class ExchangeRateService
         'PE' => 'PEN',
         'EC' => 'USD',
         'HN' => 'HNL',
+        'DO' => 'DOP',
         'SV' => 'USD',
         'IN' => 'INR',
         'CH' => 'CHF',
@@ -198,6 +200,7 @@ class ExchangeRateService
             'MXN' => '$' . number_format($amount, 2, '.', ',') . ' MXN',
             'PEN' => 'S/ ' . number_format($amount, 2, '.', ','),
             'ARS' => '$' . number_format($amount, 2, ',', '.') . ' ARS',
+            'DOP' => 'RD$ ' . number_format($amount, 2, '.', ',') . ' DOP',
             'BRL' => 'R$ ' . number_format($amount, 2, ',', '.'),
             'GBP' => '£' . number_format($amount, 2, '.', ','),
             default => '$' . number_format($amount, 2, '.', ',') . ' USD',

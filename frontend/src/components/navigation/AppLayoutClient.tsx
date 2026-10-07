@@ -17,11 +17,11 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
 
-  const isSystemArea = pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/login');
+  const isSystemArea = pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/tiendas') || pathname.startsWith('/escaner');
 
   if (isSystemArea) {
     return (
-      <div className="min-h-screen bg-[#090D16] text-slate-100 selection:bg-teal-500 selection:text-white">
+      <div className="min-h-screen selection:bg-[#E6F4EC] selection:text-[#2E7D5B] antialiased">
         <OfflineStatusBanner />
         {children}
       </div>

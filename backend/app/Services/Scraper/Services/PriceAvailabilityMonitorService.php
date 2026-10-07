@@ -135,13 +135,17 @@ class PriceAvailabilityMonitorService
             $scrapedData = $this->checkLocatelQuick($url);
         }
 
-        // Si no es VTEX o falló, utilizar el extractor genérico ligero
+        // Si no es VTEX o falló, utilizar el extractor genérico ligero pasando la tienda para contexto de país/moneda
         if (!$scrapedData) {
-            $dto = $this->genericScraper->scrapeUrl($url);
+            $dto = $this->genericScraper->scrapeUrl($url, $offer->store);
             if ($dto) {
+                $normalizer = app(\App\Services\Currency\PriceNormalizerService::class);
+                $dto = $normalizer->normalizeProductOffer($dto, $offer->store);
                 $scrapedData = [
-                    'price_usd' => (float) $dto->price,
-                    'price_ves' => (float) ($dto->priceVes ?? $this->exchangeRateService->usdToVes($dto->price)),
+                    'price_usd' => $dto->price,
+                    'price_ves' => $dto->priceVes,
+                    'price_local' => $dto->priceLocal,
+                    'currency_local' => $dto->currencyLocal,
                     'in_stock' => (bool) $dto->inStock,
                 ];
             }
@@ -168,8 +172,28 @@ class PriceAvailabilityMonitorService
         $wasInStock = (bool) $offer->in_stock;
 
         $newPriceUsd = round((float) $scrapedData['price_usd'], 2);
-        $newPriceVes = round((float) $scrapedData['price_ves'], 2);
+        $newPriceVes = $scrapedData['price_ves'] !== null ? round((float) $scrapedData['price_ves'], 2) : null;
+        $newPriceLocal = round((float) $scrapedData['price_local'], 2);
+        $newCurrencyLocal = $scrapedData['currency_local'];
         $newInStock = (bool) $scrapedData['in_stock'];
+
+        // Protección contra falsos positivos / anomalías de extracción:
+        // Si el precio cae más del 85% de golpe a centavos (< $0.50), es probable distorsión cambiaria
+        if ($oldPriceUsd >= 5.0 && $newPriceUsd < 0.50 && $newPriceUsd > 0) {
+            Log::channel('single')->warning("[PriceMonitor] Cambio anómalo de precio rechazado por precaución: \${$oldPriceUsd} -> \${$newPriceUsd} en {$offer->store?->name} ({$offer->product?->name})");
+            $offer->update(['last_checked_at' => now(), 'in_stock' => $newInStock]);
+            return [
+                'offer_id' => $offer->id,
+                'product_name' => $offer->product?->name ?? 'Producto',
+                'store_name' => $offer->store?->name ?? 'Tienda',
+                'change_type' => 'UNCHANGED',
+                'status' => 'anomalous_price_blocked',
+                'old_price_usd' => $oldPriceUsd,
+                'new_price_usd' => $oldPriceUsd,
+                'difference_usd' => 0.00,
+                'percentage_change' => 0.00,
+            ];
+        }
 
         $diffUsd = round($newPriceUsd - $oldPriceUsd, 2);
         $percentageChange = $oldPriceUsd > 0 ? round(($diffUsd / $oldPriceUsd) * 100, 2) : 0.00;
@@ -195,7 +219,7 @@ class PriceAvailabilityMonitorService
                 'old_price_usd' => $oldPriceUsd,
                 'new_price_usd' => $newPriceUsd,
                 'old_price_ves' => $oldPriceVes,
-                'new_price_ves' => $newPriceVes,
+                'new_price_ves' => $newPriceVes ?? 0,
                 'difference_usd' => $diffUsd,
                 'percentage_change' => $percentageChange,
                 'change_type' => $changeType,
@@ -208,7 +232,9 @@ class PriceAvailabilityMonitorService
         // Actualizar datos de la oferta en base de datos
         $offer->update([
             'price' => $newPriceUsd > 0 ? $newPriceUsd : $oldPriceUsd,
-            'price_ves' => $newPriceVes > 0 ? $newPriceVes : $oldPriceVes,
+            'price_local' => $newPriceLocal > 0 ? $newPriceLocal : $offer->price_local,
+            'currency_local' => $newCurrencyLocal ?: $offer->currency_local,
+            'price_ves' => $newPriceVes,
             'in_stock' => $newInStock,
             'last_checked_at' => now(),
         ]);

@@ -27,10 +27,16 @@ Schedule::command('crawler:summary --hours=2')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/crawler_summary.log'));
 
-// 4. Cron de Descubrimiento Web Continuo: Rastrea la web en busca de nuevas tiendas de cosméticos
-Schedule::command('crawler:discover-web --limit=4')
+// 4. Cron de Descubrimiento Web Continuo: Rastrea la web con Google (1 consulta/hora = 24 al día para maximizar la cuota de Serper a >100 días)
+Schedule::command('crawler:discover-web --limit=1')
     ->hourly()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/web_discovery.log'));
+
+// 5. Cron de Reporte Consolidado Diario al Telegram del Super Admin (20:00 / 8:00 PM)
+Schedule::command('report:daily-telegram')
+    ->dailyAt('20:00')
+    ->withoutOverlapping();
+
 
 

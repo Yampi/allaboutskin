@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminNotificationController;
 use App\Http\Controllers\Api\Admin\AdminScraperController;
 use App\Http\Controllers\Api\Admin\AdminSecurityLogsController;
 use App\Http\Controllers\Api\Admin\AdminStoreController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Api\Admin\AdminSystemSettingsController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AuditController;
+use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\Business\BusinessAnalyticsController;
 use App\Http\Controllers\Api\Business\BusinessBranchController;
 use App\Http\Controllers\Api\Business\BusinessOfferController;
@@ -56,11 +58,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
 
+        // Social Authentication (Laravel Socialite: Google, Facebook, etc.)
+        Route::get('/{provider}/redirect', [SocialAuthController::class, 'redirectToProvider']);
+        Route::get('/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback']);
+
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
         });
     });
+
 
     // 2. Scientific Formula Audit Engine (Public & Authenticated)
     Route::prefix('audit')->group(function () {
@@ -151,6 +158,9 @@ Route::prefix('v1')->group(function () {
 
     // 5. Administration, Roles & Security Logs (Admin / Super Admin Only)
     Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
+        // Notification & Flash Summary
+        Route::get('/notifications/summary', [AdminNotificationController::class, 'summary']);
+
         // Users Management
         Route::prefix('users')->group(function () {
             Route::get('/', [AdminUserController::class, 'index']);

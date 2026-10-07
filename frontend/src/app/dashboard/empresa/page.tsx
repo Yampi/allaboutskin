@@ -33,7 +33,12 @@ import {
   Download,
   FileText,
   X,
+  Home,
+  Users,
+  Tag,
+  Bell,
 } from 'lucide-react';
+import StoreDashboardOverview from '@/components/dashboard/StoreDashboardOverview';
 import {
   getCurrentUser,
   isUserBusiness,
@@ -66,22 +71,28 @@ function BusinessDashboardContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
 
-  const [activeTab, setActiveTab] = useState<'analytics' | 'catalog' | 'branches' | 'profile'>(() => {
+  const [activeTab, setActiveTab] = useState<'inicio' | 'analytics' | 'catalog' | 'branches' | 'profile'>(() => {
     if (tabParam === 'analytics' || tabParam === 'catalog' || tabParam === 'branches' || tabParam === 'profile') {
       return tabParam;
     }
-    return 'analytics';
+    return 'inicio';
   });
 
   useEffect(() => {
     if (tabParam === 'analytics' || tabParam === 'catalog' || tabParam === 'branches' || tabParam === 'profile') {
       setActiveTab(tabParam);
+    } else if (!tabParam) {
+      setActiveTab('inicio');
     }
   }, [tabParam]);
 
-  const handleTabChange = (tab: 'analytics' | 'catalog' | 'branches' | 'profile') => {
+  const handleTabChange = (tab: 'inicio' | 'analytics' | 'catalog' | 'branches' | 'profile') => {
     setActiveTab(tab);
-    router.replace(`/dashboard/empresa?tab=${tab}`, { scroll: false });
+    if (tab === 'inicio') {
+      router.replace('/dashboard/empresa', { scroll: false });
+    } else {
+      router.replace(`/dashboard/empresa?tab=${tab}`, { scroll: false });
+    }
   };
 
   const [isLoading, setIsLoading] = useState(true);
@@ -926,9 +937,22 @@ function BusinessDashboardContent() {
     );
   }
 
+  // Store Nav items
+  const storeNavItems = [
+    { id: 'inicio', label: 'Inicio', icon: Home },
+    { id: 'analytics', label: 'Ventas', icon: TrendingUp },
+    { id: 'catalog', label: 'Productos', icon: Package },
+    { id: 'inventario', label: 'Inventario', icon: Layers },
+    { id: 'branches', label: 'Sucursales', icon: MapPin },
+    { id: 'clientes', label: 'Clientes', icon: Users },
+    { id: 'promociones', label: 'Promociones', icon: Tag },
+    { id: 'reportes', label: 'Reportes', icon: FileText },
+    { id: 'profile', label: 'Perfil', icon: Settings },
+  ];
+
   // ================= MAIN BUSINESS DASHBOARD =================
   return (
-    <div className="space-y-8 pb-12">
+    <div className="min-h-screen bg-[#F0F7FF] text-slate-800 flex flex-col lg:flex-row antialiased selection:bg-sky-100 selection:text-sky-900 font-sans pb-16 lg:pb-0">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-2">
@@ -945,103 +969,161 @@ function BusinessDashboardContent() {
         </div>
       )}
 
-      {/* Header Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold shrink-0">
-            {store?.logo_url ? (
-              <img src={store.logo_url} alt={store.name} className="w-full h-full object-cover rounded-2xl" />
-            ) : (
-              <Store className="w-7 h-7" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{store?.name}</h1>
-              {/* Badges */}
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase border ${
-                  store?.subscription_tier === 'ENTERPRISE'
-                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
-                    : store?.subscription_tier === 'PRO_LOCAL'
-                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400'
-                }`}
-              >
-                {store?.subscription_tier_label || 'Plan Básico'}
-              </span>
-
-              {store?.verification_status === 'VERIFIED' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                  <CheckCircle className="w-3 h-3" /> Verificada
-                </span>
-              ) : store?.verification_status === 'REJECTED' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold">
-                  <AlertCircle className="w-3 h-3" /> En Revisión Rechazada
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold animate-pulse">
-                  <Clock className="w-3 h-3" /> Pendiente de Aprobación
-                </span>
-              )}
+      {/* ========================================================= */}
+      {/* 1. SIDEBAR DESKTOP (Azul B2B DLG-HYBRID)                  */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-sky-100 sticky top-0 h-screen justify-between p-5 shrink-0 z-20">
+        <div className="space-y-6">
+          <Link href="/" className="flex items-center gap-2.5 px-2 group">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-600 to-sky-400 flex items-center justify-center text-white shadow-sm shadow-sky-200 group-hover:scale-105 transition">
+              <Store className="w-4 h-4" />
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Portal de gestión comercial &bull; {store?.branches_count || 1} sucursal(es) registradas &bull; {store?.offers_count || 0} productos activos
+            <div className="font-bold text-lg text-slate-900 tracking-tight">
+              allabout<span className="text-sky-600">.skin</span>
+            </div>
+          </Link>
+
+          <nav className="space-y-1">
+            {storeNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id || (item.id === 'inventario' && activeTab === 'catalog');
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.id === 'inventario') handleTabChange('catalog');
+                    else if (item.id === 'clientes' || item.id === 'promociones' || item.id === 'reportes') handleTabChange('inicio');
+                    else handleTabChange(item.id as any);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer text-left ${
+                    isActive
+                      ? 'bg-sky-100/80 text-sky-800 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-sky-600 hover:bg-sky-50/60'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Brand Philosophy Badge (Mockup Footer Card B2B) */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50/50 border border-sky-100 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-sky-950 leading-snug">
+              Más visibilidad, <span className="text-sky-600 font-bold">más ventas.</span>
             </p>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Vitrina comercial activa
+            </p>
+          </div>
+          <Sparkles className="w-5 h-5 text-sky-400 shrink-0" />
+        </div>
+      </aside>
+
+      {/* ========================================================= */}
+      {/* 2. MAIN CONTAINER                                         */}
+      {/* ========================================================= */}
+      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+        
+        {/* TOPBAR: Buscador & Perfil de la tienda */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar productos, clientes, etc."
+              className="w-full bg-white border border-sky-100 rounded-full pl-9 pr-4 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300 transition shadow-2xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 shrink-0">
+            {branches.length > 0 && (
+              <Link
+                href={`/en-tienda/${branches[0].slug}`}
+                target="_blank"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 text-xs font-bold rounded-full transition shadow-2xs"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Ver vitrina en vivo</span>
+                <ExternalLink className="w-3 h-3 text-sky-500" />
+              </Link>
+            )}
+
+            <button
+              type="button"
+              className="w-9 h-9 rounded-full bg-white border border-sky-100 flex items-center justify-center text-slate-500 hover:text-sky-600 transition shadow-2xs relative"
+              aria-label="Notificaciones"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="w-2 h-2 rounded-full bg-sky-500 absolute top-2 right-2 ring-2 ring-white" />
+            </button>
+
+            {/* Profile Avatar Card */}
+            <div className="flex items-center gap-2.5 bg-white border border-sky-100 rounded-full py-1 pl-1 pr-3.5 shadow-2xs">
+              <div className="w-7 h-7 rounded-full bg-sky-100 text-sky-700 font-bold text-xs flex items-center justify-center overflow-hidden border border-sky-200">
+                {store?.name ? store.name.charAt(0) : 'F'}
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold text-slate-800 leading-tight">
+                  {store?.name || 'Farmacia Los Andes'}
+                </div>
+                <div className="text-[10px] text-sky-600 font-semibold leading-none">
+                  Dueño de tienda
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Action button: View live storefront */}
-        {branches.length > 0 && (
-          <div className="flex items-center gap-3">
+        {/* TAB 0: INICIO (MOCKUP AZUL B2B OVERVIEW) */}
+        {activeTab === 'inicio' && (
+          <StoreDashboardOverview
+            store={store}
+            analytics={analytics}
+            onNavigateTab={handleTabChange}
+            branchCount={branches.length}
+          />
+        )}
+
+        {/* SI NO ES INICIO: Mostrar barra de pestañas para acceder a las herramientas de gestión */}
+        {activeTab !== 'inicio' && (
+          <div className="flex items-center gap-2 border-b border-sky-100 pb-px overflow-x-auto">
             <button
-              onClick={() => copyStorefrontLink(branches[0].slug)}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-2"
-              title="Copiar enlace para biografía de Instagram o estados"
+              onClick={() => handleTabChange('inicio')}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-sky-600 transition"
             >
-              {copiedSlug === branches[0].slug ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>Copiar Enlace de Vitrina</span>
+              <Home className="w-4 h-4" />
+              <span>← Volver al Resumen</span>
             </button>
 
-            <Link
-              href={`/en-tienda/${branches[0].slug}`}
-              target="_blank"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-teal-600/20"
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>Ver mi Vitrina en Vivo</span>
-              <ExternalLink className="w-3 h-3" />
-            </Link>
+            {[
+              { id: 'analytics', label: 'Ventas & Leads', icon: TrendingUp },
+              { id: 'catalog', label: 'Catálogo & Precios', icon: Package },
+              { id: 'branches', label: 'Sucursales Físicas', icon: MapPin },
+              { id: 'profile', label: 'Perfil del Comercio', icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                    isActive
+                      ? 'border-sky-600 text-sky-700 bg-sky-50/50'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         )}
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-px overflow-x-auto">
-        {[
-          { id: 'analytics', label: 'Rendimiento & Leads', icon: TrendingUp },
-          { id: 'catalog', label: 'Catálogo & Precios', icon: Package },
-          { id: 'branches', label: 'Sucursales Físicas', icon: MapPin },
-          { id: 'profile', label: 'Perfil del Comercio', icon: Settings },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap ${
-                isActive
-                  ? 'border-teal-500 text-teal-400 bg-teal-500/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* ================= TAB 1: ANALYTICS & LEADS ================= */}
       {activeTab === 'analytics' && (
@@ -2269,6 +2351,39 @@ function BusinessDashboardContent() {
           </div>
         </div>
       )}
+      </main>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-sky-100 px-3 py-2 flex items-center justify-around shadow-lg">
+        <button
+          onClick={() => handleTabChange('inicio')}
+          className={`flex flex-col items-center gap-0.5 ${activeTab === 'inicio' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-[9px]">Inicio</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('analytics')}
+          className={`flex flex-col items-center gap-0.5 ${activeTab === 'analytics' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span className="text-[9px]">Ventas</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('catalog')}
+          className={`flex flex-col items-center gap-0.5 ${activeTab === 'catalog' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}
+        >
+          <Package className="w-4 h-4" />
+          <span className="text-[9px]">Productos</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('branches')}
+          className={`flex flex-col items-center gap-0.5 ${activeTab === 'branches' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}
+        >
+          <MapPin className="w-4 h-4" />
+          <span className="text-[9px]">Sedes</span>
+        </button>
+      </nav>
     </div>
   );
 }
