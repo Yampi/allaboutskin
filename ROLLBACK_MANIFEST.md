@@ -9,7 +9,7 @@ Este documento garantiza la trazabilidad total de todos los cambios implementado
 | Punto de Control | Commit Hash / Rama | Descripción | Comando de Reversión |
 | :--- | :--- | :--- | :--- |
 | **Baseline Pre-Auditoría** | `1f7133b` (`main`) | Estado original íntegro previo a cualquier modificación de la auditoría. | `git checkout main` o `git reset --hard 1f7133b` |
-| **Rama de Trabajo Actual** | `feature/audit-wiring-qol-innov` | Contiene todas las mejoras, cableados reales y módulos QoL. | `git checkout feature/audit-wiring-qol-innov` |
+| **Commit Auditoría & QoL** | `a40302d` (`feature/audit-wiring-qol-innov`) | Entrega completa: Cableado real, Tri-State, QoL, Leads anónimos. | `git checkout feature/audit-wiring-qol-innov` |
 
 ---
 
