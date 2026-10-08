@@ -22,7 +22,12 @@ import {
   FlaskConical,
   Sparkles,
   ShieldAlert,
-  Zap
+  Zap,
+  MapPin,
+  TrendingUp,
+  BarChart3,
+  ShoppingBag,
+  HeartPulse
 } from 'lucide-react';
 
 interface AdminDashboardOverviewProps {
@@ -309,6 +314,192 @@ export default function AdminDashboardOverview({
           </div>
         </div>
 
+      </div>
+
+      {/* ========================================================= */}
+      {/* 3. INTELIGENCIA B2B: LEADS A FARMACIAS & DEMAND GAP       */}
+      {/* ========================================================= */}
+      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                <BarChart3 className="w-4 h-4" />
+              </span>
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+                Inteligencia B2B: Leads de Farmacias y Demanda Agregada (Zero-PII)
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500">
+              Datos agregados para monetización con farmacias aliadas (Farmatodo, Locatel) sin almacenar datos privados de usuarios.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Garantía Zero-PII Activa</span>
+            </span>
+          </div>
+        </div>
+
+        {/* 4 Métricas Clave de Negocio B2B */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Leads a Farmacias (Mes)
+            </span>
+            <div className="text-2xl font-black text-slate-900 flex items-center justify-between">
+              <span>1,420</span>
+              <span className="text-xs font-bold text-emerald-600 flex items-center gap-0.5">
+                <TrendingUp className="w-3.5 h-3.5" /> +18.4%
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">Clics con intención de compra directa</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Brecha de Demanda (Gap)
+            </span>
+            <div className="text-2xl font-black text-amber-600 flex items-center justify-between">
+              <span>312</span>
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                Sin Stock Local
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">Oportunidades de importación / catálogo</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Conversión de Escaneo
+            </span>
+            <div className="text-2xl font-black text-slate-900 flex items-center justify-between">
+              <span>24.8%</span>
+              <span className="text-xs font-bold text-emerald-600">+3.2% vs target</span>
+            </div>
+            <span className="text-[10px] text-slate-400">De escáner a 'Añadir a Tocador / Rutina'</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Adherencia Skin Cycling
+            </span>
+            <div className="text-2xl font-black text-[#2E7D58] flex items-center justify-between">
+              <span>86%</span>
+              <span className="text-xs font-bold text-[#2E7D58] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Alta Fidelidad
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">Reabastecimiento recurrente de envases</span>
+          </div>
+        </div>
+
+        {/* 2 Columnas de Análisis B2B */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
+          
+          {/* Subcolumna 1: Demanda Geográfica de Activos */}
+          <div className="p-5 rounded-2xl bg-[#FAFAF7] border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Demanda de Activos por Zona</span>
+              </h3>
+              <span className="text-[10px] font-bold text-slate-500">Últimos 30 días</span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">Caracas (Chacao / Baruta)</div>
+                  <div className="text-[11px] text-slate-500">Niacinamida 10% · Filtros Mexoryl 400</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black text-emerald-700">580 búsquedas</span>
+                  <div className="text-[10px] text-emerald-600 font-bold">42% del volumen</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">Valencia / Naguanagua</div>
+                  <div className="text-[11px] text-slate-500">Retinal 0.05% · Ceramidas Reparadoras</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black text-emerald-700">340 búsquedas</span>
+                  <div className="text-[10px] text-emerald-600 font-bold">25% del volumen</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">Maracaibo</div>
+                  <div className="text-[11px] text-slate-500">Geles Oil-Free · Control Sebo Zona T</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black text-emerald-700">280 búsquedas</span>
+                  <div className="text-[10px] text-emerald-600 font-bold">20% del volumen</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Subcolumna 2: Brechas de Inventario para Farmacias */}
+          <div className="p-5 rounded-2xl bg-[#FAFAF7] border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                <span>Demand Gaps (Fórmulas sin Stock)</span>
+              </h3>
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                Acción Comercial
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">Retinaldehyde 0.05% Emulsion</div>
+                  <div className="text-[11px] text-slate-500">Demanda alta para Noche 2 de Skin Cycling</div>
+                </div>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold text-[10px] border border-rose-200">
+                    Agotado en tiendas
+                  </span>
+                  <div className="text-[10px] text-slate-400 mt-0.5">92 compradores en espera</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">CeraVe Gel Limpiador 473ml</div>
+                  <div className="text-[11px] text-slate-500">Fórmula básica para preparación dérmica</div>
+                </div>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold text-[10px] border border-amber-200">
+                    Stock Crítico
+                  </span>
+                  <div className="text-[10px] text-slate-400 mt-0.5">140 leads redirigidos</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-900">Paula's Choice 2% BHA Salicylic</div>
+                  <div className="text-[11px] text-slate-500">Exfoliante químico Noche 1</div>
+                </div>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-bold text-[10px] border border-sky-200">
+                    Importación Sugerida
+                  </span>
+                  <div className="text-[10px] text-slate-400 mt-0.5">78 búsquedas activas</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
     </div>

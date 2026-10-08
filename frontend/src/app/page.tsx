@@ -60,19 +60,20 @@ export default function LandingPage() {
                 href="/escaner"
                 className="px-7 py-3.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white font-bold text-sm shadow-md hover:shadow-lg transition flex items-center gap-2.5 group cursor-pointer"
               >
-                <span>Comienza ahora</span>
+                <Scan className="w-4 h-4 text-emerald-200" />
+                <span>Escanear Rostro o Producto (IA)</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
 
-              <a
-                href="#como-funciona"
+              <Link
+                href="/mi-rutina"
                 className="px-6 py-3.5 rounded-full bg-white hover:bg-[#F2ECE4] border border-[#E8E1D7] text-[#2D2825] font-bold text-sm shadow-2xs transition flex items-center gap-2.5 cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-full bg-[#E6F4EC] flex items-center justify-center text-[#2E7D5B]">
-                  <Play className="w-3 h-3 fill-current ml-0.5" />
+                  <Sparkles className="w-3.5 h-3.5 fill-current" />
                 </div>
-                <span>Ver cómo funciona</span>
-              </a>
+                <span>Ver Rutina y Guía Facial AR</span>
+              </Link>
             </div>
 
             {/* 3 Badges de confianza en fila */}

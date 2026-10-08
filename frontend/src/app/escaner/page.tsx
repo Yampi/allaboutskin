@@ -61,11 +61,12 @@ export default function EscanerPage() {
 
   // Imágenes
   const sampleFaceUrl = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80';
+  const sampleProductUrl = 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80';
   const beforeFaceUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80';
   const [currentImage, setCurrentImage] = useState<string>(sampleFaceUrl);
   const [isUserUploaded, setIsUserUploaded] = useState(false);
 
-  // Estado del diagnóstico IA (Gemini Vision)
+  // Estado del diagnóstico Facial (Gemini Vision)
   const [aiDiagnosis, setAiDiagnosis] = useState({
     score: 78,
     statusText: 'Buena',
@@ -77,6 +78,71 @@ export default function EscanerPage() {
     spots: 62,
     fineLines: 58,
   });
+
+  // Estado del diagnóstico de Producto / INCI & Expansión de Rutina
+  const [productDiagnosis, setProductDiagnosis] = useState({
+    name: 'The Ordinary Niacinamide 10% + Zinc 1%',
+    brand: 'The Ordinary',
+    category: 'Sérum Seborregulador Concentrado',
+    score: 94,
+    statusText: 'Altamente Biocompatible',
+    verdict: 'Fórmula optimizada con Niacinamida al 10% pura en vehículo acuoso ligero. Potente acción equilibrante del sebo y fortalecimiento de ceramidas dérmicas.',
+    cyclePlacement: 'Noche 1 (post-exfoliación), Noches 3 y 4 (recuperación). Ideal en combinación con hidratantes hipoalergénicos.',
+    incompatibilityAlert: 'NO aplicar en la misma aplicación con Vitamina C pura (Ácido L-Ascórbico) ni ácidos exfoliantes directos para prevenir rubor cutáneo transitorio.',
+    actives: [
+      {
+        name: 'Niacinamida (Vitamina B3)',
+        concentration: '10%',
+        role: 'Regulación sebácea en Zona T, refuerzo de la barrera de lípidos y atenuación de textura rugosa.',
+        rating: 'Excelente'
+      },
+      {
+        name: 'Zinc PCA',
+        concentration: '1%',
+        role: 'Sal de zinc biocompatible con propiedades antimicrobianas, matificantes y descongestionantes.',
+        rating: 'Excelente'
+      },
+      {
+        name: 'Tamarindus Indica Seed Gum',
+        concentration: '0.8%',
+        role: 'Polisacárido botánico de soporte hidratante que imita la retención hídrica del ácido hialurónico.',
+        rating: 'Seguro'
+      }
+    ],
+    complementaryProducts: [
+      {
+        id: 'comp-1',
+        name: "Paula's Choice Skin Perfecting 2% BHA",
+        brand: "Paula's Choice",
+        category: 'Exfoliante Químico (Noche 1)',
+        price: '$34.00',
+        reason: 'Desobstruye los poros en profundidad permitiendo que la niacinamida penetre sin barreras sebáceas.',
+      },
+      {
+        id: 'comp-2',
+        name: 'CeraVe Loción Hidratante Facial PM',
+        brand: 'CeraVe',
+        category: 'Crema Barrera (Noches 3 y 4)',
+        price: '$16.50',
+        reason: 'Aporta 3 ceramidas esenciales para sellar la hidratación generada por la niacinamida y el zinc.',
+      },
+      {
+        id: 'comp-3',
+        name: 'La Roche-Posay Anthelios UVmune 400',
+        brand: 'La Roche-Posay',
+        category: 'Fotoprotector Fluido (Día / AM)',
+        price: '$21.90',
+        reason: 'Protección ultravioleta de amplio espectro para evitar hiperpigmentación de brotes recientes.',
+      }
+    ]
+  });
+
+  const handleModeSelect = (mode: 'face' | 'product') => {
+    setScanMode(mode);
+    if (!isUserUploaded) {
+      setCurrentImage(mode === 'face' ? sampleFaceUrl : sampleProductUrl);
+    }
+  };
 
   // Notificación de producto añadido
   const [addedProductNotice, setAddedProductNotice] = useState<string | null>(null);
@@ -229,6 +295,45 @@ export default function EscanerPage() {
     setTimeout(() => setAddedProductNotice(null), 3000);
   };
 
+  const handleAddFullRoutineCombo = () => {
+    // Añadimos el producto principal escaneado
+    addProductToShelf({
+      id: `shelf-main-${Date.now()}`,
+      name: productDiagnosis.name,
+      brand: productDiagnosis.brand,
+      category: 'Sérum',
+      volume: '30 ml',
+      paoMonths: 6,
+      inciScore: 94,
+      primaryActives: ['Niacinamida 10%', 'Zinc PCA 1%'],
+      assignedPhase: 1,
+      assignedPhaseName: 'Noche 1: Exfoliación',
+      image: sampleProductUrl,
+      textureNote: 'Fórmula escaneada biocompatible',
+    });
+
+    // Añadimos los 3 productos complementarios
+    productDiagnosis.complementaryProducts.forEach((p, idx) => {
+      addProductToShelf({
+        id: `shelf-combo-${Date.now()}-${idx}`,
+        name: p.name,
+        brand: p.brand,
+        category: p.category,
+        volume: '50 ml',
+        paoMonths: 12,
+        inciScore: 96,
+        primaryActives: ['Fórmula complementaria'],
+        assignedPhase: idx + 2,
+        assignedPhaseName: p.category,
+        image: sampleProductUrl,
+        textureNote: p.reason,
+      });
+    });
+
+    setAddedProductNotice('¡Rutina completa de Skin Cycling añadida a tu tocador!');
+    setTimeout(() => setAddedProductNotice(null), 3500);
+  };
+
   return (
     <UserAppShell activeNavId="analisis">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in">
@@ -329,7 +434,7 @@ export default function EscanerPage() {
                 <div className="flex bg-[#EFECE6] p-0.5 rounded-full border border-[#E8E1D7] text-[11px] font-bold">
                   <button
                     type="button"
-                    onClick={() => setScanMode('face')}
+                    onClick={() => handleModeSelect('face')}
                     className={`px-3 py-1 rounded-full transition cursor-pointer ${
                       scanMode === 'face' ? 'bg-white text-[#2E7D5B] shadow-2xs' : 'text-[#66615C]'
                     }`}
@@ -338,12 +443,12 @@ export default function EscanerPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setScanMode('product')}
+                    onClick={() => handleModeSelect('product')}
                     className={`px-3 py-1 rounded-full transition cursor-pointer ${
                       scanMode === 'product' ? 'bg-white text-[#2E7D5B] shadow-2xs' : 'text-[#66615C]'
                     }`}
                   >
-                    Etiqueta INCI
+                    Etiqueta INCI / Cosmético
                   </button>
                 </div>
               </div>
@@ -363,32 +468,50 @@ export default function EscanerPage() {
                 ) : (
                   <img
                     src={currentImage}
-                    alt="Visor de escaneo facial"
+                    alt={scanMode === 'product' ? 'Visor de fórmula cosmética' : 'Visor de escaneo facial'}
                     className="w-full h-full object-cover"
                   />
                 )}
 
-                {/* HUD Overlay Clínico (Silueta y Guías del Mockup) */}
+                {/* HUD Overlay Clínico */}
                 <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
-                  {/* Óvalo facial de enfoque */}
-                  <div className="w-56 sm:w-64 h-72 sm:h-80 rounded-[50%] border-2 border-dashed border-[#2E7D5B] ring-8 ring-white/10 flex items-center justify-center relative">
-                    {/* Retículas y esquinas */}
-                    <div className="absolute top-0 w-4 h-4 border-t-2 border-l-2 border-[#2E7D5B]" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#2E7D5B]" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#2E7D5B]" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#2E7D5B]" />
+                  {scanMode === 'face' ? (
+                    /* Óvalo facial de enfoque */
+                    <div className="w-56 sm:w-64 h-72 sm:h-80 rounded-[50%] border-2 border-dashed border-[#2E7D5B] ring-8 ring-white/10 flex items-center justify-center relative">
+                      <div className="absolute top-0 w-4 h-4 border-t-2 border-l-2 border-[#2E7D5B]" />
+                      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#2E7D5B]" />
+                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#2E7D5B]" />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#2E7D5B]" />
 
-                    {/* Puntos de calibración en mejillas y frente */}
-                    <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute top-10" />
-                    <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute left-6 top-36" />
-                    <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute right-6 top-36" />
-                    <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute bottom-10" />
-                  </div>
+                      <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute top-10" />
+                      <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute left-6 top-36" />
+                      <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute right-6 top-36" />
+                      <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute bottom-10" />
+                    </div>
+                  ) : (
+                    /* Marco rectangular de etiqueta/código INCI con línea láser */
+                    <div className="w-64 sm:w-80 h-52 sm:h-60 rounded-2xl border-2 border-dashed border-[#2E7D5B] ring-8 ring-white/10 flex items-center justify-center relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#2E7D5B]" />
+                      <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#2E7D5B]" />
+                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#2E7D5B]" />
+                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#2E7D5B]" />
+
+                      {/* Línea láser de escaneo */}
+                      <div className="absolute left-0 right-0 h-0.5 bg-[#2E7D5B] shadow-[0_0_12px_#2E7D5B] animate-pulse" />
+                      <span className="text-[11px] font-bold text-white bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs">
+                        Enfoca la lista de ingredientes (INCI)
+                      </span>
+                    </div>
+                  )}
 
                   {/* Estado HUD inferior */}
                   <div className="absolute bottom-4 bg-black/60 backdrop-blur-md px-3.5 py-1 rounded-full text-[11px] font-bold text-white flex items-center gap-1.5 border border-white/20">
                     <span className="w-2 h-2 rounded-full bg-[#2E7D5B] animate-pulse" />
-                    <span>{isCameraActive ? 'Cámara activa · Alinea tu rostro' : 'Foto cargada · Lista para analizar'}</span>
+                    <span>
+                      {isCameraActive
+                        ? (scanMode === 'product' ? 'Cámara activa · Enfoca la etiqueta' : 'Cámara activa · Alinea tu rostro')
+                        : (scanMode === 'product' ? 'Cosmético listo · Iniciar análisis INCI' : 'Foto cargada · Lista para analizar')}
+                    </span>
                   </div>
                 </div>
 
@@ -457,7 +580,7 @@ export default function EscanerPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setCurrentImage(sampleFaceUrl);
+                    setCurrentImage(scanMode === 'face' ? sampleFaceUrl : sampleProductUrl);
                     setIsUserUploaded(false);
                     stopCamera();
                   }}
@@ -472,34 +595,59 @@ export default function EscanerPage() {
             {/* Columna Derecha (5 cols): 2 Tarjetas del Mockup Vista 2 */}
             <div className="lg:col-span-5 space-y-6">
               
-              {/* TARJETA 1: TOMA UNA BUENA FOTO */}
+              {/* TARJETA 1: GUÍA DE CAPTURA SEGÚN MODO */}
               <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-5">
                 <div className="space-y-1">
                   <h2 className="text-base font-extrabold text-[#2D2825]">
-                    Toma una buena foto
+                    {scanMode === 'product' ? 'Escanear producto cosmético' : 'Toma una buena foto'}
                   </h2>
                   <p className="text-xs text-[#66615C]">
-                    Recomendaciones para obtener la máxima precisión diagnóstica.
+                    {scanMode === 'product'
+                      ? 'Recomendaciones para decodificar la fórmula INCI con precisión molecular.'
+                      : 'Recomendaciones para obtener la máxima precisión diagnóstica.'}
                   </p>
                 </div>
 
                 <div className="space-y-2.5 text-xs text-[#2D2825]">
-                  <div className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
-                    <span>Luz natural (idealmente de día)</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
-                    <span>Sin maquillaje</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
-                    <span>Rostro limpio y seco</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
-                    <span>Mantén la cámara a 30-50 cm</span>
-                  </div>
+                  {scanMode === 'product' ? (
+                    <>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Texto de ingredientes (INCI) enfocado y legible</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Buena luz sin sombras ni destellos sobre el envase</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Mantén el producto a 15-25 cm</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Detecta compatibilidad con tu piel y rutina de 4 noches</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Luz natural (idealmente de día)</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Sin maquillaje</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Rostro limpio y seco</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Check className="w-4 h-4 text-[#2E7D5B] shrink-0 stroke-[2.5]" />
+                        <span>Mantén la cámara a 30-50 cm</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Botón Principal: Comenzar Escaneo */}
@@ -509,8 +657,8 @@ export default function EscanerPage() {
                     onClick={handleStartScan}
                     className="w-full py-3 rounded-full bg-[#1B3D32] hover:bg-[#2E7D5B] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>Comenzar escaneo</span>
+                    <Scan className="w-4 h-4" />
+                    <span>{scanMode === 'product' ? 'Escanear fórmula y activos' : 'Comenzar escaneo facial'}</span>
                   </button>
                 </div>
 
@@ -638,7 +786,7 @@ export default function EscanerPage() {
         )}
 
         {/* ========================================================= */}
-        {/* PASO 3: RESULTADOS (MOCKUP VISTA 6 DETALLE CLÍNICO)       */}
+        {/* PASO 3: RESULTADOS (FACIAL O PRODUCTO / EXPANSIÓN)        */}
         {/* ========================================================= */}
         {activeStep === 'results' && (
           <div className="space-y-8 animate-in fade-in">
@@ -647,14 +795,16 @@ export default function EscanerPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#E8E1D7] shadow-2xs">
               <div className="space-y-0.5">
                 <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
-                  Informe Calibrado · 15 abr 2026 · 10:24 a.m.
+                  {scanMode === 'product' ? 'Fórmula Cosmética Analizada · 15 abr 2026' : 'Informe Calibrado · 15 abr 2026 · 10:24 a.m.'}
                 </span>
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-black text-[#2D2825]">
-                    Puntuación Dérmica: {aiDiagnosis.score}/100
+                    {scanMode === 'product'
+                      ? `Biocompatibilidad Dérmica: ${productDiagnosis.score}/100`
+                      : `Puntuación Dérmica: ${aiDiagnosis.score}/100`}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-extrabold text-xs border border-[#D5E2DB]">
-                    {aiDiagnosis.statusText}
+                    {scanMode === 'product' ? productDiagnosis.statusText : aiDiagnosis.statusText}
                   </span>
                 </div>
               </div>
@@ -662,11 +812,11 @@ export default function EscanerPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => alert('Descargando informe PDF de biometría dérmica...')}
+                  onClick={() => alert('Descargando informe técnico dermatológico...')}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FAF8F5] border border-[#E8E1D7] text-xs font-bold text-[#2D2825] hover:bg-white transition cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Descargar informe</span>
+                  <span>{scanMode === 'product' ? 'Ficha INCI' : 'Descargar informe'}</span>
                 </button>
                 <button
                   type="button"
@@ -679,314 +829,563 @@ export default function EscanerPage() {
               </div>
             </div>
 
-            {/* Grid 2 Columnas de Detalle Clínico (Mockup Vista 6) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
-              {/* Columna Izquierda (6 cols): Visor de Cuadrantes + Comparador */}
-              <div className="lg:col-span-6 bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-6">
-                
-                {/* Selector de Cuadrantes */}
-                <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
-                  <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider">
-                    Mapeo por Cuadrantes
-                  </span>
-                  <div className="flex gap-1 text-[10px] font-bold">
-                    {(['all', 't-zone', 'cheeks', 'chin'] as const).map((q) => (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => setSelectedQuadrant(q)}
-                        className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
-                          selectedQuadrant === q
-                            ? 'bg-[#2E7D5B] text-white'
-                            : 'bg-[#FAF8F5] text-[#66615C] hover:bg-[#EFECE6]'
-                        }`}
+            {/* MODO A: RESULTADOS DE ESCANEO DE PRODUCTO / INCI */}
+            {scanMode === 'product' ? (
+              <div className="space-y-8">
+                {/* 2 Columnas de Detalle de Producto */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  
+                  {/* Columna Izquierda (6 cols): Imagen + Activos INCI */}
+                  <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E1D7] shadow-2xs space-y-6">
+                    <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-[#2E7D5B] uppercase tracking-wider bg-[#E6F4EC] px-2.5 py-0.5 rounded-full border border-[#D5E2DB]">
+                          {productDiagnosis.brand}
+                        </span>
+                        <h2 className="text-lg font-extrabold text-[#2D2825] mt-1">
+                          {productDiagnosis.name}
+                        </h2>
+                      </div>
+                      <span className="text-xs font-bold text-[#8C827A]">
+                        {productDiagnosis.category}
+                      </span>
+                    </div>
+
+                    {/* Foto del envase */}
+                    <div className="relative aspect-16/9 rounded-2xl overflow-hidden border border-[#E8E1D7] bg-[#1B3D32]/5">
+                      <img
+                        src={currentImage}
+                        alt={productDiagnosis.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-3 left-3 bg-[#1B3D32]/85 backdrop-blur-xs text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#E6F4EC]" />
+                        <span>Fórmula Verificada en Catálogo INCI</span>
+                      </div>
+                    </div>
+
+                    {/* Desglose de Activos INCI */}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-[#2D2825] uppercase tracking-wider">
+                          Activos Clínicos Identificados
+                        </span>
+                        <span className="text-[11px] font-bold text-[#2E7D5B]">3 Activos Clave</span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {productDiagnosis.actives.map((act, idx) => (
+                          <div key={idx} className="p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-[#2D2825] flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
+                                {act.name}
+                              </span>
+                              <span className="text-[10px] font-black text-[#1B3D32] bg-[#E6F4EC] px-2 py-0.5 rounded-md">
+                                {act.concentration}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#66615C] leading-snug">
+                              {act.role}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Alerta de Incompatibilidad Cruzada */}
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-amber-900">
+                        <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                        <span>Regla de Compatibilidad Molecular</span>
+                      </div>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        {productDiagnosis.incompatibilityAlert}
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* Columna Derecha (6 cols): Integración en Skin Cycling & Mascarilla AR */}
+                  <div className="lg:col-span-6 space-y-6">
+                    
+                    {/* TARJETA 1: UBICACIÓN EN EL CICLO DE 4 NOCHES */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E1D7] shadow-2xs space-y-5">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-extrabold text-[#2D2825] flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-[#2E7D5B]" />
+                          <span>Ubicación en tu Skin Cycling</span>
+                        </h3>
+                        <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2.5 py-0.5 rounded-full border border-[#D5E2DB]">
+                          Frecuencia Óptima
+                        </span>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2">
+                        <div className="text-xs font-bold text-[#2D2825]">
+                          {productDiagnosis.cyclePlacement}
+                        </div>
+                        <p className="text-xs text-[#66615C] leading-relaxed">
+                          {productDiagnosis.verdict}
+                        </p>
+                      </div>
+
+                      {/* Mini calendario de las 4 noches */}
+                      <div className="grid grid-cols-4 gap-2 pt-1 text-center">
+                        <div className="p-2.5 rounded-xl bg-[#E6F4EC] border border-[#2E7D5B]/30">
+                          <span className="text-[10px] font-black text-[#2E7D5B] block">Noche 1</span>
+                          <span className="text-[9px] font-bold text-[#1B3D32]">Exfoliación</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 opacity-60">
+                          <span className="text-[10px] font-black text-slate-700 block">Noche 2</span>
+                          <span className="text-[9px] font-bold text-slate-500">Retinoide</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-[#E6F4EC] border border-[#2E7D5B]/30">
+                          <span className="text-[10px] font-black text-[#2E7D5B] block">Noche 3</span>
+                          <span className="text-[9px] font-bold text-[#1B3D32]">Recuperación</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-[#E6F4EC] border border-[#2E7D5B]/30">
+                          <span className="text-[10px] font-black text-[#2E7D5B] block">Noche 4</span>
+                          <span className="text-[9px] font-bold text-[#1B3D32]">Recuperación</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <Link
+                          href="/calendario"
+                          className="w-full py-3 rounded-full bg-[#FAF8F5] hover:bg-white border border-[#E8E1D7] text-xs font-bold text-[#2D2825] transition flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span>Ver mi calendario del ciclo</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-[#66615C]" />
+                        </Link>
+                      </div>
+                    </div>
+
+                    {/* TARJETA 2: WOW MOMENT - TUTORIAL INTERACTIVO CON MASCARILLA AR */}
+                    <div className="bg-gradient-to-br from-[#1B3D32] to-[#2E7D5B] rounded-3xl p-6 sm:p-7 text-white shadow-md space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-xl bg-white/10 backdrop-blur-xs">
+                          <Sparkles className="w-4 h-4 text-emerald-200" />
+                        </span>
+                        <span className="text-xs font-bold text-emerald-200 uppercase tracking-wider">
+                          Guía Anatómica Facial (AR)
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h3 className="text-base font-extrabold text-white">
+                          ¿Cómo aplicar este sérum en tu rostro?
+                        </h3>
+                        <p className="text-xs text-emerald-100/90 leading-relaxed">
+                          Nuestra Mascarilla Virtual en Realidad Aumentada te muestra exactamente dónde colocar las gotas, la dirección de masaje y las zonas perioculares a evitar.
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <Link
+                          href="/mi-rutina?launchAr=skin_cycling"
+                          className="w-full py-3.5 rounded-full bg-white text-[#1B3D32] hover:bg-emerald-50 text-xs font-extrabold transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Camera className="w-4 h-4 text-[#2E7D5B]" />
+                          <span>Abrir Mascarilla Virtual AR</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* MOTOR DE EXPANSIÓN: DE 1 PRODUCTO A RUTINA MENSUAL COMPLETA */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E1D7] shadow-2xs space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE1] pb-5">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E6F4EC] text-[#2E7D5B] text-xs font-extrabold border border-[#D5E2DB]">
+                        <Package className="w-3.5 h-3.5" />
+                        <span>Expande a Rutina Mensual de Skin Cycling</span>
+                      </div>
+                      <h3 className="text-lg font-extrabold text-[#2D2825]">
+                        3 Fórmulas Complementarias Biocompatibles
+                      </h3>
+                      <p className="text-xs text-[#66615C]">
+                        Diseñadas para sincronizarse con tu producto escaneado sin causar sobrecarga ni irritación.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddFullRoutineCombo}
+                      className="px-6 py-3 rounded-full bg-[#2E7D5B] hover:bg-[#1B3D32] text-white font-bold text-xs shadow-md transition flex items-center gap-2 shrink-0 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Añadir combo mensual al tocador</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {productDiagnosis.complementaryProducts.map((p) => (
+                      <div
+                        key={p.id}
+                        className="rounded-2xl p-5 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-4 hover:shadow-xs transition"
                       >
-                        {q === 'all' ? 'Todo' : q === 't-zone' ? 'Zona T' : q === 'cheeks' ? 'Mejillas' : 'Mentón'}
-                      </button>
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                            {p.category}
+                          </span>
+                          <h4 className="font-extrabold text-xs text-[#2D2825] leading-snug">
+                            {p.name}
+                          </h4>
+                          <p className="text-[11px] text-[#66615C] leading-snug">
+                            {p.reason}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 border-t border-[#E8E1D7]/70 flex items-center justify-between">
+                          <span className="font-black text-sm text-[#2D2825]">{p.price}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSuggestedProduct(p.name, p.brand, p.category)}
+                            className="px-3.5 py-1.5 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Añadir</span>
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                </div>
 
-                {/* Visor con zoom y retícula */}
-                <div className="relative aspect-4/3 rounded-2xl overflow-hidden border border-[#E8E1D7]">
-                  <img
-                    src={currentImage}
-                    alt="Rostro analizado"
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Overlay interactivo según cuadrante */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-white text-xs font-bold bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs">
-                      {selectedQuadrant === 'all'
-                        ? 'Vista General: Sin signos críticos de reactividad'
-                        : selectedQuadrant === 't-zone'
-                        ? 'Zona T: Mayor producción sebácea, comedones cerrados leves'
-                        : selectedQuadrant === 'cheeks'
-                        ? 'Mejillas: Barrera cutánea íntegra y retención hídrica alta'
-                        : 'Mentón: Normal, sin brotes quísticos'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Comparador Antes / Después (Mockup Vista 6) */}
-                <div className="pt-2 border-t border-[#F0ECE1] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-[#2D2825]">
-                      Comparador Evolutivo
-                    </span>
-                    <div className="flex bg-[#EFECE6] p-0.5 rounded-full text-[10px] font-bold">
-                      <button
-                        type="button"
-                        onClick={() => setComparisonTab('evolution')}
-                        className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'evolution' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
-                      >
-                        Evolución
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setComparisonTab('before')}
-                        className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'before' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
-                      >
-                        Antes
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setComparisonTab('after')}
-                        className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'after' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
-                      >
-                        Después
-                      </button>
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#66615C]">
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4 text-[#2E7D5B]" />
+                      <span>Disponible en farmacias aliadas (Farmatodo, Locatel y Farmarket).</span>
                     </div>
-                  </div>
-
-                  {/* Miniaturas de comparación */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl overflow-hidden border border-[#E8E1D7] relative aspect-video">
-                      <img src={beforeFaceUrl} alt="Antes" className="w-full h-full object-cover" />
-                      <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
-                        18 ene 2026
-                      </span>
-                    </div>
-                    <div className="rounded-xl overflow-hidden border border-[#2E7D5B] relative aspect-video">
-                      <img src={currentImage} alt="Hoy" className="w-full h-full object-cover" />
-                      <span className="absolute bottom-1.5 left-1.5 bg-[#2E7D5B] text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
-                        Hoy (15 abr)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Columna Derecha (6 cols): Barras por Área + Diagnóstico IA */}
-              <div className="lg:col-span-6 space-y-6">
-                
-                {/* TARJETA 1: RESULTADOS POR ÁREA (BARRAS DEL MOCKUP) */}
-                <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-4">
-                  <h3 className="text-sm font-extrabold text-[#2D2825]">
-                    Resultados por área
-                  </h3>
-
-                  <div className="space-y-3">
-                    {/* Hidratación */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-[#2D2825]">Hidratación</span>
-                        <span className="text-[#2E7D5B]">{aiDiagnosis.hydration}%</span>
-                      </div>
-                      <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
-                        <div className="bg-[#2E7D5B] h-full rounded-full" style={{ width: `${aiDiagnosis.hydration}%` }} />
-                      </div>
-                    </div>
-
-                    {/* Elasticidad */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-[#2D2825]">Elasticidad</span>
-                        <span className="text-[#2E7D5B]">{aiDiagnosis.elasticity}%</span>
-                      </div>
-                      <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
-                        <div className="bg-[#2E7D5B] h-full rounded-full" style={{ width: `${aiDiagnosis.elasticity}%` }} />
-                      </div>
-                    </div>
-
-                    {/* Poros */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-[#2D2825]">Poros</span>
-                        <span className="text-amber-700">{aiDiagnosis.pores}%</span>
-                      </div>
-                      <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
-                        <div className="bg-amber-500 h-full rounded-full" style={{ width: `${aiDiagnosis.pores}%` }} />
-                      </div>
-                    </div>
-
-                    {/* Manchas */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-[#2D2825]">Manchas</span>
-                        <span className="text-amber-700">{aiDiagnosis.spots}%</span>
-                      </div>
-                      <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
-                        <div className="bg-amber-500 h-full rounded-full" style={{ width: `${aiDiagnosis.spots}%` }} />
-                      </div>
-                    </div>
-
-                    {/* Líneas finas */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-[#2D2825]">Líneas finas</span>
-                        <span className="text-[#66615C]">{aiDiagnosis.fineLines}%</span>
-                      </div>
-                      <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
-                        <div className="bg-[#8C827A] h-full rounded-full" style={{ width: `${aiDiagnosis.fineLines}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TARJETA 2: DIAGNÓSTICO IA (GEMINI CLINICAL) */}
-                <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
-                    <h3 className="text-sm font-extrabold text-[#2D2825]">
-                      Diagnóstico IA
-                    </h3>
-                  </div>
-
-                  <p className="text-xs text-[#2D2825] leading-relaxed">
-                    {aiDiagnosis.verdict}
-                  </p>
-
-                  <div className="p-4 rounded-2xl bg-[#E6F4EC]/60 border border-[#D5E2DB] space-y-1">
-                    <span className="text-[10px] font-bold text-[#1B3D32] uppercase tracking-wider block">
-                      Recomendación principal
-                    </span>
-                    <p className="text-xs text-[#1B3D32] leading-relaxed">
-                      {aiDiagnosis.recommendation}
-                    </p>
-                  </div>
-
-                  <div className="pt-2">
                     <Link
-                      href="/calendario"
-                      className="w-full py-3 rounded-full bg-[#2E7D5B] hover:bg-[#1B3D32] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                      href="/tiendas"
+                      className="font-bold text-[#2E7D5B] hover:text-[#1B3D32] flex items-center gap-1"
                     >
-                      <span>Ver rutina sugerida</span>
+                      <span>Ver disponibilidad y precios locales</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>
 
               </div>
+            ) : (
+              /* MODO B: RESULTADOS DE ESCANEO FACIAL */
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Columna Izquierda (6 cols): Visor de Cuadrantes + Comparador */}
+                <div className="lg:col-span-6 bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-6">
+                  
+                  {/* Selector de Cuadrantes */}
+                  <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+                    <span className="text-[11px] font-bold text-[#66615C] uppercase tracking-wider">
+                      Mapeo por Cuadrantes
+                    </span>
+                    <div className="flex gap-1 text-[10px] font-bold">
+                      {(['all', 't-zone', 'cheeks', 'chin'] as const).map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setSelectedQuadrant(q)}
+                          className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
+                            selectedQuadrant === q
+                              ? 'bg-[#2E7D5B] text-white'
+                              : 'bg-[#FAF8F5] text-[#66615C] hover:bg-[#EFECE6]'
+                          }`}
+                        >
+                          {q === 'all' ? 'Todo' : q === 't-zone' ? 'Zona T' : q === 'cheeks' ? 'Mejillas' : 'Mentón'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-            </div>
+                  {/* Visor con zoom y retícula */}
+                  <div className="relative aspect-4/3 rounded-2xl overflow-hidden border border-[#E8E1D7]">
+                    <img
+                      src={currentImage}
+                      alt="Rostro analizado"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Overlay interactivo según cuadrante */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex items-end p-4">
+                      <span className="text-white text-xs font-bold bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs">
+                        {selectedQuadrant === 'all'
+                          ? 'Vista General: Sin signos críticos de reactividad'
+                          : selectedQuadrant === 't-zone'
+                          ? 'Zona T: Mayor producción sebácea, poros visibles'
+                          : selectedQuadrant === 'cheeks'
+                          ? 'Mejillas: Barrera cutánea íntegra y retención hídrica alta'
+                          : 'Mentón: Normal, sin brotes quísticos'}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* FILA INFERIOR: PRODUCTOS RECOMENDADOS (MOCKUP VISTA 6) */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E1D7] shadow-2xs space-y-6">
-              <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-4">
-                <div>
-                  <h3 className="text-base font-extrabold text-[#2D2825]">
-                    Productos recomendados
-                  </h3>
-                  <p className="text-xs text-[#66615C]">
-                    Fórmulas biocompatibles con los hallazgos de tu análisis facial.
-                  </p>
+                  {/* Comparador Antes / Después */}
+                  <div className="pt-2 border-t border-[#F0ECE1] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-[#2D2825]">
+                        Comparador Evolutivo
+                      </span>
+                      <div className="flex bg-[#EFECE6] p-0.5 rounded-full text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setComparisonTab('evolution')}
+                          className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'evolution' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
+                        >
+                          Evolución
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setComparisonTab('before')}
+                          className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'before' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
+                        >
+                          Antes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setComparisonTab('after')}
+                          className={`px-2.5 py-0.5 rounded-full ${comparisonTab === 'after' ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}
+                        >
+                          Después
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl overflow-hidden border border-[#E8E1D7] relative aspect-video">
+                        <img src={beforeFaceUrl} alt="Antes" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
+                          18 ene 2026
+                        </span>
+                      </div>
+                      <div className="rounded-xl overflow-hidden border border-[#2E7D5B] relative aspect-video">
+                        <img src={currentImage} alt="Hoy" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1.5 left-1.5 bg-[#2E7D5B] text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
+                          Hoy (15 abr)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
-                <Link
-                  href="/tiendas"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32]"
-                >
-                  <span>Ver disponibilidad en tiendas</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                {/* Columna Derecha (6 cols): Barras + Diagnóstico IA + Acceso a Mascarilla AR */}
+                <div className="lg:col-span-6 space-y-6">
+                  
+                  {/* RESULTADOS POR ÁREA */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-4">
+                    <h3 className="text-sm font-extrabold text-[#2D2825]">
+                      Resultados por área
+                    </h3>
+
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-[#2D2825]">Hidratación</span>
+                          <span className="text-[#2E7D5B]">{aiDiagnosis.hydration}%</span>
+                        </div>
+                        <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2E7D5B] h-full rounded-full" style={{ width: `${aiDiagnosis.hydration}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-[#2D2825]">Elasticidad</span>
+                          <span className="text-[#2E7D5B]">{aiDiagnosis.elasticity}%</span>
+                        </div>
+                        <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2E7D5B] h-full rounded-full" style={{ width: `${aiDiagnosis.elasticity}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-[#2D2825]">Poros</span>
+                          <span className="text-amber-700">{aiDiagnosis.pores}%</span>
+                        </div>
+                        <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full" style={{ width: `${aiDiagnosis.pores}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-[#2D2825]">Manchas</span>
+                          <span className="text-amber-700">{aiDiagnosis.spots}%</span>
+                        </div>
+                        <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full" style={{ width: `${aiDiagnosis.spots}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-[#2D2825]">Líneas finas</span>
+                          <span className="text-[#66615C]">{aiDiagnosis.fineLines}%</span>
+                        </div>
+                        <div className="w-full bg-[#EFECE6] rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#8C827A] h-full rounded-full" style={{ width: `${aiDiagnosis.fineLines}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DIAGNÓSTICO IA + BOTÓN MASCARILLA AR */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-2xs space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
+                      <h3 className="text-sm font-extrabold text-[#2D2825]">
+                        Diagnóstico IA Dermatológico
+                      </h3>
+                    </div>
+
+                    <p className="text-xs text-[#2D2825] leading-relaxed">
+                      {aiDiagnosis.verdict}
+                    </p>
+
+                    <div className="p-4 rounded-2xl bg-[#E6F4EC]/60 border border-[#D5E2DB] space-y-1">
+                      <span className="text-[10px] font-bold text-[#1B3D32] uppercase tracking-wider block">
+                        Recomendación principal
+                      </span>
+                      <p className="text-xs text-[#1B3D32] leading-relaxed">
+                        {aiDiagnosis.recommendation}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <Link
+                        href="/calendario"
+                        className="w-full py-3 rounded-full bg-[#FAF8F5] hover:bg-white border border-[#E8E1D7] text-xs font-bold text-[#2D2825] transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-[#2E7D5B]" />
+                        <span>Ver rutina sugerida</span>
+                      </Link>
+
+                      <Link
+                        href="/mi-rutina?launchAr=skin_cycling"
+                        className="w-full py-3 rounded-full bg-[#2E7D5B] hover:bg-[#1B3D32] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Probar Mascarilla AR</span>
+                      </Link>
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                {/* Prod 1 */}
-                <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
-                      Limpiador
-                    </span>
-                    <h4 className="font-bold text-xs text-[#2D2825]">
-                      CeraVe Gel Limpiador
-                    </h4>
-                    <div className="text-[11px] text-[#66615C]">
-                      Espumoso 236ml · Control de sebo
-                    </div>
+            {/* FILA INFERIOR: PRODUCTOS RECOMENDADOS FACIALES (SOLO MODO ROSTRO) */}
+            {scanMode === 'face' && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E1D7] shadow-2xs space-y-6">
+                <div className="flex items-center justify-between border-b border-[#F0ECE1] pb-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-[#2D2825]">
+                      Productos recomendados
+                    </h3>
+                    <p className="text-xs text-[#66615C]">
+                      Fórmulas biocompatibles con los hallazgos de tu análisis facial.
+                    </p>
                   </div>
 
-                  <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
-                    <span className="font-black text-xs text-[#2D2825]">$14.50</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddSuggestedProduct('CeraVe Gel Limpiador', 'CeraVe', 'CLEANSER')}
-                      className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Añadir</span>
-                    </button>
-                  </div>
+                  <Link
+                    href="/tiendas"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32]"
+                  >
+                    <span>Ver disponibilidad en tiendas</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
 
-                {/* Prod 2 */}
-                <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
-                      Sérum
-                    </span>
-                    <h4 className="font-bold text-xs text-[#2D2825]">
-                      The Ordinary Niacinamida 10%
-                    </h4>
-                    <div className="text-[11px] text-[#66615C]">
-                      Zinc 1% · Minimiza poros
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  {/* Prod 1 */}
+                  <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                        Limpiador
+                      </span>
+                      <h4 className="font-bold text-xs text-[#2D2825]">
+                        CeraVe Gel Limpiador
+                      </h4>
+                      <div className="text-[11px] text-[#66615C]">
+                        Espumoso 236ml · Control de sebo
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
+                      <span className="font-black text-xs text-[#2D2825]">$14.50</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSuggestedProduct('CeraVe Gel Limpiador', 'CeraVe', 'CLEANSER')}
+                        className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Añadir</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
-                    <span className="font-black text-xs text-[#2D2825]">$11.00</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddSuggestedProduct('The Ordinary Niacinamida 10%', 'The Ordinary', 'SERUM')}
-                      className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Añadir</span>
-                    </button>
-                  </div>
-                </div>
+                  {/* Prod 2 */}
+                  <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                        Sérum
+                      </span>
+                      <h4 className="font-bold text-xs text-[#2D2825]">
+                        The Ordinary Niacinamida 10%
+                      </h4>
+                      <div className="text-[11px] text-[#66615C]">
+                        Zinc 1% · Minimiza poros
+                      </div>
+                    </div>
 
-                {/* Prod 3 */}
-                <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
-                      Hidratante
-                    </span>
-                    <h4 className="font-bold text-xs text-[#2D2825]">
-                      La Roche-Posay Hidratante
-                    </h4>
-                    <div className="text-[11px] text-[#66615C]">
-                      Toleriane Fluido Ligero · Barrera
+                    <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
+                      <span className="font-black text-xs text-[#2D2825]">$11.00</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSuggestedProduct('The Ordinary Niacinamida 10%', 'The Ordinary', 'SERUM')}
+                        className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Añadir</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
-                    <span className="font-black text-xs text-[#2D2825]">$19.80</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddSuggestedProduct('La Roche-Posay Hidratante', 'La Roche-Posay', 'MOISTURIZER')}
-                      className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Añadir</span>
-                    </button>
+                  {/* Prod 3 */}
+                  <div className="rounded-2xl p-4 bg-[#FAFAF7] border border-[#E8E1D7] flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2 py-0.5 rounded-full border border-[#D5E2DB]">
+                        Hidratante
+                      </span>
+                      <h4 className="font-bold text-xs text-[#2D2825]">
+                        La Roche-Posay Hidratante
+                      </h4>
+                      <div className="text-[11px] text-[#66615C]">
+                        Toleriane Fluido Ligero · Barrera
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E8E1D7]/60 flex items-center justify-between">
+                      <span className="font-black text-xs text-[#2D2825]">$19.80</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSuggestedProduct('La Roche-Posay Hidratante', 'La Roche-Posay', 'MOISTURIZER')}
+                        className="px-3 py-1 bg-[#2E7D5B] hover:bg-[#1B3D32] text-white rounded-full text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Añadir</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}

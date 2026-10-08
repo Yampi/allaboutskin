@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   ShieldCheck,
@@ -29,11 +30,23 @@ import UserAppShell from '@/components/navigation/UserAppShell';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
 import { getCurrentUser, StoredUser, logUserRoutineAdherence } from '@/lib/api';
 
-export default function MiRutinaExplicativaPage() {
+function MiRutinaContent() {
+  const searchParams = useSearchParams();
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [activeSlot, setActiveSlot] = useState<'PM' | 'AM'>('PM');
   const [isArMaskOpen, setIsArMaskOpen] = useState(false);
   const [arRoutineType, setArRoutineType] = useState<'skin_cycling' | 'spf_shield' | 'double_cleansing'>('skin_cycling');
+
+  useEffect(() => {
+    const launchParam = searchParams.get('launchAr');
+    const arParam = searchParams.get('ar');
+    if (launchParam === 'spf_shield' || launchParam === 'double_cleansing' || launchParam === 'skin_cycling') {
+      setArRoutineType(launchParam);
+      setIsArMaskOpen(true);
+    } else if (arParam === '1' || launchParam === 'true') {
+      setIsArMaskOpen(true);
+    }
+  }, [searchParams]);
 
   // Estado de los pasos completados hoy
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({
@@ -469,5 +482,17 @@ export default function MiRutinaExplicativaPage() {
       )}
 
     </UserAppShell>
+  );
+}
+
+export default function MiRutinaExplicativaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#2E7D5B] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <MiRutinaContent />
+    </Suspense>
   );
 }
