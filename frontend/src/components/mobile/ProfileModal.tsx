@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, User, SlidersHorizontal, Check, ShieldCheck, Sparkles, Award } from 'lucide-react';
+import { X, User, SlidersHorizontal, Check, ShieldCheck, Sparkles, Award, LogOut } from 'lucide-react';
 import { UserProfile } from './types';
+import { logoutUser } from '@/lib/api';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -44,9 +45,20 @@ export default function ProfileModal({
 
   const toggleCondition = (cond: string) => {
     if (selectedConditions.includes(cond)) {
-      setSelectedConditions(selectedConditions.filter((c) => c !== cond));
+      setSelectedConditions(selectedConditions.filter((c: string) => c !== cond));
     } else {
       setSelectedConditions([...selectedConditions, cond]);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      onClose();
+      window.location.href = '/';
     }
   };
 
@@ -187,18 +199,28 @@ export default function ProfileModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3 border-t border-[#E8E1D7] bg-[#FAF8F5] flex gap-2">
+        <div className="px-5 py-3 border-t border-[#E8E1D7] bg-[#FAF8F5] flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-full bg-[#F2ECE4] hover:bg-[#E2D9CD] text-[#7E756F] font-medium text-[13px] transition cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-2 py-2.5 rounded-full bg-[#2E7D5B] hover:bg-[#1B3D32] text-white font-medium text-[13px] shadow-diffuse transition cursor-pointer"
+            >
+              Guardar y Calibrar
+            </button>
+          </div>
           <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-full bg-[#F2ECE4] hover:bg-[#E2D9CD] text-[#7E756F] font-medium text-[13px] transition cursor-pointer"
+            type="button"
+            onClick={handleLogout}
+            className="w-full py-2 rounded-full text-xs font-bold text-rose-600 hover:bg-rose-50 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-2 py-2.5 rounded-full bg-[#8FA89B] hover:bg-[#7D978A] text-white font-medium text-[13px] shadow-diffuse transition cursor-pointer"
-          >
-            Guardar y Calibrar
+            <LogOut className="w-3.5 h-3.5 text-rose-500" />
+            <span>Cerrar sesión de mi cuenta</span>
           </button>
         </div>
       </div>

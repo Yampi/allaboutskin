@@ -4,15 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Home,
-  HeartPulse,
-  Calendar,
-  Package,
-  Scan,
-  Store,
-  User,
-  Search,
-  Bell,
   Sparkles,
   Flame,
   Check,
@@ -28,16 +19,18 @@ import {
   CheckCircle2,
   Sliders,
   Flower2,
-  Menu,
-  X
+  Package,
+  Store,
+  Calendar,
+  HeartPulse
 } from 'lucide-react';
+import UserAppShell from '@/components/navigation/UserAppShell';
 import { getCurrentUser, StoredUser, fetchUserProfile, fetchPublicStores, logUserRoutineAdherence } from '@/lib/api';
 
 export default function UserSkinDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [activeTab, setActiveTab] = useState<'AM' | 'PM'>('AM');
-  const [activeSidebarNav, setActiveSidebarNav] = useState('inicio');
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [vanityProducts, setVanityProducts] = useState<any[]>([]);
   const [nearbyStores, setNearbyStores] = useState<any[]>([]);
@@ -75,7 +68,6 @@ export default function UserSkinDashboardPage() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setVanityProducts(parsed);
-          // Adaptar items de rutina a los productos reales
           const amSteps = parsed.filter((p: any) => p.phase === 0 || !p.phase);
           const pmSteps = parsed.filter((p: any) => p.phase && p.phase > 0);
           if (amSteps.length > 0 || pmSteps.length > 0) {
@@ -120,8 +112,7 @@ export default function UserSkinDashboardPage() {
     });
   };
 
-  const userName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuario');
-  const isPremium = currentUser?.role === 'premium_user' || true;
+  const userName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'María González');
 
   const currentRoutineSteps = routineItems.filter((i) => i.period === activeTab);
 
@@ -131,15 +122,15 @@ export default function UserSkinDashboardPage() {
     : userProfile?.skin_type === 'DRY' ? 'Seca'
     : userProfile?.skin_type === 'SENSITIVE' ? 'Sensible'
     : userProfile?.skin_type === 'NORMAL' ? 'Normal / Equilibrada'
-    : 'No calibrado';
+    : 'Graso / Sensible';
 
   const fitzpatrickLabel = userProfile?.fitzpatrick_scale
     ? `Fototipo ${userProfile.fitzpatrick_scale}`
-    : 'Pendiente';
+    : 'Fototipo III';
 
   const concernsLabel = Array.isArray(userProfile?.concerns) && userProfile.concerns.length > 0
     ? userProfile.concerns.slice(0, 2).join(' + ')
-    : 'Mantenimiento barrera';
+    : 'Deshidratación + Poros';
 
   const score = userProfile?.barrier_status === 'DAMAGED' ? 45
     : userProfile?.barrier_status === 'SENSITIVE' ? 65
@@ -151,138 +142,10 @@ export default function UserSkinDashboardPage() {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
-  const navItems = [
-    { id: 'inicio', label: 'Inicio', icon: Home, href: '/dashboard/usuario' },
-    { id: 'mi-piel', label: 'Mi piel', icon: HeartPulse, href: '/mi-rutina' },
-    { id: 'mi-rutina', label: 'Mi rutina', icon: Calendar, href: '/calendario' },
-    { id: 'productos', label: 'Productos', icon: Package, href: '/biblioteca' },
-    { id: 'analisis', label: 'Análisis y escaneos', icon: Scan, href: '/escaner' },
-    { id: 'tiendas', label: 'Tiendas cercanas', icon: Store, href: '/tiendas' },
-    { id: 'perfil', label: 'Perfil', icon: User, href: '/mi-rutina' },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#FAFAF7] text-[#2D2825] flex flex-col lg:flex-row antialiased selection:bg-[#E6F4EC] selection:text-[#2E7D5B] font-sans pb-16 lg:pb-0">
-      
-      {/* ========================================================= */}
-      {/* 1. SIDEBAR DESKTOP (Verde Clínico DLG-HYBRID)              */}
-      {/* ========================================================= */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-[#E8E1D7] sticky top-0 h-screen justify-between p-5 shrink-0 z-20">
-        <div className="space-y-6">
-          {/* Brand Header */}
-          <Link href="/" className="flex items-center gap-2.5 px-2 group cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs group-hover:scale-105 transition">
-              <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
-            </div>
-            <div className="font-extrabold text-lg text-[#2D2825] tracking-tight">
-              allabout<span className="text-[#2E7D5B]">.skin</span>
-            </div>
-          </Link>
-
-          {/* Nav Items */}
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSidebarNav === item.id;
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  onClick={() => setActiveSidebarNav(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition cursor-pointer text-left ${
-                    isActive
-                      ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB] shadow-2xs font-bold'
-                      : 'text-[#66615C] hover:text-[#2E7D5B] hover:bg-[#F2F7F4]'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#2E7D5B]' : 'text-[#8C827A]'}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Brand Philosophy Badge (Mockup Footer Card) */}
-        <div className="p-4 rounded-2xl bg-[#F4F8F5] border border-[#D5E2DB] flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-[#1B3D32] leading-snug">
-              Tu piel, <span className="text-[#2E7D5B] font-extrabold">con ciencia.</span>
-            </p>
-            <p className="text-[10px] text-[#66615C] font-medium">
-              No con marketing.
-            </p>
-          </div>
-          <Flower2 className="w-5 h-5 text-[#2E7D5B] shrink-0" />
-        </div>
-      </aside>
-
-      {/* ========================================================= */}
-      {/* 2. HEADER MOBILE (Visible solo en dispositivos móviles)   */}
-      {/* ========================================================= */}
-      <header className="lg:hidden bg-white/95 backdrop-blur-md border-b border-[#E8E1D7] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <span className="font-extrabold text-base text-[#2D2825] tracking-tight">
-            allabout<span className="text-[#2E7D5B]">.skin</span>
-          </span>
-        </Link>
-        <Link
-          href="/mi-rutina"
-          className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-xs flex items-center justify-center border border-[#D5E2DB]"
-        >
-          {userName.charAt(0)}
-        </Link>
-      </header>
-
-      {/* ========================================================= */}
-      {/* 3. MAIN DASHBOARD CONTENT AREA (Vista 1 Mockup)           */}
-      {/* ========================================================= */}
-      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+    <UserAppShell activeNavId="inicio">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in">
         
-        {/* TOPBAR: Search bar & User Profile */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar productos, ingredientes, etc."
-              className="w-full bg-white border border-[#E8E1D7] rounded-full pl-9 pr-4 py-2 text-xs text-[#2D2825] placeholder:text-[#8C827A] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B] transition shadow-2xs"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 shrink-0">
-            <button
-              type="button"
-              className="w-9 h-9 rounded-full bg-white border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2E7D5B] transition shadow-2xs relative cursor-pointer"
-              aria-label="Notificaciones"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute top-2 right-2 ring-2 ring-white" />
-            </button>
-
-            {/* Profile Avatar Card */}
-            <Link
-              href="/mi-rutina"
-              className="flex items-center gap-2.5 bg-white border border-[#E8E1D7] rounded-full py-1 pl-1 pr-3.5 shadow-2xs hover:border-[#2E7D5B] transition"
-            >
-              <div className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-xs flex items-center justify-center overflow-hidden border border-[#D5E2DB]">
-                {userName.charAt(0)}
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-bold text-[#2D2825] leading-tight">
-                  {userName}
-                </div>
-                <div className="text-[10px] text-[#2E7D5B] font-semibold leading-none">
-                  {isPremium ? 'Premium' : 'Estándar'}
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
         {/* HERO / GREETING BANNER */}
         <div className="bg-gradient-to-r from-[#EAF4EE] via-[#F4F9F6] to-white rounded-3xl border border-[#D5E2DB] p-5 sm:p-7 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xs overflow-hidden relative">
           <div className="space-y-1.5 z-10">
@@ -290,7 +153,7 @@ export default function UserSkinDashboardPage() {
               Hola, {userName.split(' ')[0]}
             </h1>
             <p className="text-xs sm:text-sm text-[#66615C] max-w-lg leading-relaxed">
-              Tu piel es única. Aquí tienes un resumen de tu estado actual y lo que necesitas hoy.
+              Tu piel es única. Aquí tienes un resumen de tu estado dermatológico actual y las recomendaciones para hoy.
             </p>
           </div>
 
@@ -315,7 +178,7 @@ export default function UserSkinDashboardPage() {
         {/* ========================================================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
-          {/* WIDGET 1: ESTADO DE TU PIEL (WOW MOMENT: Radial Gauge) */}
+          {/* WIDGET 1: ESTADO DE TU PIEL (Radial Score Gauge) */}
           <div className="bg-white rounded-3xl border border-[#E8E1D7] p-6 shadow-2xs flex flex-col justify-between hover:shadow-xs transition space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-[#2D2825] uppercase tracking-wider">
@@ -383,7 +246,7 @@ export default function UserSkinDashboardPage() {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-[#8C827A] uppercase block">
-                    Focos o Necesidades
+                    Focos activos
                   </span>
                   <span className="font-medium text-[#66615C]">
                     {concernsLabel}
@@ -393,10 +256,10 @@ export default function UserSkinDashboardPage() {
             </div>
 
             <Link
-              href="/mi-rutina"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
+              href="/mi-piel"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1 cursor-pointer"
             >
-              <span>Ver análisis completo</span>
+              <span>Ver análisis completo de piel</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -464,15 +327,15 @@ export default function UserSkinDashboardPage() {
             </div>
 
             <Link
-              href="/calendario"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
+              href="/mi-rutina"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1 cursor-pointer"
             >
-              <span>Ver toda la rutina</span>
+              <span>Ver explicación completa de la rutina</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {/* WIDGET 3: SKIN CYCLING (WOW MOMENT: Stepper interactivo) */}
+          {/* WIDGET 3: SKIN CYCLING (4-Night Stepper) */}
           <div className="bg-white rounded-3xl border border-[#E8E1D7] p-6 shadow-2xs flex flex-col justify-between hover:shadow-xs transition space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -491,7 +354,6 @@ export default function UserSkinDashboardPage() {
 
             {/* 4-Night Cycle Stepper */}
             <div className="grid grid-cols-4 gap-2 pt-2 text-center">
-              {/* Day 1: Exfoliación (Completado) */}
               <div className="space-y-1.5">
                 <div className="w-9 h-9 mx-auto rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] font-bold text-xs">
                   1
@@ -502,7 +364,6 @@ export default function UserSkinDashboardPage() {
                 <div className="text-[9px] text-[#8C827A] font-medium">Día 1</div>
               </div>
 
-              {/* Day 2: Retinoide (ACTIVO) */}
               <div className="space-y-1.5 relative">
                 <div className="w-9 h-9 mx-auto rounded-full bg-[#2E7D5B] text-white font-black text-xs flex items-center justify-center shadow-xs ring-4 ring-[#E6F4EC] animate-pulse">
                   2
@@ -513,7 +374,6 @@ export default function UserSkinDashboardPage() {
                 <div className="text-[9px] text-[#2E7D5B] font-bold">Día 2</div>
               </div>
 
-              {/* Day 3: Recuperación */}
               <div className="space-y-1.5 opacity-60">
                 <div className="w-9 h-9 mx-auto rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] font-bold text-xs">
                   3
@@ -524,7 +384,6 @@ export default function UserSkinDashboardPage() {
                 <div className="text-[9px] text-[#8C827A]">Día 3</div>
               </div>
 
-              {/* Day 4: Recuperación */}
               <div className="space-y-1.5 opacity-60">
                 <div className="w-9 h-9 mx-auto rounded-full bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-center text-[#66615C] font-bold text-xs">
                   4
@@ -538,9 +397,9 @@ export default function UserSkinDashboardPage() {
 
             <Link
               href="/calendario"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1 cursor-pointer"
             >
-              <span>Ver progreso</span>
+              <span>Ver calendario y niveles de envases</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -551,7 +410,7 @@ export default function UserSkinDashboardPage() {
         {/* ========================================================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
-          {/* WIDGET 4: PAO Y VENCIMIENTOS (Monitor de Vida Útil) */}
+          {/* WIDGET 4: PAO Y VENCIMIENTOS */}
           <div className="bg-white rounded-3xl border border-[#E8E1D7] p-6 shadow-2xs flex flex-col justify-between hover:shadow-xs transition space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-[#2D2825] uppercase tracking-wider">
@@ -560,45 +419,34 @@ export default function UserSkinDashboardPage() {
               <Clock className="w-4 h-4 text-[#8C827A]" />
             </div>
 
-            {/* Product with Critical PAO */}
-            {vanityProducts.length > 0 ? (
-              <div className="p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1 shrink-0">
-                    <span className="text-base">🧴</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-[#2D2825] truncate">
-                      {vanityProducts[0].name || 'Producto en tocador'}
-                    </div>
-                    <div className="text-[10px] text-[#66615C]">
-                      {vanityProducts[0].brand || 'Uso activo'}
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] border border-[#D5E2DB] px-2 py-0.5 rounded-full shrink-0">
-                    Activo
-                  </span>
+            <div className="p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-2.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1 shrink-0">
+                  <span className="text-base">🧴</span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-[#2D2825] truncate">
+                    CeraVe Loción Hidratante Facial
+                  </div>
+                  <div className="text-[10px] text-[#66615C]">
+                    Abierto hace 42 días • 18 días restantes
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] border border-[#D5E2DB] px-2 py-0.5 rounded-full shrink-0">
+                  Activo
+                </span>
+              </div>
 
-                {/* Progress Bar */}
-                <div className="space-y-1">
-                  <div className="w-full bg-[#E8E1D7]/50 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-[#2E7D5B] h-full rounded-full w-[85%]" />
-                  </div>
-                </div>
+              <div className="w-full bg-[#E8E1D7]/50 rounded-full h-1.5 overflow-hidden">
+                <div className="bg-[#2E7D5B] h-full rounded-full w-[70%]" />
               </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E8E1D7] text-center space-y-1.5">
-                <p className="text-xs font-semibold text-[#2D2825]">Sin alertas de PAO</p>
-                <p className="text-[10px] text-[#7E756F]">Escanea un producto para monitorear su caducidad</p>
-              </div>
-            )}
+            </div>
 
             <Link
               href="/biblioteca"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1 cursor-pointer"
             >
-              <span>Ver todos</span>
+              <span>Ver todos los productos</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -612,7 +460,6 @@ export default function UserSkinDashboardPage() {
               <Package className="w-4 h-4 text-[#8C827A]" />
             </div>
 
-            {/* Cosmetic Bottles Visual Miniatures */}
             <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7]">
               <div className="flex items-center -space-x-2 overflow-hidden py-1">
                 <div className="w-10 h-10 rounded-xl bg-white border border-[#E8E1D7] flex items-center justify-center shadow-2xs text-xs font-bold text-[#2D2825]">
@@ -628,24 +475,24 @@ export default function UserSkinDashboardPage() {
 
               <div className="space-y-1 text-right">
                 <div className="text-xs font-bold text-[#2D2825]">
-                  <span className="text-[#2E7D5B] font-extrabold">{vanityProducts.length || routineItems.length}</span> en rutina
+                  <span className="text-[#2E7D5B] font-extrabold">{vanityProducts.length || 5}</span> en uso
                 </div>
                 <div className="text-[10px] font-semibold text-[#5D6B63]">
-                  {vanityProducts.length > 0 ? 'Sincronizado' : 'Protocolo sugerido'}
+                  2 por vencer
                 </div>
               </div>
             </div>
 
             <Link
-              href="/mi-rutina"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1"
+              href="/biblioteca"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E7D5B] hover:text-[#1B3D32] transition pt-1 cursor-pointer"
             >
-              <span>Ver tocador</span>
+              <span>Ver inventario</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {/* WIDGET 6: DÓNDE COMPRAR CERCA DE TI (Geolocalización Local) */}
+          {/* WIDGET 6: DÓNDE COMPRAR CERCA DE TI */}
           <div className="bg-white rounded-3xl border border-[#E8E1D7] p-6 shadow-2xs flex flex-col justify-between hover:shadow-xs transition space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-[#2D2825] uppercase tracking-wider">
@@ -654,13 +501,12 @@ export default function UserSkinDashboardPage() {
               <Store className="w-4 h-4 text-[#8C827A]" />
             </div>
 
-            {/* Pharmacies List */}
             <div className="space-y-2">
               {nearbyStores.length > 0 ? (
                 nearbyStores.map((store: any, idx: number) => {
-                  const initial = store.store_name?.charAt(0) || store.name?.charAt(0) || 'T';
-                  const storeName = store.store_name || store.name || 'Tienda';
-                  const locationText = store.city || store.state || (store.distance_km ? `${store.distance_km} km` : 'Disponible');
+                  const initial = store.store_name?.charAt(0) || store.name?.charAt(0) || 'F';
+                  const storeName = store.store_name || store.name || 'Farmacia';
+                  const locationText = store.city || store.state || (store.distance_km ? `${store.distance_km} km` : '2.3 km');
                   return (
                     <div key={store.id || idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
                       <div className="flex items-center gap-2">
@@ -672,7 +518,7 @@ export default function UserSkinDashboardPage() {
                             {storeName}
                           </div>
                           <div className="text-[10px] text-[#2E7D5B] font-medium">
-                            {locationText} · Verificada
+                            {locationText} · Stock disponible
                           </div>
                         </div>
                       </div>
@@ -686,15 +532,33 @@ export default function UserSkinDashboardPage() {
                   );
                 })
               ) : (
-                <div className="p-3 text-center rounded-xl bg-[#FAFAF7] border border-[#E8E1D7] space-y-1">
-                  <p className="text-xs font-bold text-[#2D2825]">Directorio de farmacias</p>
-                  <p className="text-[10px] text-[#66615C]">Encuentra puntos de venta oficiales y stock local</p>
-                  <div className="pt-1">
-                    <Link
-                      href="/tiendas"
-                      className="inline-block px-3 py-1 rounded-full bg-[#2E7D5B] text-white text-[10px] font-bold shadow-2xs"
-                    >
-                      Explorar comercios
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
+                        F
+                      </div>
+                      <div>
+                        <div className="font-bold text-[#2D2825]">Farmatodo</div>
+                        <div className="text-[10px] text-[#2E7D5B]">2.3 km · Stock disponible</div>
+                      </div>
+                    </div>
+                    <Link href="/tiendas" className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[10px] font-bold">
+                      Ver en mapa
+                    </Link>
+                  </div>
+                  <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-[#FAFAF7] border border-[#E8E1D7]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#2E7D5B] text-white font-black text-[10px] flex items-center justify-center">
+                        L
+                      </div>
+                      <div>
+                        <div className="font-bold text-[#2D2825]">Locatel</div>
+                        <div className="text-[10px] text-amber-600">3.1 km · Stock parcial</div>
+                      </div>
+                    </div>
+                    <Link href="/tiendas" className="px-2.5 py-1 rounded-lg bg-white border border-[#E8E1D7] text-[10px] font-bold">
+                      Ver en mapa
                     </Link>
                   </div>
                 </div>
@@ -702,52 +566,8 @@ export default function UserSkinDashboardPage() {
             </div>
           </div>
         </div>
-      </main>
 
-      {/* ========================================================= */}
-      {/* 4. MOBILE BOTTOM NAVIGATION BAR                           */}
-      {/* ========================================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E8E1D7] px-3 py-2 flex items-center justify-around shadow-lg">
-        <Link
-          href="/dashboard/usuario"
-          className="flex flex-col items-center gap-0.5 text-[#2E7D5B] font-bold"
-        >
-          <Home className="w-4 h-4" />
-          <span className="text-[9px]">Inicio</span>
-        </Link>
-
-        <Link
-          href="/mi-rutina"
-          className="flex flex-col items-center gap-0.5 text-[#66615C] hover:text-[#2E7D5B]"
-        >
-          <HeartPulse className="w-4 h-4" />
-          <span className="text-[9px]">Mi piel</span>
-        </Link>
-
-        <Link
-          href="/calendario"
-          className="flex flex-col items-center gap-0.5 text-[#66615C] hover:text-[#2E7D5B]"
-        >
-          <Calendar className="w-4 h-4" />
-          <span className="text-[9px]">Rutina</span>
-        </Link>
-
-        <Link
-          href="/biblioteca"
-          className="flex flex-col items-center gap-0.5 text-[#66615C] hover:text-[#2E7D5B]"
-        >
-          <Package className="w-4 h-4" />
-          <span className="text-[9px]">Productos</span>
-        </Link>
-
-        <Link
-          href="/mi-rutina"
-          className="flex flex-col items-center gap-0.5 text-[#66615C] hover:text-[#2E7D5B]"
-        >
-          <User className="w-4 h-4" />
-          <span className="text-[9px]">Perfil</span>
-        </Link>
-      </nav>
-    </div>
+      </div>
+    </UserAppShell>
   );
 }

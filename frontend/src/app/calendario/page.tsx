@@ -11,21 +11,22 @@ import {
   Flame,
   CheckCircle2,
   Check,
-  Circle,
-  Lightbulb,
   ArrowRight,
   Droplets,
-  Layers,
+  Package,
   ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
+import UserAppShell from '@/components/navigation/UserAppShell';
 import { useSkincare } from '@/context/SkincareContext';
 
-export default function CalendarioPage() {
-  const { userProfile, completeNightRitual } = useSkincare();
+export default function CalendarioSkinCyclingPage() {
+  const { userProfile } = useSkincare();
 
   const now = new Date();
   const dayOfWeek = (now.getDay() + 6) % 7; // Lunes = 0, Domingo = 6
   const [selectedDayIndex, setSelectedDayIndex] = useState(dayOfWeek);
+  
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({
     'step-1': true,
     'step-2': true,
@@ -65,12 +66,46 @@ export default function CalendarioPage() {
 
   const selectedDay = weekDays[selectedDayIndex] || weekDays[0];
 
+  // Productos asignados según la fase del ciclo con niveles de envase estimados
+  const phaseProducts: Record<number, Array<{
+    name: string;
+    brand: string;
+    category: string;
+    bottleLevel: number;
+    daysLeft: number;
+    volumeLeft: string;
+    warning?: boolean;
+  }>> = {
+    1: [
+      { name: 'Gel Limpiador Suave', brand: 'CeraVe', category: 'Limpiador', bottleLevel: 80, daysLeft: 45, volumeLeft: '160 ml' },
+      { name: 'Ácido Salicílico 2% BHA', brand: 'Paula\'s Choice', category: 'Exfoliante químico', bottleLevel: 55, daysLeft: 30, volumeLeft: '65 ml' },
+      { name: 'Hidratante Barrera Ligera', brand: 'CeraVe', category: 'Hidratante', bottleLevel: 70, daysLeft: 40, volumeLeft: '40 ml' },
+    ],
+    2: [
+      { name: 'Gel Limpiador Suave', brand: 'CeraVe', category: 'Limpiador', bottleLevel: 80, daysLeft: 45, volumeLeft: '160 ml' },
+      { name: 'Granactive Retinoid 2%', brand: 'The Ordinary', category: 'Sérum retinoide', bottleLevel: 35, daysLeft: 18, volumeLeft: '10 ml', warning: true },
+      { name: 'Cicaplast Baume B5+', brand: 'La Roche-Posay', category: 'Bálsamo reparador', bottleLevel: 65, daysLeft: 32, volumeLeft: '26 ml' },
+    ],
+    3: [
+      { name: 'Limpiador Facial Syndet', brand: 'CeraVe', category: 'Limpiador', bottleLevel: 80, daysLeft: 45, volumeLeft: '160 ml' },
+      { name: 'Sérum Ácido Hialurónico 2%', brand: 'The Ordinary', category: 'Sérum hidratante', bottleLevel: 60, daysLeft: 35, volumeLeft: '18 ml' },
+      { name: 'Crema Hidratante con Ceramidas', brand: 'CeraVe', category: 'Hidratante barrera', bottleLevel: 75, daysLeft: 42, volumeLeft: '120 ml' },
+    ],
+    4: [
+      { name: 'Limpiador Facial Syndet', brand: 'CeraVe', category: 'Limpiador', bottleLevel: 80, daysLeft: 45, volumeLeft: '160 ml' },
+      { name: 'Sérum Calmante Centella Asiatica', brand: 'Skin1004', category: 'Ampolla calmante', bottleLevel: 50, daysLeft: 28, volumeLeft: '25 ml' },
+      { name: 'Crema Hidratante con Ceramidas', brand: 'CeraVe', category: 'Hidratante barrera', bottleLevel: 75, daysLeft: 42, volumeLeft: '120 ml' },
+    ],
+  };
+
+  const currentPhaseProducts = phaseProducts[selectedDay.phaseNum] || phaseProducts[2];
+
   return (
-    <div className="w-full min-h-screen bg-[#FAFAF7] text-[#2D2825] py-8 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <UserAppShell activeNavId="calendario">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-in fade-in">
         
         {/* ========================================================= */}
-        {/* HEADER & SELECTOR DE MES (MOCKUP VISTA 4)                 */}
+        {/* HEADER & SELECTOR DE MES                                  */}
         {/* ========================================================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E8E1D7] pb-6">
           <div>
@@ -86,7 +121,6 @@ export default function CalendarioPage() {
             </p>
           </div>
 
-          {/* Selector de Mes */}
           <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-[#E8E1D7] shadow-2xs self-start md:self-auto">
             <button
               type="button"
@@ -170,7 +204,7 @@ export default function CalendarioPage() {
                       Esta noche: {selectedDay.phaseLabel}
                     </h2>
                     <span className="text-xs text-[#7E756F] font-medium">
-                      Día {selectedDay.phaseNum} de tu ciclo
+                      Día {selectedDay.phaseNum} de tu ciclo de 4 noches
                     </span>
                   </div>
                 </div>
@@ -183,7 +217,6 @@ export default function CalendarioPage() {
 
             {/* Checklist interactivo de pasos */}
             <div className="space-y-3 pt-2">
-              
               <div
                 onClick={() => toggleStep('step-1')}
                 className={`p-3.5 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
@@ -197,7 +230,7 @@ export default function CalendarioPage() {
                     {completedSteps['step-1'] && <Check className="w-3 h-3" />}
                   </div>
                   <span className={`text-xs font-semibold ${completedSteps['step-1'] ? 'text-[#2D2825]' : 'text-[#7E756F]'}`}>
-                    Limpiador suave
+                    Limpiador suave equilibrante
                   </span>
                 </div>
                 <span className="text-[10px] text-[#7E756F]">Paso 1</span>
@@ -216,7 +249,7 @@ export default function CalendarioPage() {
                     {completedSteps['step-2'] && <Check className="w-3 h-3" />}
                   </div>
                   <span className={`text-xs font-semibold ${completedSteps['step-2'] ? 'text-[#2D2825]' : 'text-[#7E756F]'}`}>
-                    Sérum retinoide
+                    {selectedDay.phaseNum === 1 ? 'Exfoliante químico AHA/BHA' : selectedDay.phaseNum === 2 ? 'Sérum retinoide 2%' : 'Sérum hidratante / calmante'}
                   </span>
                 </div>
                 <span className="text-[10px] text-[#7E756F]">Paso 2 (Activo)</span>
@@ -235,43 +268,71 @@ export default function CalendarioPage() {
                     {completedSteps['step-3'] && <Check className="w-3 h-3" />}
                   </div>
                   <span className={`text-xs font-semibold ${completedSteps['step-3'] ? 'text-[#2D2825]' : 'text-[#7E756F]'}`}>
-                    Hidratante ligera
+                    Hidratante reparadora de barrera
                   </span>
                 </div>
                 <span className="text-[10px] text-[#7E756F]">Paso 3 (Sellado)</span>
               </div>
 
-              <div
-                onClick={() => toggleStep('step-4')}
-                className={`p-3.5 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
-                  completedSteps['step-4'] ? 'bg-amber-50/50 border-amber-200' : 'bg-[#FAF8F5] border-[#E8E1D7]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition ${
-                    completedSteps['step-4'] ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 bg-white'
-                  }`}>
-                    {completedSteps['step-4'] && <Check className="w-3 h-3" />}
-                  </div>
-                  <span className="text-xs font-semibold text-amber-900">
-                    Evita ácidos y vitamina C
-                  </span>
-                </div>
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex items-center justify-between">
+                <span className="text-xs font-semibold text-amber-900">
+                  {selectedDay.phaseNum === 2 ? 'Evita ácidos exfoliantes y vitamina C' : 'Sella siempre con ceramidas'}
+                </span>
                 <span className="text-[10px] text-amber-700 font-bold">Regla clínica</span>
               </div>
-
             </div>
 
+            {/* SECCIÓN DE PRODUCTOS EN USO CON NIVELES DE ENVASE */}
+            <div className="space-y-3 pt-4 border-t border-[#E8E1D7]">
+              <span className="text-xs font-bold text-[#2D2825] flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-[#2E7D5B]" />
+                <span>Productos en uso y niveles de envase ({selectedDay.phaseLabel})</span>
+              </span>
+
+              <div className="space-y-2.5">
+                {currentPhaseProducts.map((prod, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-2xl bg-[#FAFAF7] border border-[#E8E1D7] flex items-center justify-between text-xs gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-[#2D2825] block truncate">
+                        {prod.name}
+                      </span>
+                      <span className="text-[10px] text-[#7E756F]">
+                        {prod.brand} • {prod.volumeLeft} restantes (~{prod.daysLeft} días)
+                      </span>
+                    </div>
+
+                    <div className="w-24 text-right shrink-0">
+                      <div className="flex items-center justify-end gap-1 mb-1">
+                        <span className={`text-[10px] font-bold ${prod.bottleLevel <= 35 ? 'text-amber-600' : 'text-[#2E7D5B]'}`}>
+                          {prod.bottleLevel}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#E8E1D7] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${prod.bottleLevel <= 35 ? 'bg-amber-500' : 'bg-[#2E7D5B]'}`}
+                          style={{ width: `${prod.bottleLevel}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* BOTÓN VER DETALLES DE LA RUTINA (Lleva a la página explicativa /mi-rutina) */}
             <Link
-              href="/dashboard/usuario"
-              className="w-full py-3.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2"
+              href="/mi-rutina"
+              className="w-full py-3.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Ver detalles de la rutina</span>
+              <span>Ver detalles explicativos de la rutina</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Columna Derecha: Tarjeta 2 (Tu progreso) + Tarjeta 3 (Últimos 7 días) (lg:col-span-6) */}
+          {/* Columna Derecha: Tarjeta 2 (Tu progreso) + Tarjeta 3 (Últimos 7 días - Image 4) */}
           <div className="lg:col-span-6 space-y-6">
             
             {/* Tarjeta 2: Tu progreso */}
@@ -315,57 +376,78 @@ export default function CalendarioPage() {
               </div>
             </div>
 
-            {/* Tarjeta 3: Últimos 7 días */}
-            <div className="bg-white rounded-3xl p-6 border border-[#E8E1D7] shadow-sm space-y-4">
+            {/* ========================================================= */}
+            {/* Tarjeta 3: ÚLTIMOS 7 DÍAS (Exacto a Referencia Imagen 4)     */}
+            {/* ========================================================= */}
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E1D7] shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
-                <span className="text-xs font-bold text-[#2D2825]">
+                <h3 className="text-base font-extrabold text-[#2D2825]">
                   Últimos 7 días
-                </span>
-                <span className="text-[11px] text-[#2E7D5B] font-semibold bg-[#E6F4EC] px-2 py-0.5 rounded-full">
+                </h3>
+                <span className="text-xs font-bold text-[#2E7D5B] bg-[#E6F4EC] px-3 py-1 rounded-full border border-[#D5E2DB]">
                   Semana 3
                 </span>
               </div>
 
+              {/* Métricas lado a lado: Adherencia 86% vs Esperado 80% */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#E8E1D7]">
-                  <span className="text-[10px] text-[#7E756F] font-bold uppercase block">
-                    Adherencia
+                <div className="bg-[#FAFAF7] p-4 rounded-2xl border border-[#E8E1D7] space-y-1">
+                  <span className="text-[10px] font-extrabold text-[#66615C] uppercase tracking-wider block">
+                    ADHERENCIA
                   </span>
-                  <span className="text-xl font-extrabold text-[#2E7D5B] mt-0.5 block">
+                  <div className="text-3xl font-extrabold text-[#2E7D5B] tracking-tight">
                     86%
-                  </span>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#E8E1D7]">
-                  <span className="text-[10px] text-[#7E756F] font-bold uppercase block">
-                    Resultado esperado
+                <div className="bg-[#FAFAF7] p-4 rounded-2xl border border-[#E8E1D7] space-y-1">
+                  <span className="text-[10px] font-extrabold text-[#66615C] uppercase tracking-wider block">
+                    RESULTADO ESPERADO
                   </span>
-                  <span className="text-xl font-extrabold text-[#2D2825] mt-0.5 block">
+                  <div className="text-3xl font-extrabold text-[#2D2825] tracking-tight">
                     80%
+                  </div>
+                </div>
+              </div>
+
+              {/* Barras de cumplimiento por jornada: 6 de 7 noches */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#66615C] font-semibold">
+                    Cumplimiento por jornada
+                  </span>
+                  <span className="font-extrabold text-[#2E7D5B]">
+                    6 de 7 noches
                   </span>
                 </div>
-              </div>
 
-              {/* Indicador de píldoras diarias */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-[11px] text-[#7E756F]">
-                  <span>Cumplimiento por jornada</span>
-                  <span className="font-semibold text-[#2E7D5B]">6 de 7 noches</span>
-                </div>
-                <div className="flex items-center gap-1.5 h-3">
-                  {[true, true, true, false, true, true, true].map((done, i) => (
-                    <div
-                      key={i}
-                      className={`flex-1 h-full rounded-full ${done ? 'bg-[#2E7D5B]' : 'bg-[#E8E1D7]'}`}
-                      title={`Día ${i + 1}: ${done ? 'Completado' : 'Pendiente'}`}
-                    />
-                  ))}
+                {/* 7 barras horizontales redondeadas */}
+                <div className="grid grid-cols-7 gap-2">
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 1: Cumplida" />
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 2: Cumplida" />
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 3: Cumplida" />
+                  <div className="h-3 rounded-full bg-[#E8E1D7]" title="Noche 4: Descanso" />
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 5: Cumplida" />
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 6: Cumplida" />
+                  <div className="h-3 rounded-full bg-[#2E7D5B]" title="Noche 7: Cumplida" />
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1 text-xs text-[#2E7D5B] font-semibold">
+              {/* Diagnóstico de mejora confirmado */}
+              <div className="flex items-center gap-2 pt-2 text-xs font-bold text-[#2E7D5B]">
                 <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
                 <span>Mejora en textura y luminosidad confirmada</span>
+              </div>
+            </div>
+
+            {/* Consejo clínico */}
+            <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E8E1D7] flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-[#2E7D5B] mt-0.5 shrink-0" />
+              <div className="text-xs space-y-0.5">
+                <span className="font-bold text-[#2D2825] block">Consejo de hoy:</span>
+                <p className="text-[#66615C] leading-relaxed">
+                  La constancia es la clave en Skin Cycling. Tu piel necesita entre 4 y 6 semanas completas para mostrar cambios celulares visibles sin comprometer la barrera cutánea.
+                </p>
               </div>
             </div>
 
@@ -373,24 +455,7 @@ export default function CalendarioPage() {
 
         </div>
 
-        {/* ========================================================= */}
-        {/* TARJETA INFERIOR: CONSEJO DE HOY                         */}
-        {/* ========================================================= */}
-        <div className="bg-[#FAF8F5] border border-[#E8E1D7] rounded-3xl p-5 sm:p-6 flex items-start gap-4 shadow-2xs">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-2xs">
-            <Lightbulb className="w-5 h-5" />
-          </div>
-          <div className="space-y-0.5">
-            <h4 className="text-xs font-bold text-[#2D2825]">
-              Consejo de hoy
-            </h4>
-            <p className="text-xs text-[#5D6B63] leading-relaxed font-normal">
-              La constancia es la clave. Tu piel necesita entre 4 y 6 semanas para mostrar cambios visibles a nivel celular durante la renovación con retinoides.
-            </p>
-          </div>
-        </div>
-
       </div>
-    </div>
+    </UserAppShell>
   );
 }

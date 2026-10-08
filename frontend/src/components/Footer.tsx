@@ -82,8 +82,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/mi-piel" className="hover:text-white transition-colors">
+                  Mi Piel (Datos Clínicos)
+                </Link>
+              </li>
+              <li>
                 <Link href="/mi-rutina" className="hover:text-white transition-colors">
-                  Perfil Dermatológico
+                  Mi Rutina Explicativa
                 </Link>
               </li>
             </ul>

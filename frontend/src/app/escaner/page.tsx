@@ -42,6 +42,7 @@ import {
 import { useSkincare } from '@/context/SkincareContext';
 import { scanImageWithGeminiVision } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
+import UserAppShell from '@/components/navigation/UserAppShell';
 
 export default function EscanerPage() {
   const { userProfile, updateProfile, addProductToShelf } = useSkincare();
@@ -228,129 +229,9 @@ export default function EscanerPage() {
     setTimeout(() => setAddedProductNotice(null), 3000);
   };
 
-  const navItems = [
-    { id: 'inicio', label: 'Inicio', icon: Home, href: '/dashboard/usuario' },
-    { id: 'mi-piel', label: 'Mi piel', icon: HeartPulse, href: '/mi-rutina' },
-    { id: 'mi-rutina', label: 'Mi rutina', icon: Calendar, href: '/calendario' },
-    { id: 'productos', label: 'Productos', icon: Package, href: '/biblioteca' },
-    { id: 'analisis', label: 'Análisis y escaneos', icon: Scan, href: '/escaner' },
-    { id: 'tiendas', label: 'Tiendas cercanas', icon: Store, href: '/tiendas' },
-    { id: 'perfil', label: 'Perfil', icon: User, href: '/mi-rutina' },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#FAFAF7] text-[#2D2825] flex flex-col lg:flex-row antialiased selection:bg-[#E6F4EC] selection:text-[#2E7D5B] font-sans pb-16 lg:pb-0">
-      
-      {/* ========================================================= */}
-      {/* 1. SIDEBAR DESKTOP (Verde Clínico DLG-HYBRID)              */}
-      {/* ========================================================= */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-[#E8E1D7] sticky top-0 h-screen justify-between p-5 shrink-0 z-20">
-        <div className="space-y-6">
-          <Link href="/" className="flex items-center gap-2.5 px-2 group cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs group-hover:scale-105 transition">
-              <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
-            </div>
-            <div className="font-extrabold text-lg text-[#2D2825] tracking-tight">
-              allabout<span className="text-[#2E7D5B]">.skin</span>
-            </div>
-          </Link>
-
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.id === 'analisis';
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition cursor-pointer text-left ${
-                    isActive
-                      ? 'bg-[#E6F4EC] text-[#2E7D5B] border border-[#D5E2DB] shadow-2xs font-bold'
-                      : 'text-[#66615C] hover:text-[#2E7D5B] hover:bg-[#F2F7F4]'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#2E7D5B]' : 'text-[#8C827A]'}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-[#F4F8F5] border border-[#D5E2DB] flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-[#1B3D32] leading-snug">
-              Tu piel, <span className="text-[#2E7D5B] font-extrabold">con ciencia.</span>
-            </p>
-            <p className="text-[10px] text-[#66615C] font-medium">
-              No con marketing.
-            </p>
-          </div>
-          <Flower2 className="w-5 h-5 text-[#2E7D5B] shrink-0" />
-        </div>
-      </aside>
-
-      {/* ========================================================= */}
-      {/* 2. HEADER MOBILE (Visible en pantallas pequeñas)          */}
-      {/* ========================================================= */}
-      <header className="lg:hidden bg-white/95 backdrop-blur-md border-b border-[#E8E1D7] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <span className="font-extrabold text-base text-[#2D2825] tracking-tight">
-            allabout<span className="text-[#2E7D5B]">.skin</span>
-          </span>
-        </Link>
-        <span className="text-xs font-bold text-[#2E7D5B] bg-[#E6F4EC] px-2.5 py-1 rounded-full border border-[#D5E2DB]">
-          Escáner IA
-        </span>
-      </header>
-
-      {/* ========================================================= */}
-      {/* 3. MAIN ESCANER CONTENT (Vistas 2 y 6 Mockup)             */}
-      {/* ========================================================= */}
-      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
-        
-        {/* TOPBAR: Search bar & User Profile */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar productos, ingredientes, etc."
-              className="w-full bg-white border border-[#E8E1D7] rounded-full pl-9 pr-4 py-2 text-xs text-[#2D2825] placeholder:text-[#8C827A] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B] transition shadow-2xs"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 shrink-0">
-            <button
-              type="button"
-              className="w-9 h-9 rounded-full bg-white border border-[#E8E1D7] flex items-center justify-center text-[#66615C] hover:text-[#2E7D5B] transition shadow-2xs relative cursor-pointer"
-              aria-label="Notificaciones"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-[#2E7D5B] absolute top-2 right-2 ring-2 ring-white" />
-            </button>
-
-            <Link
-              href="/mi-rutina"
-              className="flex items-center gap-2.5 bg-white border border-[#E8E1D7] rounded-full py-1 pl-1 pr-3.5 shadow-2xs hover:border-[#2E7D5B] transition"
-            >
-              <div className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#2E7D5B] font-bold text-xs flex items-center justify-center overflow-hidden border border-[#D5E2DB]">
-                M
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-bold text-[#2D2825] leading-tight">
-                  María González
-                </div>
-                <div className="text-[10px] text-[#2E7D5B] font-semibold leading-none">
-                  Premium
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
+    <UserAppShell activeNavId="analisis">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in">
 
         {/* ========================================================= */}
         {/* HEADER DEL ESCÁNER & STEPPER DE 3 PASOS (MOCKUP VISTA 2)  */}
@@ -1127,32 +1008,7 @@ export default function EscanerPage() {
           </div>
         </footer>
 
-      </main>
-
-      {/* 4. Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E8E1D7] px-3 py-2 flex items-center justify-around shadow-lg">
-        <Link href="/dashboard/usuario" className="flex flex-col items-center gap-0.5 text-[#66615C]">
-          <Home className="w-4 h-4" />
-          <span className="text-[9px]">Inicio</span>
-        </Link>
-        <Link href="/mi-rutina" className="flex flex-col items-center gap-0.5 text-[#66615C]">
-          <HeartPulse className="w-4 h-4" />
-          <span className="text-[9px]">Mi piel</span>
-        </Link>
-        <Link href="/calendario" className="flex flex-col items-center gap-0.5 text-[#66615C]">
-          <Calendar className="w-4 h-4" />
-          <span className="text-[9px]">Rutina</span>
-        </Link>
-        <Link href="/escaner" className="flex flex-col items-center gap-0.5 text-[#2E7D5B] font-bold">
-          <Scan className="w-4 h-4" />
-          <span className="text-[9px]">Escáner</span>
-        </Link>
-        <Link href="/tiendas" className="flex flex-col items-center gap-0.5 text-[#66615C]">
-          <Store className="w-4 h-4" />
-          <span className="text-[9px]">Tiendas</span>
-        </Link>
-      </nav>
-
-    </div>
+      </div>
+    </UserAppShell>
   );
 }

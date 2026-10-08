@@ -17,7 +17,18 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
 
-  const isSystemArea = pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/tiendas') || pathname.startsWith('/escaner');
+  const isSystemArea =
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/mi-piel') ||
+    pathname.startsWith('/mi-rutina') ||
+    pathname.startsWith('/calendario') ||
+    pathname.startsWith('/biblioteca') ||
+    pathname.startsWith('/tiendas') ||
+    pathname.startsWith('/escaner') ||
+    pathname.startsWith('/perfil') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/registro');
 
   if (isSystemArea) {
     return (

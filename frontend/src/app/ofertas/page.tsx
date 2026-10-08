@@ -15,7 +15,6 @@ import {
   Store,
   Globe2
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { API_BASE_URL } from '@/lib/api';
 
 interface CleanProductOffer {
@@ -185,8 +184,6 @@ export default function OffersAndProductsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
-      <Navbar />
-
       <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
         
         {/* TOP HERO HEADER */}
