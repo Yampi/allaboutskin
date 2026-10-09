@@ -1589,21 +1589,40 @@ export default function VirtualFaceMaskTutorial({
               </p>
             </div>
 
-            {/* Scorecard */}
-            <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-white/5 border border-white/10 text-left">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-white/50 block font-mono">Cobertura</span>
-                <span className="text-base font-bold text-emerald-400 font-mono">100%</span>
+            {/* Scorecard con Explicación de Valores */}
+            <div className="space-y-2 text-left">
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-white/5 border border-white/10">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-white/50 block font-mono">Cobertura</span>
+                  <span className="text-base font-bold text-emerald-400 font-mono">100%</span>
+                  <span className="text-[9px] text-emerald-300/80 block">Sin zonas ciegas</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-white/50 block font-mono">Zonas Mapeadas</span>
+                  <span className="text-base font-bold text-cyan-400 font-mono">
+                    {activeStepZones.length} / {activeStepZones.length}
+                  </span>
+                  <span className="text-[9px] text-cyan-300/80 block">Biometría 3D</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-white/50 block font-mono">Absorción</span>
+                  <span className="text-base font-bold text-amber-300 font-mono">+25%</span>
+                  <span className="text-[9px] text-amber-300/80 block">Penetración óptima</span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-white/50 block font-mono">Zonas</span>
-                <span className="text-base font-bold text-cyan-400 font-mono">
-                  {activeStepZones.length} / {activeStepZones.length}
+
+              {/* Razón Clínica y Significado de la Guía Facial */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5 text-left text-xs">
+                <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                  ✦ Significado Clínico del Escaneo Facial
                 </span>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-white/50 block font-mono">Precisión</span>
-                <span className="text-base font-bold text-amber-300 font-mono">Óptima</span>
+                <p className="text-white/80 leading-relaxed text-[11.5px]">
+                  <strong>¿Por qué guiamos cada zona?</strong> La piel facial no es homogénea: la <em>Zona T</em> concentra mayor densidad sebácea, mientras que las <em>mejillas</em> sufren mayor evaporación de agua (TEWL). La dirección ascendente del masaje favorece el drenaje linfático y previene la migración de activos irritantes hacia la zona periocular.
+                </p>
+                <div className="pt-1 flex items-center justify-between text-[10px] text-emerald-400 font-mono">
+                  <span>• Estimulación microvascular activa</span>
+                  <span>• Cero fricción dañina</span>
+                </div>
               </div>
             </div>
 

@@ -142,13 +142,13 @@ export default function Footer() {
               </li>
               <li className="pt-2">
                 <div className="flex items-center gap-3 text-[#A4B5AC]">
-                  <a href="#" className="hover:text-white transition" aria-label="Instagram">
+                  <a href="https://instagram.com/allaboutskin" target="_blank" rel="noreferrer" className="hover:text-white transition" aria-label="Instagram">
                     <InstagramIcon className="w-4 h-4" />
                   </a>
-                  <a href="#" className="hover:text-white transition" aria-label="Facebook">
+                  <a href="https://facebook.com/allaboutskin" target="_blank" rel="noreferrer" className="hover:text-white transition" aria-label="Facebook">
                     <FacebookIcon className="w-4 h-4" />
                   </a>
-                  <a href="#" className="hover:text-white transition" aria-label="YouTube">
+                  <a href="https://youtube.com/@allaboutskin" target="_blank" rel="noreferrer" className="hover:text-white transition" aria-label="YouTube">
                     <YoutubeIcon className="w-4 h-4" />
                   </a>
                 </div>

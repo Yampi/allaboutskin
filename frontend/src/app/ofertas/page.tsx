@@ -16,6 +16,7 @@ import {
   Globe2
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
+import UserAppShell from '@/components/navigation/UserAppShell';
 
 interface CleanProductOffer {
   id: string;
@@ -183,8 +184,8 @@ export default function OffersAndProductsPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1B1A]">
-      <main className="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-10">
+    <UserAppShell activeNavId="productos">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full space-y-8 animate-in fade-in">
         
         {/* TOP HERO HEADER */}
         <div className="border-b border-[#ECE6DC] pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -422,6 +423,6 @@ export default function OffersAndProductsPage() {
         )}
 
       </main>
-    </div>
+    </UserAppShell>
   );
 }

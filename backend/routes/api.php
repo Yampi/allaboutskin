@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\Business\BusinessOfferController;
 use App\Http\Controllers\Api\Business\BusinessStoreController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\LifecycleController;
+use App\Http\Controllers\Api\ProductReviewController;
+use App\Http\Controllers\Api\UserSkinScanController;
 use App\Http\Controllers\Api\RoutineController;
 use App\Http\Controllers\Api\SkinProfileController;
 use App\Http\Controllers\Api\StoreDirectoryController;
@@ -83,7 +85,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/ingredients/{identifier}', [CatalogController::class, 'ingredientDetail']);
         Route::get('/products', [CatalogController::class, 'products']);
         Route::get('/products/{slug}', [CatalogController::class, 'productDetail']);
+        Route::get('/products/{slug}/reviews', [ProductReviewController::class, 'index']);
+        Route::post('/products/{slug}/reviews', [ProductReviewController::class, 'store']);
+        Route::post('/reviews/{id}/helpful', [ProductReviewController::class, 'voteHelpful']);
         Route::get('/brands', [CatalogController::class, 'brands']);
+    });
+
+    // 3.2. User Skin Scans & Biometric Evolution (Public / Authenticated)
+    Route::prefix('user')->group(function () {
+        Route::get('/skin-scans', [UserSkinScanController::class, 'index']);
+        Route::post('/skin-scans', [UserSkinScanController::class, 'store']);
     });
 
     // 3.5. Local Stores, Branches & In-Store Shopping (Public)

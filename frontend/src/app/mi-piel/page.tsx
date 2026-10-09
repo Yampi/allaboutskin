@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import UserAppShell from '@/components/navigation/UserAppShell';
 import { getCurrentUser, StoredUser, fetchUserProfile, updateUserProfile } from '@/lib/api';
+import SkinEvolutionProgressSection from '@/components/progress/SkinEvolutionProgressSection';
 
 const FITZPATRICK_SWATCHES = [
   { type: 'I', label: 'Muy clara (se quema siempre)', color: '#FBF0E4' },
@@ -329,6 +330,9 @@ export default function MiPielPage() {
           </div>
 
         </div>
+
+        {/* SECCIÓN DE EVOLUCIÓN BIOMÉTRICA & COMPARADOR DESLIZANTE */}
+        <SkinEvolutionProgressSection />
 
       </div>
 
