@@ -162,17 +162,37 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
 
                   {/* Dropdown del Menú de Usuario */}
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E1D7] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-sm border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <div className="px-3 py-2 border-b border-slate-100">
                         <p className="text-xs font-bold text-[#2D2825] truncate">{userName}</p>
                         <p className="text-[10px] text-[#7E756F] truncate">{currentUser.email || 'usuario@allabout.skin'}</p>
                       </div>
 
                       <div className="py-1 space-y-0.5">
+                        {isUserAdmin(currentUser) && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                            <span>Panel SuperAdmin</span>
+                          </Link>
+                        )}
+                        {isUserBusiness(currentUser) && (
+                          <Link
+                            href="/dashboard/empresa"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                          >
+                            <Store className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                            <span>Portal de Comercios</span>
+                          </Link>
+                        )}
                         <Link
                           href="/dashboard/usuario"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
                         >
                           <Home className="w-3.5 h-3.5" />
                           <span>Mi Tocador / Dashboard</span>
@@ -180,7 +200,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                         <Link
                           href="/mi-piel"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
                         >
                           <HeartPulse className="w-3.5 h-3.5" />
                           <span>Mi Piel (Datos Clínicos)</span>
@@ -188,7 +208,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                         <Link
                           href="/mi-rutina"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
                           <span>Mi Rutina Explicativa</span>
@@ -196,7 +216,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                         <Link
                           href="/perfil"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
                         >
                           <User className="w-3.5 h-3.5" />
                           <span>Ajustes de Perfil</span>
@@ -207,7 +227,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition cursor-pointer text-left"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-bold text-rose-600 hover:bg-rose-50 transition cursor-pointer text-left"
                         >
                           <LogOut className="w-3.5 h-3.5 text-rose-500" />
                           <span>Cerrar sesión</span>

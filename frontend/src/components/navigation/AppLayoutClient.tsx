@@ -9,6 +9,7 @@ import ProfileModal from '@/components/mobile/ProfileModal';
 import MicroscopyModal from '@/components/mobile/MicroscopyModal';
 import InStoreNotificationBanner from '@/components/InStoreNotificationBanner';
 import OfflineStatusBanner from '@/components/system/OfflineStatusBanner';
+import RolePortalBar from './RolePortalBar';
 import Footer from '@/components/Footer';
 
 function LayoutInner({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   if (isSystemArea) {
     return (
       <div className="min-h-screen selection:bg-[#E6F4EC] selection:text-[#2E7D5B] antialiased">
+        <RolePortalBar />
         <OfflineStatusBanner />
         {children}
       </div>
@@ -41,6 +43,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#2D2825] selection:bg-[#8FA89B]/30 antialiased">
+      {/* -1. Universal Role & Portal Switcher Bar */}
+      <RolePortalBar />
+
       {/* 0. Resilience & Offline Status Banner */}
       <OfflineStatusBanner />
 
