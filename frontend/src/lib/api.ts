@@ -1,5 +1,56 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
+import {
+  apiCircuitBreaker,
+  ApiError,
+  CircuitBreakerError,
+} from './circuitBreaker';
+
+export { apiCircuitBreaker, ApiError, CircuitBreakerError };
+export type { CircuitState, ApiErrorState, ApiErrorCode } from './circuitBreaker';
+
+/**
+ * Robust fetch wrapper integrated with SRE Circuit Breaker.
+ * Enforces timeouts, tracks failures, and fails fast when circuit is OPEN.
+ */
+export async function apiFetch<T = any>(
+  url: string,
+  init?: RequestInit,
+  timeoutMs?: number
+): Promise<T> {
+  return apiCircuitBreaker.execute(async () => {
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      let errorData: any = {};
+      try {
+        errorData = await res.json();
+      } catch {
+        // Body is not JSON
+      }
+      const message =
+        errorData?.message ||
+        `HTTP ${res.status}: ${res.statusText || 'Error en petición al servidor'}`;
+      const code =
+        res.status === 401 || res.status === 403
+          ? 'UNAUTHORIZED'
+          : res.status === 404
+          ? 'NOT_FOUND'
+          : res.status === 422
+          ? 'VALIDATION_ERROR'
+          : res.status === 429
+          ? 'RATE_LIMITED'
+          : res.status >= 500
+          ? 'BACKEND_DOWN'
+          : 'UNKNOWN';
+      const retryAfter = res.headers.get('Retry-After');
+      const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : undefined;
+      throw new ApiError(message, code, res.status, retryAfterSeconds);
+    }
+    return await res.json();
+  }, timeoutMs);
+}
+
+
 export type UserRoleType = 'super_admin' | 'admin' | 'scientific_editor' | 'business_owner' | 'premium_user' | 'standard_user';
 
 export interface StoredUser {
@@ -155,7 +206,7 @@ export async function auditInci(
 ): Promise<AuditReport> {
   const endpoint = `${API_BASE_URL}/audit/inci`;
 
-  const res = await fetch(endpoint, {
+  const json = await apiFetch<{ data: AuditReport }>(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -166,28 +217,16 @@ export async function auditInci(
     }),
   });
 
-  if (!res.ok) {
-    throw new Error('Error al auditar la fórmula');
-  }
-
-  const json = await res.json();
   return json.data;
 }
 
 export async function getProductAudit(slug: string): Promise<AuditReport> {
-  const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
-  if (res.ok) {
-    const json = await res.json();
-    return json.data;
-  }
-
-  return auditInci('Aqua, Niacinamide, Zinc PCA', slug);
+  const json = await apiFetch<{ data: AuditReport }>(`${API_BASE_URL}/audit/product/${slug}`);
+  return json.data;
 }
 
 export async function getCatalogProducts() {
-  const res = await fetch(`${API_BASE_URL}/catalog/products`);
-  if (res.ok) return res.json();
-  return { data: [] };
+  return apiFetch(`${API_BASE_URL}/catalog/products`);
 }
 
 // User & Routine Storage Helpers
@@ -1869,22 +1908,21 @@ export interface ProductReviewsResponse {
 
 export async function fetchProductReviews(slug: string): Promise<ProductReviewsResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) {
-      throw new Error('Error al obtener reseñas del producto');
-    }
-    return await res.json();
+    return await apiFetch<ProductReviewsResponse>(
+      `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+      { cache: 'no-store' }
+    );
   } catch (error) {
-    // Fallback con almacenamiento local para productos personalizados o modo sin conexión
+    // Modo sin conexión o almacenamiento local exclusivamente para reseñas del usuario local
     const localKey = `allaboutskin_reviews_${slug}`;
     const localSaved = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
     const localList: ProductReviewItem[] = localSaved ? JSON.parse(localSaved) : [];
 
     return {
       product_slug: slug,
-      average_rating: localList.length ? +(localList.reduce((acc, r) => acc + r.rating, 0) / localList.length).toFixed(1) : 4.8,
+      average_rating: localList.length
+        ? +(localList.reduce((acc, r) => acc + r.rating, 0) / localList.length).toFixed(1)
+        : 0,
       total_reviews: localList.length,
       stars_breakdown: {
         5: localList.filter((r) => r.rating === 5).length,
@@ -1910,16 +1948,14 @@ export async function submitProductReview(
   }
 ): Promise<{ message: string; review: ProductReviewItem }> {
   try {
-    const res = await fetch(`${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al enviar la reseña');
-    }
-    const data = await res.json();
+    const data = await apiFetch<{ message: string; review: ProductReviewItem }>(
+      `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      }
+    );
     return data;
   } catch (e: any) {
     // Persistencia local resiliente
@@ -1949,16 +1985,10 @@ export async function submitProductReview(
 }
 
 export async function voteReviewHelpful(reviewId: number): Promise<{ helpful_count: number }> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/catalog/reviews/${reviewId}/helpful`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-    });
-    if (!res.ok) throw new Error('Error al votar reseña');
-    return await res.json();
-  } catch (e) {
-    return { helpful_count: 1 };
-  }
+  return apiFetch<{ helpful_count: number }>(`${API_BASE_URL}/catalog/reviews/${reviewId}/helpful`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
 }
 
 // ==========================================
