@@ -79,7 +79,16 @@ class MultiStoreCrawlerEngine
                         $rawOffers = $connector->search($store, $term, $ingredient);
                     } catch (\Throwable $e) {
                         $totalErrors++;
-                        Log::channel('single')->warning("[MultiStoreCrawler] Error en búsqueda {$store->name} [{$term}]: " . $e->getMessage());
+                        if ($e instanceof \Illuminate\Http\Client\RequestException && $e->response?->status() === 429) {
+                            $retryAfter = (int) $e->response->header('Retry-After');
+                            $sleepSeconds = $retryAfter > 0 ? min($retryAfter, 10) : 2;
+                            Log::channel('single')->warning("[MultiStoreCrawler] HTTP 429 Rate Limited en {$store->name} [{$term}]. Retry-After recibido: {$retryAfter}s. Aplicando backoff de {$sleepSeconds}s.");
+                            if ($sleepSeconds > 0) {
+                                sleep($sleepSeconds);
+                            }
+                        } else {
+                            Log::channel('single')->warning("[MultiStoreCrawler] Error en búsqueda {$store->name} [{$term}]: " . $e->getMessage());
+                        }
                         continue;
                     }
 
