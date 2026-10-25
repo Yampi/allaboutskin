@@ -8,6 +8,7 @@ use App\Models\AffiliateStore;
 use App\Models\SecurityAuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminStoreController extends Controller
 {
@@ -136,24 +137,28 @@ class AdminStoreController extends Controller
             $updateData['verified_at'] = now();
             $updateData['is_active'] = true;
             $updateData['rejected_reason'] = null;
-
-            // Activar también sus sucursales principales
-            $store->branches()->update(['is_active' => true]);
         } elseif ($newStatus === 'REJECTED') {
             $updateData['rejected_reason'] = $validated['rejected_reason'] ?? 'Información de establecimiento incompleta o no verificable.';
             $updateData['is_active'] = false;
         }
 
-        $store->update($updateData);
+        DB::transaction(function () use ($store, $updateData, $newStatus, $admin) {
+            $store->update($updateData);
 
-        // Registro de auditoría de seguridad
-        SecurityAuditLog::logEvent(
-            eventType: 'STORE_VERIFICATION_UPDATED',
-            description: "Admin [{$admin->email}] actualizó verificación de tienda [{$store->name}] a [{$newStatus}]",
-            userId: $admin->id,
-            severity: 'INFO',
-            target: "store:{$store->id}"
-        );
+            if ($newStatus === 'VERIFIED') {
+                // Activar también sus sucursales principales
+                $store->branches()->update(['is_active' => true]);
+            }
+
+            // Registro de auditoría de seguridad
+            SecurityAuditLog::logEvent(
+                eventType: 'STORE_VERIFICATION_UPDATED',
+                description: "Admin [{$admin->email}] actualizó verificación de tienda [{$store->name}] a [{$newStatus}]",
+                userId: $admin->id,
+                severity: 'INFO',
+                target: "store:{$store->id}"
+            );
+        }, 5);
 
         return response()->json([
             'status' => 'success',
@@ -208,29 +213,33 @@ class AdminStoreController extends Controller
         $admin = $request->user();
         $store = AffiliateStore::findOrFail($id);
 
-        $store->is_active = !$store->is_active;
-        $store->save();
+        [$message, $affectedOffersCount] = DB::transaction(function () use ($store, $admin) {
+            $store->is_active = !$store->is_active;
+            $store->save();
 
-        $affectedOffersCount = 0;
-        if (!$store->is_active) {
-            // Desactivar: suspender sucursales y retirar ofertas del inventario público
-            $store->branches()->update(['is_active' => false]);
-            $affectedOffersCount = $store->productOffers()->update(['in_stock' => false]);
-            $message = "Tienda [{$store->name}] desactivada. Se retiraron {$affectedOffersCount} ofertas y sus productos del inventario activo.";
-        } else {
-            // Reactivar: restablecer sucursales y ofertas
-            $store->branches()->update(['is_active' => true]);
-            $affectedOffersCount = $store->productOffers()->update(['in_stock' => true]);
-            $message = "Tienda [{$store->name}] reactivada. Se reincorporaron {$affectedOffersCount} ofertas al inventario.";
-        }
+            $affectedOffersCount = 0;
+            if (!$store->is_active) {
+                // Desactivar: suspender sucursales y retirar ofertas del inventario público
+                $store->branches()->update(['is_active' => false]);
+                $affectedOffersCount = $store->productOffers()->update(['in_stock' => false]);
+                $message = "Tienda [{$store->name}] desactivada. Se retiraron {$affectedOffersCount} ofertas y sus productos del inventario activo.";
+            } else {
+                // Reactivar: restablecer sucursales y ofertas
+                $store->branches()->update(['is_active' => true]);
+                $affectedOffersCount = $store->productOffers()->update(['in_stock' => true]);
+                $message = "Tienda [{$store->name}] reactivada. Se reincorporaron {$affectedOffersCount} ofertas al inventario.";
+            }
 
-        SecurityAuditLog::logEvent(
-            eventType: 'STORE_STATUS_TOGGLED',
-            description: "Admin [{$admin?->email}] cambió estado activo de tienda [{$store->name}] a [" . ($store->is_active ? 'ACTIVO' : 'INACTIVO') . "]. {$affectedOffersCount} ofertas afectadas.",
-            userId: $admin?->id,
-            severity: 'WARNING',
-            target: "store:{$store->id}"
-        );
+            SecurityAuditLog::logEvent(
+                eventType: 'STORE_STATUS_TOGGLED',
+                description: "Admin [{$admin?->email}] cambió estado activo de tienda [{$store->name}] a [" . ($store->is_active ? 'ACTIVO' : 'INACTIVO') . "]. {$affectedOffersCount} ofertas afectadas.",
+                userId: $admin?->id,
+                severity: 'WARNING',
+                target: "store:{$store->id}"
+            );
+
+            return [$message, $affectedOffersCount];
+        }, 5);
 
         return response()->json([
             'status' => 'success',
@@ -302,32 +311,37 @@ class AdminStoreController extends Controller
         $productIds = $store->productOffers()->pluck('product_id')->unique()->toArray();
         $offersCount = $store->productOffers()->count();
 
-        // Eliminar la tienda (onDelete cascade limpia product_store_offers, store_branches y store_lead_interactions)
-        $store->delete();
+        // Ejecutar eliminación atómica en cascada y purga de huérfanos con DB::transaction
+        $orphanedDeletedCount = DB::transaction(function () use ($store, $storeName, $admin, $productIds, $offersCount, $id) {
+            // Eliminar la tienda (onDelete cascade limpia product_store_offers, store_branches y store_lead_interactions)
+            $store->delete();
 
-        // Purgar productos que se hayan quedado huérfanos (que no tengan ofertas de ninguna otra tienda y no sean verificados)
-        $orphanedDeletedCount = 0;
-        if (!empty($productIds)) {
-            foreach ($productIds as $pId) {
-                $hasOtherOffers = \App\Models\ProductStoreOffer::where('product_id', $pId)->exists();
-                if (!$hasOtherOffers) {
-                    $product = \App\Models\Product::find($pId);
-                    if ($product && !$product->is_verified) {
-                        $product->ingredients()->detach();
-                        $product->delete();
-                        $orphanedDeletedCount++;
+            // Purgar productos que se hayan quedado huérfanos (que no tengan ofertas de ninguna otra tienda y no sean verificados)
+            $orphanedDeletedCount = 0;
+            if (!empty($productIds)) {
+                foreach ($productIds as $pId) {
+                    $hasOtherOffers = \App\Models\ProductStoreOffer::where('product_id', $pId)->exists();
+                    if (!$hasOtherOffers) {
+                        $product = \App\Models\Product::find($pId);
+                        if ($product && !$product->is_verified) {
+                            $product->ingredients()->detach();
+                            $product->delete();
+                            $orphanedDeletedCount++;
+                        }
                     }
                 }
             }
-        }
 
-        SecurityAuditLog::logEvent(
-            eventType: 'STORE_DELETED',
-            description: "Admin [{$admin?->email}] eliminó la tienda [{$storeName}]. Se eliminaron {$offersCount} ofertas y {$orphanedDeletedCount} productos exclusivos del inventario.",
-            userId: $admin?->id,
-            severity: 'WARNING',
-            target: "store:{$id}"
-        );
+            SecurityAuditLog::logEvent(
+                eventType: 'STORE_DELETED',
+                description: "Admin [{$admin?->email}] eliminó la tienda [{$storeName}]. Se eliminaron {$offersCount} ofertas y {$orphanedDeletedCount} productos exclusivos del inventario.",
+                userId: $admin?->id,
+                severity: 'WARNING',
+                target: "store:{$id}"
+            );
+
+            return $orphanedDeletedCount;
+        }, 5);
 
         return response()->json([
             'status' => 'success',

@@ -10,6 +10,7 @@ use App\Models\StoreBranch;
 use App\Models\StoreLeadInteraction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BusinessStoreController extends Controller
@@ -131,46 +132,48 @@ class BusinessStoreController extends Controller
         $slugBase = Str::slug($validated['store_name'] . '-' . $validated['city']);
         $uniqueSlug = $slugBase . '-' . Str::random(5);
 
-        // Crear la entidad de la tienda
-        $store = AffiliateStore::create([
-            'owner_id' => $user->id,
-            'name' => $validated['store_name'],
-            'slug' => $uniqueSlug,
-            'website_url' => $validated['website_url'] ?? 'https://allabout.skin',
-            'store_type' => 'PHYSICAL',
-            'country_code' => 'VE',
-            'affiliate_network' => 'Comercio Local',
-            'instagram_handle' => $validated['instagram_handle'] ?? null,
-            'whatsapp_contact' => $validated['whatsapp'],
-            'is_independent' => true,
-            'verification_status' => 'PENDING_REVIEW',
-            'subscription_tier' => StoreSubscriptionTier::FREE->value,
-            'is_active' => true, // Activa para que el comerciante empiece a configurarla
-            'submitted_by_email' => $user->email,
-        ]);
+        // Crear tienda, sucursal principal y ascender rol dentro de una transacción ACID atómica
+        [$store, $branch] = DB::transaction(function () use ($validated, $user, $uniqueSlug) {
+            $store = AffiliateStore::create([
+                'owner_id' => $user->id,
+                'name' => $validated['store_name'],
+                'slug' => $uniqueSlug,
+                'website_url' => $validated['website_url'] ?? 'https://allabout.skin',
+                'store_type' => 'PHYSICAL',
+                'country_code' => 'VE',
+                'affiliate_network' => 'Comercio Local',
+                'instagram_handle' => $validated['instagram_handle'] ?? null,
+                'whatsapp_contact' => $validated['whatsapp'],
+                'is_independent' => true,
+                'verification_status' => 'PENDING_REVIEW',
+                'subscription_tier' => StoreSubscriptionTier::FREE->value,
+                'is_active' => true, // Activa para que el comerciante empiece a configurarla
+                'submitted_by_email' => $user->email,
+            ]);
 
-        // Crear sucursal principal
-        $branch = StoreBranch::create([
-            'store_id' => $store->id,
-            'name' => $validated['store_name'] . ' - Sede Principal',
-            'slug' => 'branch-' . $uniqueSlug,
-            'state' => $validated['state'],
-            'city' => $validated['city'],
-            'address' => $validated['address'],
-            'latitude' => $validated['latitude'] ?? 9.2150000,
-            'longitude' => $validated['longitude'] ?? -66.0100000,
-            'geofence_radius_meters' => 90,
-            'phone' => $validated['phone'] ?? null,
-            'whatsapp' => $validated['whatsapp'],
-            'opening_hours' => $validated['opening_hours'] ?? 'Lunes a Sábado: 8:00 AM - 6:00 PM',
-            'is_active' => true,
-        ]);
+            $branch = StoreBranch::create([
+                'store_id' => $store->id,
+                'name' => $validated['store_name'] . ' - Sede Principal',
+                'slug' => 'branch-' . $uniqueSlug,
+                'state' => $validated['state'],
+                'city' => $validated['city'],
+                'address' => $validated['address'],
+                'latitude' => $validated['latitude'] ?? 9.2150000,
+                'longitude' => $validated['longitude'] ?? -66.0100000,
+                'geofence_radius_meters' => 90,
+                'phone' => $validated['phone'] ?? null,
+                'whatsapp' => $validated['whatsapp'],
+                'opening_hours' => $validated['opening_hours'] ?? 'Lunes a Sábado: 8:00 AM - 6:00 PM',
+                'is_active' => true,
+            ]);
 
-        // Si el usuario es estándar, ascender automáticamente a BUSINESS_OWNER
-        if ($user->role === UserRole::STANDARD_USER) {
-            $user->role = UserRole::BUSINESS_OWNER;
-            $user->save();
-        }
+            if ($user->role === UserRole::STANDARD_USER) {
+                $user->role = UserRole::BUSINESS_OWNER;
+                $user->save();
+            }
+
+            return [$store, $branch];
+        }, 5);
 
         // Disparar alerta instantánea al Super Admin vía Telegram (tolerante a fallos)
         try {
@@ -241,37 +244,39 @@ class BusinessStoreController extends Controller
             ], 409);
         }
 
-        // Asignar propiedad al usuario autenticado
-        $store->owner_id = $user->id;
-        if (!empty($validated['whatsapp'])) {
-            $store->whatsapp_contact = $validated['whatsapp'];
-        }
-        $store->verification_status = 'PENDING_REVIEW';
-        $store->is_active = true;
-        if (!empty($validated['verification_notes'])) {
-            $store->community_notes = trim(($store->community_notes ?? '') . "\nReclamada por: {$user->email}. Notas: " . $validated['verification_notes']);
-        }
-        $store->save();
+        // Asignar propiedad al usuario autenticado dentro de una transacción ACID atómica
+        DB::transaction(function () use ($store, $user, $validated) {
+            $store->owner_id = $user->id;
+            if (!empty($validated['whatsapp'])) {
+                $store->whatsapp_contact = $validated['whatsapp'];
+            }
+            $store->verification_status = 'PENDING_REVIEW';
+            $store->is_active = true;
+            if (!empty($validated['verification_notes'])) {
+                $store->community_notes = trim(($store->community_notes ?? '') . "\nReclamada por: {$user->email}. Notas: " . $validated['verification_notes']);
+            }
+            $store->save();
 
-        // Ascender rol del usuario a BUSINESS_OWNER si es estándar
-        if ($user->role === UserRole::STANDARD_USER) {
-            $user->role = UserRole::BUSINESS_OWNER;
-            $user->save();
-        }
+            // Ascender rol del usuario a BUSINESS_OWNER si es estándar
+            if ($user->role === UserRole::STANDARD_USER) {
+                $user->role = UserRole::BUSINESS_OWNER;
+                $user->save();
+            }
 
-        // Registrar evento en auditoría de seguridad
-        \App\Models\SecurityAuditLog::logEvent(
-            eventType: 'STORE_CLAIMED',
-            description: "El usuario {$user->email} ha reclamado la titularidad de '{$store->name}'.",
-            userId: $user->id,
-            severity: 'INFO',
-            target: "affiliate_stores:{$store->id}",
-            payload: [
-                'store_id' => $store->id,
-                'store_name' => $store->name,
-                'whatsapp' => $validated['whatsapp'] ?? null,
-            ]
-        );
+            // Registrar evento en auditoría de seguridad
+            \App\Models\SecurityAuditLog::logEvent(
+                eventType: 'STORE_CLAIMED',
+                description: "El usuario {$user->email} ha reclamado la titularidad de '{$store->name}'.",
+                userId: $user->id,
+                severity: 'INFO',
+                target: "affiliate_stores:{$store->id}",
+                payload: [
+                    'store_id' => $store->id,
+                    'store_name' => $store->name,
+                    'whatsapp' => $validated['whatsapp'] ?? null,
+                ]
+            );
+        }, 5);
 
         return response()->json([
             'status' => 'success',
