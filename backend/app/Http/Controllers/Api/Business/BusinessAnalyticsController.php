@@ -75,8 +75,7 @@ class BusinessAnalyticsController extends Controller
                 'inci_name' => $ing->inci_name,
                 'common_name' => $ing->common_name ?: $ing->inci_name,
                 'evidence_level' => $ing->evidence_level,
-                'benefit' => !empty($ing->cosing_functions) && is_array($ing->cosing_functions) ? implode(', ', array_slice($ing->cosing_functions, 0, 2)) : 'Tratamiento dermoespecífico',
-                'opportunity_score' => $ing->evidence_level === 'A' ? 95 : 82,
+                'benefit' => !empty($ing->cosing_functions) && is_array($ing->cosing_functions) ? implode(', ', array_slice($ing->cosing_functions, 0, 2)) : null,
             ]);
 
         // 5. Demografía Dermatológica Local (100% Anónima y Agregada)
@@ -87,12 +86,17 @@ class BusinessAnalyticsController extends Controller
             ->pluck('count', 'skin_type')
             ->toArray();
 
+        // Sin perfiles no hay muestra: los porcentajes quedan en 0, nunca se inventan.
+        $pct = fn (string $type) => $totalProfiles > 0
+            ? round((($skinDistribution[$type] ?? 0) / $totalProfiles) * 100, 1)
+            : 0;
+
         $demographicSummary = [
-            'total_sample_size' => max(1, $totalProfiles),
-            'oily_skin_pct' => $totalProfiles > 0 ? round((($skinDistribution['OILY'] ?? 0) / $totalProfiles) * 100, 1) : 38.5,
-            'dry_skin_pct' => $totalProfiles > 0 ? round((($skinDistribution['DRY'] ?? 0) / $totalProfiles) * 100, 1) : 24.2,
-            'combination_skin_pct' => $totalProfiles > 0 ? round((($skinDistribution['COMBINATION'] ?? 0) / $totalProfiles) * 100, 1) : 22.1,
-            'sensitive_skin_pct' => $totalProfiles > 0 ? round((($skinDistribution['SENSITIVE'] ?? 0) / $totalProfiles) * 100, 1) : 15.2,
+            'total_sample_size' => $totalProfiles,
+            'oily_skin_pct' => $pct('OILY'),
+            'dry_skin_pct' => $pct('DRY'),
+            'combination_skin_pct' => $pct('COMBINATION'),
+            'sensitive_skin_pct' => $pct('SENSITIVE'),
         ];
 
         // 6. Distribución por sucursales

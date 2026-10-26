@@ -15,6 +15,7 @@ export default function StoreOverviewDemandGap({
 }: StoreOverviewDemandGapProps) {
   const demandGap = analytics?.demand_gap_opportunities || [];
   const demographics = analytics?.anonymous_demographics;
+  const sampleSize = demographics?.total_sample_size ?? 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -27,7 +28,7 @@ export default function StoreOverviewDemandGap({
                 Oportunidad Comercial B2B
               </div>
               <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                Brecha de Demanda Local (Demand Gap)
+                Ingredientes con evidencia que no ofreces
               </h2>
             </div>
           </div>
@@ -40,7 +41,6 @@ export default function StoreOverviewDemandGap({
                     <th className="pb-2">Ingrediente Activo</th>
                     <th className="pb-2">Evidencia</th>
                     <th className="pb-2">Beneficio</th>
-                    <th className="pb-2 text-right">Potencial</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -55,10 +55,7 @@ export default function StoreOverviewDemandGap({
                           Grado {item.evidence_level}
                         </span>
                       </td>
-                      <td className="py-2.5 text-slate-600 truncate max-w-xs">{item.benefit}</td>
-                      <td className="py-2.5 text-right font-bold text-[#4A6B5B]">
-                        {item.opportunity_score}%
-                      </td>
+                      <td className="py-2.5 text-slate-600 truncate max-w-xs">{item.benefit ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -66,7 +63,7 @@ export default function StoreOverviewDemandGap({
             </div>
           ) : (
             <div className="py-6 text-center text-slate-400 text-xs">
-              Excelente cobertura de catálogo. Tu tienda cubre los activos demandados en la zona.
+              Tu catálogo ya cubre los ingredientes con evidencia A/B registrados.
             </div>
           )}
         </div>
@@ -74,7 +71,7 @@ export default function StoreOverviewDemandGap({
         <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5 text-[11px]">
             <ShieldCheck className="w-3.5 h-3.5 text-[#4A6B5B]" />
-            Auditorías de usuarios de tu localidad.
+            Ingredientes con evidencia A/B ausentes de tu catálogo.
           </span>
           <button
             onClick={() => onNavigateTab('catalog')}
@@ -91,19 +88,24 @@ export default function StoreOverviewDemandGap({
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-[#4A6B5B]" />
-              Biotipos en tu Región
+              Biotipos de usuarios
             </h3>
             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-medium">
               Anónimo
             </span>
           </div>
 
+          {sampleSize === 0 ? (
+            <p className="py-6 text-center text-slate-400 text-xs">
+              Aún no hay perfiles de piel registrados.
+            </p>
+          ) : (
           <div className="space-y-2.5 mt-3">
             {[
-              { label: 'Piel Grasa / Acné', pct: demographics?.oily_skin_pct ?? 38.5 },
-              { label: 'Piel Seca', pct: demographics?.dry_skin_pct ?? 24.2 },
-              { label: 'Piel Mixta', pct: demographics?.combination_skin_pct ?? 22.1 },
-              { label: 'Piel Sensible', pct: demographics?.sensitive_skin_pct ?? 15.2 },
+              { label: 'Piel Grasa / Acné', pct: demographics?.oily_skin_pct ?? 0 },
+              { label: 'Piel Seca', pct: demographics?.dry_skin_pct ?? 0 },
+              { label: 'Piel Mixta', pct: demographics?.combination_skin_pct ?? 0 },
+              { label: 'Piel Sensible', pct: demographics?.sensitive_skin_pct ?? 0 },
             ].map((bio, i) => (
               <div key={i}>
                 <div className="flex justify-between text-[11px] font-medium text-slate-600 mb-0.5">
@@ -116,10 +118,11 @@ export default function StoreOverviewDemandGap({
               </div>
             ))}
           </div>
+          )}
         </div>
 
         <p className="mt-3 text-[10px] text-slate-400">
-          Datos agregados para optimizar órdenes con distribuidores.
+          Datos agregados de {sampleSize} perfil(es), sin información personal.
         </p>
       </div>
     </div>

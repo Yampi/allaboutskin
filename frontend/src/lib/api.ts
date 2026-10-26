@@ -1108,8 +1108,7 @@ export interface BusinessAnalyticsData {
     inci_name: string;
     common_name: string;
     evidence_level: string;
-    benefit: string;
-    opportunity_score: number;
+    benefit: string | null;
   }>;
   anonymous_demographics?: {
     total_sample_size: number;
