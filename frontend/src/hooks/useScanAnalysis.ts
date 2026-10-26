@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { auditInci, AuditReport, getCurrentUser, saveUserSkinScan, scanImageWithGeminiVision } from '@/lib/api';
+import { auditInci, AuditReport, getCurrentUser, saveUserSkinScan, scanImageWithGeminiVision, ScanAccountRequiredError } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { useScanCamera } from './useScanCamera';
 import type { ClinicalSkinEvaluationResult, SkincareProductEvaluationResult } from '@/lib/clinicalVisionEngine';
@@ -12,6 +12,7 @@ export interface ScanError {
   title: string;
   message: string;
   tips: string[];
+  needsAccount?: boolean;
 }
 
 export interface ProductResult {
@@ -24,6 +25,7 @@ const toScanError = (err: unknown, title = 'No se pudo completar el análisis'):
   title,
   message: err instanceof Error ? err.message : 'Error inesperado al analizar la imagen.',
   tips: [],
+  needsAccount: err instanceof ScanAccountRequiredError,
 });
 
 export function useScanAnalysis() {

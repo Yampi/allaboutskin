@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import UserAppShell from '@/components/navigation/UserAppShell';
 import ErrorState from '@/components/system/ErrorState';
 import ScanCapture from '@/components/escaner/ScanCapture';
@@ -25,6 +26,11 @@ export default function EscanerPage() {
         {scan.error && (
           <div className="max-w-xl space-y-2">
             <ErrorState title={scan.error.title} message={scan.error.message} />
+            {scan.error.needsAccount && (
+              <Link href="/login" className="inline-flex px-4 py-2 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold transition">
+                Crear cuenta gratis o iniciar sesión
+              </Link>
+            )}
             {scan.error.tips.length > 0 && (
               <ul className="list-disc pl-5 text-xs text-[#66615C]">{scan.error.tips.map((t) => <li key={t}>{t}</li>)}</ul>
             )}

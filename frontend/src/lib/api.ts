@@ -962,10 +962,14 @@ export async function sendCopilotMessage(params: {
 
 import type { VisionClassificationResult } from './gemini';
 
+/** El visitante agotó sus análisis gratis: hay que crear cuenta o iniciar sesión. */
+export class ScanAccountRequiredError extends Error {}
+
 export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg'): Promise<VisionClassificationResult> {
+  const token = getCurrentUser()?.token;
   const res = await fetch('/api/ai/scan-image', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ image: base64Image, mimeType }),
   });
   if (!res.ok) {
@@ -973,7 +977,9 @@ export async function scanImageWithGeminiVision(base64Image: string, mimeType: s
     try {
       const errorJson = await res.json();
       if (errorJson?.error) errorMsg = errorJson.error;
-    } catch {
+      if (errorJson?.code === 'ACCOUNT_REQUIRED') throw new ScanAccountRequiredError(errorMsg);
+    } catch (parseErr) {
+      if (parseErr instanceof ScanAccountRequiredError) throw parseErr;
       if (res.status === 413) {
         errorMsg = 'La imagen es demasiado pesada. Se requiere comprimir la foto antes de enviarla.';
       } else if (res.status === 429) {
