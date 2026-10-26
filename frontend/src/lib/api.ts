@@ -1998,113 +1998,29 @@ export async function voteReviewHelpful(reviewId: number): Promise<{ helpful_cou
 export interface UserSkinScanItem {
   id: number;
   user_id?: number | null;
-  session_token?: string;
-  image_url: string;
-  overall_score: number;
-  hydration_score: number;
-  elasticity_score: number;
-  pores_score: number;
-  spots_score: number;
-  fine_lines_score: number;
-  barrier_status: 'OPTIMAL' | 'NORMAL' | 'COMPROMISED' | string;
+  image_url?: string | null;
+  // Las métricas solo existen si el análisis las devolvió; nunca se rellenan por defecto.
+  overall_score: number | null;
+  hydration_score: number | null;
+  elasticity_score: number | null;
+  pores_score: number | null;
+  spots_score: number | null;
+  fine_lines_score: number | null;
+  barrier_status: string | null;
   scan_mode: 'face' | 'product' | string;
-  clinical_summary?: string;
-  recommendations?: string;
+  clinical_summary?: string | null;
+  recommendations?: string | null;
   created_at: string;
 }
 
-export interface UserSkinScansResponse {
-  total_scans: number;
-  progression_delta: {
-    score_change: number;
-    hydration_change: number;
-    elasticity_change: number;
-    pores_reduction: number;
-    spots_reduction: number;
-    days_tracked: number;
-  } | null;
-  latest_scan: UserSkinScanItem | null;
-  scans: UserSkinScanItem[];
+// Requiere sesión: el historial contiene datos de salud. Ante un error lanza ApiError,
+// sin recurrir a localStorage ni a datos de ejemplo.
+export async function saveUserSkinScan(
+  payload: Partial<Omit<UserSkinScanItem, 'id' | 'created_at' | 'user_id'>>
+): Promise<{ message: string; scan: UserSkinScanItem }> {
+  return apiFetch(`${API_BASE_URL}/user/skin-scans`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
 }
-
-export async function fetchUserSkinScans(sessionToken: string = 'demo-session-user'): Promise<UserSkinScansResponse> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/user/skin-scans?session_token=${encodeURIComponent(sessionToken)}`, {
-      headers: getAuthHeaders(),
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error('Error al obtener capturas de evolución');
-    return await res.json();
-  } catch (err) {
-    // Fallback con almacenamiento local
-    const localKey = 'allaboutskin_skin_scans_history';
-    const localSaved = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
-    const scans: UserSkinScanItem[] = localSaved ? JSON.parse(localSaved) : [];
-
-    const first = scans[scans.length - 1];
-    const latest = scans[0];
-
-    const delta = first && latest && scans.length > 1 ? {
-      score_change: latest.overall_score - first.overall_score,
-      hydration_change: latest.hydration_score - first.hydration_score,
-      elasticity_change: latest.elasticity_score - first.elasticity_score,
-      pores_reduction: first.pores_score - latest.pores_score,
-      spots_reduction: first.spots_score - latest.spots_score,
-      days_tracked: Math.round((new Date(latest.created_at).getTime() - new Date(first.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-    } : null;
-
-    return {
-      total_scans: scans.length,
-      progression_delta: delta,
-      latest_scan: latest || null,
-      scans: scans,
-    };
-  }
-}
-
-export async function saveUserSkinScan(payload: Partial<UserSkinScanItem>): Promise<{ message: string; scan: UserSkinScanItem }> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/user/skin-scans`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al guardar captura');
-    }
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    // Sincronizar en localStorage
-    const localKey = 'allaboutskin_skin_scans_history';
-    const localSaved = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
-    const scans: UserSkinScanItem[] = localSaved ? JSON.parse(localSaved) : [];
-
-    const newScan: UserSkinScanItem = {
-      id: Date.now(),
-      image_url: payload.image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
-      overall_score: payload.overall_score || 78,
-      hydration_score: payload.hydration_score || 82,
-      elasticity_score: payload.elasticity_score || 76,
-      pores_score: payload.pores_score || 68,
-      spots_score: payload.spots_score || 62,
-      fine_lines_score: payload.fine_lines_score || 58,
-      barrier_status: payload.barrier_status || 'OPTIMAL',
-      scan_mode: payload.scan_mode || 'face',
-      clinical_summary: payload.clinical_summary || 'Captura de piel registrada.',
-      recommendations: payload.recommendations || 'Mantener protocolo de Skin Cycling.',
-      created_at: new Date().toISOString(),
-    };
-
-    scans.unshift(newScan);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(localKey, JSON.stringify(scans));
-    }
-    return { message: '¡Captura guardada en tu historial local!', scan: newScan };
-  }
-}
-
-
-
-

@@ -61,10 +61,10 @@ export default function SkinStatusCard({ profile, scans, onRetry }: SkinStatusCa
         <EmptyNote text="Aún no has completado tu perfil dermatológico." cta={{ href: '/mi-piel', label: 'Completar mi perfil' }} />
       ) : (
         <div className="flex items-center gap-4">
-          {latest ? (
+          {latest?.overall_score != null ? (
             <ScoreGauge score={latest.overall_score} />
           ) : (
-            <EmptyNote text="Sin escaneos todavía." cta={{ href: '/escaner', label: 'Hacer mi primer escaneo' }} />
+            <EmptyNote text={latest ? "Tu último escaneo no incluye una puntuación." : "Sin escaneos todavía."} cta={{ href: '/escaner', label: 'Hacer mi primer escaneo' }} />
           )}
           <div className="space-y-2 text-xs">
             <Attribute label="Biotipo cutáneo" value={SKIN_TYPE_LABELS[p.skin_type] ?? p.skin_type} />

@@ -329,36 +329,6 @@ function extractJsonFromText(raw: string): string {
 }
 
 /**
- * Fallback generator for referential evaluation when testing offline or without an active API key.
- */
-export function getFallbackFaceAnalysis(): VisionClassificationResult {
-  return governAndClassifyBiomarkers({
-    detectedAnatomy: 'HUMAN_FACE',
-    confidence: 0.90,
-    landmarks: {
-      bilateralEyesVisible: true,
-      nasalDorsumVisible: true,
-      oralCommissureVisible: true,
-      malarCheeksVisible: true,
-      foreheadVisible: true,
-    },
-    opticalBiomarkers: {
-      tZoneSebumReflectance: 'MODERATE',
-      cheeksSebumReflectance: 'LOW',
-      follicularOstiaPores: 'VISIBLE_T_ZONE',
-      erythemaMalarIndex: 'ABSENT',
-      stratumCorneumDesquamation: 'NONE',
-      fitzpatrickPhototypeEstimate: 3,
-      darkCirclesType: 'VASCULAR',
-      darkCirclesSeverity: 'MILD',
-      hyperpigmentationLevel: 'NONE_OR_UNIFORM',
-      textureAndLinesLevel: 'SMOOTH',
-      activeLesionRisk: 'NONE',
-    },
-  });
-}
-
-/**
  * Classifies an uploaded photo and extracts quantitative dermatological biomarkers,
  * then applies the Allabout.skin Clinical Governance Engine (Baumann BSTI + Fitzpatrick).
  */
@@ -481,8 +451,7 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
     .replace(/\s+/g, '');
 
   if (!isValidGeminiApiKey(apiKey)) {
-    console.warn('GEMINI_API_KEY no configurada o es un placeholder. Activando diagnóstico referencial.');
-    return getFallbackFaceAnalysis();
+    throw new Error('El servicio de análisis por IA no está configurado en este entorno.');
   }
 
   try {

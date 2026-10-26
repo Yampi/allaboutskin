@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Sliders, ArrowRight } from 'lucide-react';
 import UserAppShell from '@/components/navigation/UserAppShell';
 import ErrorState from '@/components/system/ErrorState';
-import SkinEvolutionProgressSection from '@/components/progress/SkinEvolutionProgressSection';
 import ProfileSummary from '@/components/mipiel/ProfileSummary';
 import ScanHistory from '@/components/mipiel/ScanHistory';
 import EditProfileModal from '@/components/mipiel/EditProfileModal';
@@ -56,7 +55,6 @@ export default function MiPielPage() {
               </p>
             )}
             <ScanHistory scans={data.scans} />
-            <SkinEvolutionProgressSection />
           </>
         )}
       </div>

@@ -24,7 +24,7 @@ export default function ScanHistory({ scans }: { scans: SkinScansSummary }) {
           {scans.scans.map((s) => (
             <li key={s.id} className="py-2 flex items-center justify-between text-xs">
               <span className="text-[#2D2825] font-semibold">{formatDate(s.created_at)} · {s.scan_mode === 'product' ? 'Escaneo de producto' : 'Escaneo facial'}</span>
-              <span className="font-extrabold text-[#2E7D5B]">{s.overall_score}/100</span>
+              {s.overall_score != null && <span className="font-extrabold text-[#2E7D5B]">{s.overall_score}/100</span>}
             </li>
           ))}
         </ul>
