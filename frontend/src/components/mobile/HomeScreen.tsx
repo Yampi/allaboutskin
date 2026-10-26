@@ -472,9 +472,11 @@ export default function HomeScreen({
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       />
-                      <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs text-[#4A6B5B] text-[9.5px] font-bold">
-                        {product.inciScore}% INCI
-                      </span>
+                      {product.inciScore !== undefined && (
+                        <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs text-[#4A6B5B] text-[9.5px] font-bold">
+                          {product.inciScore}% INCI
+                        </span>
+                      )}
                     </div>
 
                     <span className="text-[10px] font-bold text-[#7E756F] uppercase tracking-wider block">

@@ -66,7 +66,7 @@ export interface ProductShelfItem {
   category: string;
   volume: string;
   paoMonths: number;
-  inciScore: number;
+  inciScore?: number;
   primaryActives: string[];
   assignedPhase: number;
   assignedPhaseName: string;

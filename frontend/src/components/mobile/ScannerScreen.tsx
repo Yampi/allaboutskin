@@ -34,7 +34,6 @@ import {
   Award,
 } from 'lucide-react';
 import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfItem, UserProfile } from './types';
-import { sampleScanPresets } from './skincareData';
 import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/ocrService';
 import Link from 'next/link';
 import { scanImageWithGeminiVision, ScanAccountRequiredError } from '@/lib/api';
@@ -43,6 +42,15 @@ import { FaceSkinAnalysis } from '@/lib/gemini';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
 import ClinicalFaceMaskVisor from '@/components/ar/ClinicalFaceMaskVisor';
 
+type RejectionKind = 'unclassified' | 'account' | 'no-inci' | 'audit-failed';
+
+const REJECTION_COPY: Record<RejectionKind, { title: string; subtitle: string }> = {
+  unclassified: { title: 'No pudimos clasificar la imagen', subtitle: 'Imagen no reconocida como cosmético ni rostro' },
+  account: { title: 'Usaste tus análisis gratis', subtitle: 'Crea una cuenta gratuita para seguir analizando' },
+  'no-inci': { title: 'No pudimos leer los ingredientes', subtitle: 'Detectamos un producto, pero su lista INCI no es legible' },
+  'audit-failed': { title: 'No se pudo auditar la fórmula', subtitle: 'No hay informe que mostrar para este producto' },
+};
+
 export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
   id: string;
   name: string;
@@ -50,11 +58,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
   category: string;
   night: number;
   nightName: string;
-  matchScore: number;
   activeTag: string;
   image: string;
-  price: string;
-  affiliateUrl: string;
 }>> = {
   COMBINATION: [
     {
@@ -64,11 +69,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Limpieza Fisiológica',
       night: 1,
       nightName: 'Noche 1 - 4 (Limpieza)',
-      matchScore: 98,
       activeTag: 'Niacinamida + Ceramidas',
       image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
-      price: '$16.50',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-comb-2',
@@ -77,11 +79,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Sérum Seborregulador',
       night: 2,
       nightName: 'Noche 2: Tratamiento',
-      matchScore: 99,
       activeTag: 'Niacinamida 10% + Zinc PCA',
       image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
-      price: '$8.20',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-comb-3',
@@ -90,11 +89,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Hidratante Barrera',
       night: 3,
       nightName: 'Noches 3 & 4: Recuperación',
-      matchScore: 97,
       activeTag: 'Neurosensina + Esfingobioma',
       image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
-      price: '$24.90',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
   ],
   OILY: [
@@ -105,11 +101,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Limpieza Profunda Purificante',
       night: 1,
       nightName: 'Noche 1 - 4 (Limpieza)',
-      matchScore: 99,
       activeTag: 'Zinc PCA + LHA Purificante',
       image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
-      price: '$18.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-oily-2',
@@ -118,11 +111,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Exfoliante Químico BHA',
       night: 1,
       nightName: 'Noche 1: Exfoliación',
-      matchScore: 99,
       activeTag: 'Ácido Salicílico 2% + Té Verde',
       image: 'https://images.unsplash.com/photo-1570554886111-e80fcca6a029?auto=format&fit=crop&w=400&q=80',
-      price: '$36.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-oily-3',
@@ -131,11 +121,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Gel de Hidratación Ligero',
       night: 3,
       nightName: 'Noches 3 & 4: Recuperación',
-      matchScore: 96,
       activeTag: 'Ácido Hialurónico Purificado',
       image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
-      price: '$15.90',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
   ],
   DRY: [
@@ -146,11 +133,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Limpieza sin Espuma',
       night: 1,
       nightName: 'Noche 1 - 4 (Limpieza)',
-      matchScore: 99,
       activeTag: 'Tecnología MVE + 3 Ceramidas',
       image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
-      price: '$14.50',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-dry-2',
@@ -159,11 +143,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Sérum Reparador Hidratante',
       night: 3,
       nightName: 'Noches 3 & 4: Recuperación',
-      matchScore: 98,
       activeTag: 'Ácido Hialurónico + Pantenol 5%',
       image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80',
-      price: '$42.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-dry-3',
@@ -172,11 +153,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Bálsamo Calmante Multirreparador',
       night: 4,
       nightName: 'Noche 4: Sellado de Barrera',
-      matchScore: 99,
       activeTag: 'Madecassoside + Tribioma',
       image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
-      price: '$17.50',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
   ],
   SENSITIVE: [
@@ -187,11 +165,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Limpieza Micelar Suave',
       night: 1,
       nightName: 'Noche 1 - 4 (Limpieza)',
-      matchScore: 99,
       activeTag: 'Patente D.A.F. + Coco-Glucoside',
       image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
-      price: '$15.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-sens-2',
@@ -200,11 +175,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Crema Restauradora Alta Tolerancia',
       night: 3,
       nightName: 'Noches 3 & 4: Recuperación',
-      matchScore: 98,
       activeTag: 'D-Sensinose™ Postbiótico',
       image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
-      price: '$23.50',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-sens-3',
@@ -213,11 +185,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Concentrado Fortalecedor Diario',
       night: 2,
       nightName: 'Noche 2: Preparación',
-      matchScore: 97,
       activeTag: '89% Agua Volcánica + Hialurónico',
       image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
-      price: '$26.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
   ],
   NORMAL: [
@@ -228,11 +197,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Limpieza Equilibrante',
       night: 1,
       nightName: 'Noche 1 - 4 (Limpieza)',
-      matchScore: 98,
       activeTag: 'Ceramidas + Ácido Hialurónico',
       image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80',
-      price: '$15.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-norm-2',
@@ -241,11 +207,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Sérum Renovador Celular',
       night: 2,
       nightName: 'Noche 2: Retinoides',
-      matchScore: 97,
       activeTag: 'Retinol Puro 0.3% + Bisabolol',
       image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=400&q=80',
-      price: '$78.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
     {
       id: 'curated-norm-3',
@@ -254,11 +217,8 @@ export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
       category: 'Hidratación Barrera Lamelar',
       night: 3,
       nightName: 'Noches 3 & 4: Recuperación',
-      matchScore: 98,
       activeTag: 'Escualano Vegetal + Glicoproteína Glacial',
       image: 'https://images.unsplash.com/photo-1608248597359-25f0a82b3d7a?auto=format&fit=crop&w=400&q=80',
-      price: '$38.00',
-      affiliateUrl: 'https://amazon.es?tag=allaboutskin-21',
     },
   ],
 };
@@ -276,8 +236,8 @@ export default function ScannerScreen({
   onUpdateProfile,
   userProfile,
 }: ScannerScreenProps) {
-  // Input modes: 'camera' | 'upload' | 'text' | 'preset' | 'ar-mask'
-  const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'text' | 'preset' | 'ar-mask'>('camera');
+  // Input modes: 'camera' | 'upload' | 'text' | 'ar-mask'
+  const [scanMode, setScanMode] = useState<'camera' | 'upload' | 'text' | 'ar-mask'>('camera');
 
   // Camera State
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -294,8 +254,8 @@ export default function ScannerScreen({
   // Reintentos ante saturación de Gemini: número de intento actual y cancelación
   const [visionAttempt, setVisionAttempt] = useState(1);
   const visionAbortRef = useRef<AbortController | null>(null);
-  // Se agotaron los análisis gratis: hay que invitar a crear cuenta o iniciar sesión
-  const [accountRequired, setAccountRequired] = useState(false);
+  // Motivo del aviso cuando no hay resultado: cada uno tiene su título y su salida
+  const [rejectionKind, setRejectionKind] = useState<RejectionKind>('unclassified');
   const [manualInciText, setManualInciText] = useState('');
   const [manualProductName, setManualProductName] = useState('');
   const [manualBrandName, setManualBrandName] = useState('');
@@ -316,7 +276,6 @@ export default function ScannerScreen({
   const [auditResult, setAuditResult] = useState<InciScanResult | null>(null);
   const [selectedInciItem, setSelectedInciItem] = useState<InciIngredientResult | null>(null);
   const [addedSuccess, setAddedSuccess] = useState(false);
-  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
 
   // Start real device camera
   const startCamera = async (mode = facingMode) => {
@@ -504,7 +463,7 @@ export default function ScannerScreen({
     setRejectionMessage(null);
     setScanTypeResult(null);
     setAdoptedProfileSuccess(false);
-    setAccountRequired(false);
+    setRejectionKind('unclassified');
 
     let base64 = dataUrlString || '';
     let optimizedBlob: Blob = imageSource;
@@ -586,7 +545,17 @@ export default function ScannerScreen({
           }
         }
 
-        await runApiInciAudit(detectedInci || 'Aqua, Glycerin, Niacinamide, Sodium Hyaluronate', detectedName, detectedBrand);
+        if (!detectedInci.trim()) {
+          setRejectionKind('no-inci');
+          setRejectionMessage(
+            `Detectamos ${detectedName}, pero no pudimos leer su lista de ingredientes. Fotografía la etiqueta trasera, donde dice «Ingredients / INCI», o pega los ingredientes a mano.`
+          );
+          setScanTypeResult('INVALID');
+          setOcrProgress(100);
+          setIsProcessing(false);
+          return;
+        }
+        await runApiInciAudit(detectedInci, detectedName, detectedBrand);
         setOcrProgress(100);
         setIsProcessing(false);
         return;
@@ -613,7 +582,7 @@ export default function ScannerScreen({
       }
       // Sin análisis gratis disponibles: no tiene sentido intentar otra vía, se muestra el aviso tal cual
       if (err instanceof ScanAccountRequiredError) {
-        setAccountRequired(true);
+        setRejectionKind('account');
         setRejectionMessage(err.message);
         setScanTypeResult('INVALID');
         setIsProcessing(false);
@@ -662,6 +631,14 @@ export default function ScannerScreen({
         setOcrProgress(100);
       }
     }
+  };
+
+  // La auditoría falló: se muestra el motivo real, sin informe de muestra
+  const showAuditFailure = (message: string) => {
+    setAuditResult(null);
+    setRejectionKind('audit-failed');
+    setRejectionMessage(message);
+    setScanTypeResult('INVALID');
   };
 
   // Execute actual API Audit Call to /api/audit/inci
@@ -723,7 +700,7 @@ export default function ScannerScreen({
             safetyScore: Math.max(70, 100 - (item.irritation_rating || 0) * 10 - (item.comedogenic_rating || 0) * 5),
             comedogenicRating: item.comedogenic_rating || 0,
             cosingRef: item.cas_number || 'UE-CosIng',
-            pubmedStudiesCount: item.matched_studies_count || 120,
+            pubmedStudiesCount: item.matched_studies_count ?? 0,
             description: item.clinical_rationale || 'Ingrediente verificado conforme a la regulación cosmética internacional.',
           };
         });
@@ -747,16 +724,20 @@ export default function ScannerScreen({
           summary:
             report.ai_clinical_copilot?.plain_language_summary ||
             `Fórmula de ${breakdown.length} ingredientes analizada con rigor clínico. Nivel de evidencia científica indexado en PubMed y CosIng.`,
-          ingredients: mappedIngredients.length > 0 ? mappedIngredients : sampleScanPresets[0].ingredients,
+          ingredients: mappedIngredients,
         };
 
-        setAuditResult(finalResult);
+        if (mappedIngredients.length === 0) {
+          showAuditFailure('No reconocimos ningún ingrediente de la lista. Revisa que el texto sea la lista INCI de la etiqueta.');
+        } else {
+          setAuditResult(finalResult);
+        }
       } else {
-        setAuditResult(sampleScanPresets[0]);
+        showAuditFailure(json?.message || json?.error || 'El servicio de auditoría no devolvió un informe.');
       }
     } catch (error) {
       console.error('Audit API error:', error);
-      setAuditResult(sampleScanPresets[0]);
+      showAuditFailure('No se pudo conectar con el servicio de auditoría. Inténtalo de nuevo en unos minutos.');
     } finally {
       setIsProcessing(false);
       setOcrProgress(100);
@@ -1006,19 +987,20 @@ export default function ScannerScreen({
                   {(() => {
                     const isHighShine = faceSkinResult.zoneTAnalysis?.shineLevel === 'HIGH';
                     const isModShine = faceSkinResult.zoneTAnalysis?.shineLevel === 'MODERATE';
-                    const sebumPercent = isHighShine ? 85 : isModShine ? 68 : 32;
-                    const sebumLabel = isHighShine ? '85% (Alto)' : isModShine ? '68% (Medio-Alto)' : '32% (Controlado)';
-                    
-                    const poresPercent = faceSkinResult.zoneTAnalysis?.poresVisible ? 55 : 20;
+                    // La IA devuelve categorías, no mediciones: las barras muestran el nivel (bajo, medio, alto), no un porcentaje
+                    const sebumPercent = isHighShine ? 100 : isModShine ? 66 : 33;
+                    const sebumLabel = isHighShine ? 'Alto' : isModShine ? 'Medio' : 'Bajo';
+
+                    const poresPercent = faceSkinResult.zoneTAnalysis?.poresVisible ? 66 : 33;
                     const poresLabel = faceSkinResult.zoneTAnalysis?.poresVisible ? 'Visibles' : 'Imperceptibles';
-                    
+
                     const isBalancedHydration = faceSkinResult.cheeksAnalysis?.hydrationState === 'BALANCED';
                     const isDryHydration = faceSkinResult.cheeksAnalysis?.hydrationState === 'DRY';
-                    const hydrationPercent = isBalancedHydration ? 84 : isDryHydration ? 35 : 70;
-                    const hydrationLabel = isBalancedHydration ? '84% (Óptima)' : isDryHydration ? '35% (Baja / Tirante)' : '70% (Equilibrada)';
-                    
+                    const hydrationPercent = isBalancedHydration ? 100 : isDryHydration ? 33 : 66;
+                    const hydrationLabel = isBalancedHydration ? 'Equilibrada' : isDryHydration ? 'Baja / Tirante' : 'Normal';
+
                     const hasRedness = faceSkinResult.cheeksAnalysis?.rednessPresent;
-                    const rednessPercent = hasRedness ? 45 : 15;
+                    const rednessPercent = hasRedness ? 66 : 0;
                     const rednessLabel = hasRedness ? 'Leve detectada' : 'Sin rojez visible';
 
                     return (
@@ -1093,7 +1075,7 @@ export default function ScannerScreen({
                           {/* Métrica 1: Hidratación */}
                           <div className="space-y-1.5">
                             <div className="flex justify-between text-xs font-semibold text-slate-700">
-                              <span>Hidratación de Barrera</span>
+                              <span>Hidratación aparente</span>
                               <span className="text-emerald-800 font-bold">{hydrationLabel}</span>
                             </div>
                             <div className="w-full h-2.5 rounded-full bg-slate-200/70 overflow-hidden p-0.5">
@@ -1336,15 +1318,12 @@ export default function ScannerScreen({
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-bold text-sm sm:text-base text-slate-900">
-                              Tu Rutina Sugerida para Skin Cycling
+                              Productos comunes para tu tipo de piel
                             </h4>
                             <p className="text-xs text-slate-500 font-medium">
-                              3 fórmulas seleccionadas para tu biotipo
+                              Ejemplos que se usan a menudo en rutinas de Skin Cycling; no es una prescripción
                             </p>
                           </div>
-                          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-900 border border-emerald-500/20 text-xs font-bold">
-                            ✓ 100% Compatibles
-                          </span>
                         </div>
 
                         {/* Product Cards Grid */}
@@ -1384,12 +1363,11 @@ export default function ScannerScreen({
                                       category: item.category,
                                       volume: '50 ml',
                                       paoMonths: 12,
-                                      inciScore: item.matchScore,
                                       primaryActives: [item.activeTag],
                                       assignedPhase: item.night,
                                       assignedPhaseName: item.nightName,
                                       image: item.image,
-                                      textureNote: 'Prescripción oficial de Allabout.skin',
+                                      textureNote: 'Sugerido para tu tipo de piel',
                                     });
                                   }}
                                   className="w-full py-1.5 rounded-full text-xs font-bold text-[#1E3A2B] bg-emerald-500/10 hover:bg-emerald-500/20 transition cursor-pointer text-center block"
@@ -1397,15 +1375,6 @@ export default function ScannerScreen({
                                   Añadir al Neceser
                                 </button>
 
-                                <a
-                                  href={item.affiliateUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="w-full py-1 rounded-full text-[11px] font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1 cursor-pointer"
-                                >
-                                  <span>Ver en tienda ({item.price})</span>
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
                               </div>
                             </div>
                           ))}
@@ -1688,10 +1657,10 @@ export default function ScannerScreen({
                 </div>
                 <div>
                   <h3 className="font-serif text-[20px] font-semibold text-[#2D2825]">
-                    {accountRequired ? 'Usaste tus análisis gratis' : 'No pudimos clasificar la imagen'}
+                    {REJECTION_COPY[rejectionKind].title}
                   </h3>
                   <span className="text-[12px] text-[#943C36] font-medium">
-                    {accountRequired ? 'Crea una cuenta gratuita para seguir analizando' : 'Imagen no reconocida como cosmético ni rostro'}
+                    {REJECTION_COPY[rejectionKind].subtitle}
                   </span>
                 </div>
               </div>
@@ -1710,7 +1679,7 @@ export default function ScannerScreen({
                 {rejectionMessage || 'No detectamos un producto de skincare ni el rostro de una persona en la foto.'}
               </div>
 
-              {accountRequired && (
+              {rejectionKind === 'account' && (
                 <Link
                   href="/login"
                   className="w-full py-3.5 px-4 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white font-semibold text-[13px] shadow-xs transition flex items-center justify-center gap-2"
@@ -1720,7 +1689,7 @@ export default function ScannerScreen({
               )}
 
               {/* Friendly Tips Box */}
-              {!accountRequired && (
+              {rejectionKind === 'unclassified' && (
               <div className="p-4 rounded-[18px] bg-[#F2ECE4] border border-[#E2D9CD] space-y-2.5 text-[12.5px] text-[#2D2825]">
                 <span className="font-bold text-[#4A6B5B] uppercase text-[10.5px] tracking-wider block">
                   💡 Consejos para una captura exitosa:
@@ -1740,6 +1709,19 @@ export default function ScannerScreen({
                   </div>
                 </div>
               </div>
+              )}
+
+              {(rejectionKind === 'no-inci' || rejectionKind === 'audit-failed') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleResetScan();
+                    setScanMode('text');
+                  }}
+                  className="w-full py-3.5 px-4 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white font-semibold text-[13px] shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  Pegar los ingredientes a mano
+                </button>
               )}
 
               {/* Action Buttons */}
@@ -1789,7 +1771,7 @@ export default function ScannerScreen({
 
           <div className={`${scanMode === 'ar-mask' ? 'w-full max-w-7xl' : 'max-w-2xl'} mx-auto space-y-3 transition-all duration-300`}>
             {/* Mode Selector Tabs (Cámara Real / Mascarilla AR / Subir Foto / Escribir INCI / Muestras) */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 rounded-2xl sm:rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-2xl sm:rounded-full bg-[#F2ECE4] border border-[#E2D9CD]">
               <button
                 onClick={() => setScanMode('camera')}
                 className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -1838,21 +1820,6 @@ export default function ScannerScreen({
                 <span>Pegar INCI</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setScanMode('preset');
-                  setScanTypeResult('PRODUCT');
-                  setAuditResult(sampleScanPresets[selectedPresetIndex]);
-                }}
-                className={`py-2.5 rounded-full text-[12px] font-medium transition cursor-pointer flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1 ${
-                  scanMode === 'preset'
-                    ? 'bg-white text-[#4A6B5B] shadow-xs font-semibold'
-                    : 'text-[#7E756F] hover:text-[#2D2825]'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                <span>Muestras</span>
-              </button>
             </div>
 
             {/* MODE 1: REAL CAMERA FEED VIEWPORT */}
@@ -2031,42 +1998,6 @@ export default function ScannerScreen({
               </div>
             )}
 
-            {/* MODE 4: QUICK PRESETS */}
-            {scanMode === 'preset' && (
-              <div className="space-y-3">
-                <span className="text-[11px] font-bold uppercase text-[#7E756F] tracking-wider block">
-                  Selecciona una Fórmula Predefinida de Ejemplo:
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {sampleScanPresets.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedPresetIndex(idx);
-                        setScanTypeResult('PRODUCT');
-                        setAuditResult(preset);
-                      }}
-                      className={`p-4 rounded-[20px] text-left transition cursor-pointer border ${
-                        selectedPresetIndex === idx
-                          ? 'bg-[#EBF1EE] border-[#8FA89B] shadow-xs'
-                          : 'bg-white border-[#E8E1D7] hover:border-[#8FA89B]'
-                      }`}
-                    >
-                      <span className="text-[10px] font-bold uppercase text-[#7E756F] block">
-                        {preset.brand}
-                      </span>
-                      <h4 className="font-serif text-[16px] font-semibold text-[#2D2825] mt-0.5">
-                        {preset.productName}
-                      </h4>
-                      <span className="text-[11.5px] text-[#4A6B5B] font-medium block mt-1.5">
-                        Compatibilidad: {preset.compatibilityScore}% • {preset.ingredients.length} activos
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Informational Guidance Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div className="bg-white p-4 rounded-[20px] border border-[#E8E1D7] space-y-1">
@@ -2130,7 +2061,7 @@ export default function ScannerScreen({
               <div className="bg-[#F2ECE4] p-3 rounded-[14px]">
                 <span className="text-[#7E756F] block text-[11px]">Citas PubMed</span>
                 <span className="font-bold text-[#4A6B5B] text-[15px]">
-                  {selectedInciItem.pubmedStudiesCount}+ papers
+                  {selectedInciItem.pubmedStudiesCount > 0 ? `${selectedInciItem.pubmedStudiesCount} estudios` : 'Sin estudios enlazados'}
                 </span>
               </div>
             </div>
