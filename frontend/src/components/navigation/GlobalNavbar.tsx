@@ -165,7 +165,7 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-sm border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <div className="px-3 py-2 border-b border-slate-100">
                         <p className="text-xs font-bold text-[#2D2825] truncate">{userName}</p>
-                        <p className="text-[10px] text-[#7E756F] truncate">{currentUser.email || 'usuario@allabout.skin'}</p>
+                        {currentUser.email && <p className="text-[10px] text-[#7E756F] truncate">{currentUser.email}</p>}
                       </div>
 
                       <div className="py-1 space-y-0.5">

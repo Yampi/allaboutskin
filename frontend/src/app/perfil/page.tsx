@@ -57,7 +57,7 @@ export default function PerfilUsuarioPage() {
     }
   };
 
-  const userName = currentUser?.name || 'María González';
+  const userName = currentUser?.name || 'Tu cuenta';
   const userEmail = currentUser?.email || 'maria.gonzalez@allabout.skin';
   const userRole = currentUser?.role === 'super_admin' ? 'Administrador'
     : currentUser?.role === 'business_owner' ? 'Comercio Afiliado'

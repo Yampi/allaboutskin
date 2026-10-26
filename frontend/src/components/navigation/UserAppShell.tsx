@@ -80,7 +80,7 @@ export default function UserAppShell({
     : 'inicio'
   );
 
-  const userName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'María González');
+  const userName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Tu cuenta');
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
@@ -319,7 +319,7 @@ export default function UserAppShell({
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E1D7] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="px-3 py-2 border-b border-slate-100">
                       <p className="text-xs font-bold text-slate-800 truncate">{userName}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{currentUser?.email || 'usuario@allabout.skin'}</p>
+                      {currentUser?.email && <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>}
                     </div>
 
                     <div className="py-1 space-y-0.5">

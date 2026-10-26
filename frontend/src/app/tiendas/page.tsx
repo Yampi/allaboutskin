@@ -163,7 +163,7 @@ export default function TiendasDirectorioPage() {
     }
   };
 
-  const userName = currentUser?.name || 'María González';
+  const userName = currentUser?.name || 'Tu cuenta';
 
   // Productos del protocolo en anaquel (Mockup Vista 3)
   const routineShelfProducts = [
