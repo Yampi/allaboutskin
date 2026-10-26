@@ -3,6 +3,7 @@
 namespace App\Domain\Audit\Services;
 
 use App\Domain\Cosmetics\Services\InciParserService;
+use App\Domain\Evidence\Services\EvidenceGradeCalculator;
 use App\Domain\Evidence\Services\PubMedApiService;
 use App\Models\Ingredient;
 use App\Models\IngredientConflict;
@@ -14,7 +15,8 @@ class FormulaAuditEngine
     public function __construct(
         protected InciParserService $inciParser,
         protected PubMedApiService $pubMedApi,
-        protected AiSkincareAdvisorService $aiAdvisor
+        protected AiSkincareAdvisorService $aiAdvisor,
+        protected EvidenceGradeCalculator $gradeCalculator
     ) {}
 
     /**
@@ -44,6 +46,7 @@ class FormulaAuditEngine
             productName: $productName,
             brandName: $brandName,
             unmatchedTokens: $parseResult['unmatched_tokens'],
+            unmatchedSuggestions: $parseResult['unmatched_suggestions'],
             rawInciText: $rawInciText,
             price: $price,
             currency: $currency
@@ -101,7 +104,8 @@ class FormulaAuditEngine
         ?Product $product = null,
         ?string $rawInciText = null,
         ?float $price = null,
-        string $currency = 'USD'
+        string $currency = 'USD',
+        array $unmatchedSuggestions = []
     ): array {
         $activeIngredients = $ingredients->filter(fn (Ingredient $ing) => $ing->is_active);
 
@@ -143,6 +147,7 @@ class FormulaAuditEngine
                 'active_ingredients_count' => $activeIngredients->count(),
                 'unmatched_tokens_count' => count($unmatchedTokens),
                 'unmatched_tokens' => $unmatchedTokens,
+                'unmatched_suggestions' => $unmatchedSuggestions,
                 'audited_at' => now()->toIso8601String(),
             ],
             'ai_clinical_copilot' => $aiInsight,
@@ -205,12 +210,19 @@ class FormulaAuditEngine
     protected function compileEvidenceAndStudies(Collection $actives): array
     {
         $allStudies = collect();
-        $totalIndexedPmids = 0;
         $grades = [];
+        $perIngredient = [];
 
         foreach ($actives as $active) {
             // Retrieve cached or online synced studies
             $studies = $this->pubMedApi->searchAndSyncStudies($active, 4);
+
+            $perIngredient[] = [
+                'inci_name' => $active->inci_name,
+                'common_name' => $active->common_name,
+                'studies_count' => count($studies),
+                'evidence_grade' => $this->gradeCalculator->bestGrade(array_map(fn ($s) => $s->evidence_grade, $studies)),
+            ];
 
             foreach ($studies as $study) {
                 $allStudies->push([
@@ -225,17 +237,11 @@ class FormulaAuditEngine
                 ]);
 
                 $grades[] = $study->evidence_grade;
-                $totalIndexedPmids++;
             }
         }
 
-        // Compute overall evidence grade
-        $overallGrade = 'B';
-        if (in_array('A', $grades)) {
-            $overallGrade = 'A';
-        } elseif (empty($grades)) {
-            $overallGrade = $actives->isNotEmpty() ? 'C' : 'D';
-        }
+        // El grado global es el mejor de los estudios reales; sin estudios no hay grado.
+        $overallGrade = $this->gradeCalculator->bestGrade($grades);
 
         return [
             'overall_evidence_grade' => $overallGrade,
@@ -243,10 +249,13 @@ class FormulaAuditEngine
                 'A' => 'Evidencia Clínica Muy Alta (Revisiones Sistemáticas / Ensayos RCT)',
                 'B' => 'Evidencia Clínica Moderada (Ensayos Clínicos Controlados en Humanos)',
                 'C' => 'Evidencia Preliminar (Estudios In Vivo / Observacionales)',
-                default => 'Evidencia Teórica / Mecanística',
+                'D' => 'Evidencia Teórica / Mecanística',
+                default => $actives->isEmpty()
+                    ? 'No se identificaron ingredientes activos en la base'
+                    : 'Sin estudios encontrados para los activos identificados',
             },
-            'total_referenced_studies' => $allStudies->unique('pmid')->count(),
-            'studies' => $allStudies->unique('pmid')->values()->all(),
+            'by_ingredient' => $perIngredient,
+            'total_referenced_studies' => $allStudies->unique('pmid')->count(),            'studies' => $allStudies->unique('pmid')->values()->all(),
         ];
     }
 

@@ -6,6 +6,9 @@ use App\Models\Ingredient;
 use App\Models\IngredientAlias;
 use Illuminate\Support\Collection;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
 class InciParserService
 {
     /**
@@ -15,47 +18,176 @@ class InciParserService
      * @return array{
      *     raw_tokens: array<string>,
      *     matched_ingredients: Collection<int, array{ingredient: Ingredient, raw_token: string, confidence: float, position: int}>,
-     *     unmatched_tokens: array<string>
+     *     unmatched_tokens: array<string>,
+     *     unmatched_suggestions: array<int, array{raw_token: string, suggested_inci_name: string, confidence: float}>
      * }
      */
     public function parseAndMatch(string $rawInci): array
     {
         $tokens = $this->tokenize($rawInci);
-        $matched = collect();
-        $unmatched = [];
+        if (empty($tokens)) {
+            return [
+                'raw_tokens' => [],
+                'matched_ingredients' => collect(),
+                'unmatched_tokens' => [],
+                'unmatched_suggestions' => [],
+            ];
+        }
 
-        // Preload all ingredients and aliases to minimize queries during fuzzy matching
-        $allIngredients = Ingredient::with(['indications', 'pubmedStudies', 'conflictsAsA', 'conflictsAsB'])->get();
-        $allAliases = IngredientAlias::all()->groupBy('ingredient_id');
-
+        // Build token items maintaining position
+        $tokenItems = [];
         $position = 1;
         foreach ($tokens as $token) {
             $normalizedToken = $this->normalizeToken($token);
-
             if (empty($normalizedToken)) {
                 continue;
             }
 
-            $matchResult = $this->findBestMatch($normalizedToken, $allIngredients, $allAliases);
+            $tokenItems[] = [
+                'raw_token' => $token,
+                'normalized' => $normalizedToken,
+                'position' => $position,
+            ];
+            $position++;
+        }
 
-            if ($matchResult['ingredient']) {
-                $matched->push([
-                    'ingredient' => $matchResult['ingredient'],
-                    'raw_token' => $token,
-                    'confidence' => $matchResult['confidence'],
-                    'position' => $position,
-                ]);
+        if (empty($tokenItems)) {
+            return [
+                'raw_tokens' => $tokens,
+                'matched_ingredients' => collect(),
+                'unmatched_tokens' => [],
+                'unmatched_suggestions' => [],
+            ];
+        }
+
+        $uniqueNormalized = array_values(array_unique(array_column($tokenItems, 'normalized')));
+
+        // Step 1: Batch Exact SQL Lookup on ingredients table (WHERE IN on UPPER(inci_name) / UPPER(common_name))
+        $exactIngredients = Ingredient::select(['id', 'inci_name', 'common_name'])
+            ->where(function ($query) use ($uniqueNormalized) {
+                $query->whereIn(DB::raw('UPPER(inci_name)'), $uniqueNormalized)
+                      ->orWhereIn(DB::raw('UPPER(common_name)'), $uniqueNormalized);
+            })
+            ->get();
+
+        $exactMap = [];
+        foreach ($exactIngredients as $ing) {
+            $inciUpper = strtoupper($ing->inci_name);
+            if (!isset($exactMap[$inciUpper])) {
+                $exactMap[$inciUpper] = ['id' => $ing->id, 'confidence' => 1.0];
+            }
+            if ($ing->common_name) {
+                $commonUpper = strtoupper($ing->common_name);
+                if (!isset($exactMap[$commonUpper])) {
+                    $exactMap[$commonUpper] = ['id' => $ing->id, 'confidence' => 1.0];
+                }
+            }
+        }
+
+        // Identify tokens still unmatched after Step 1
+        $unmatchedAfterStep1 = [];
+        $tokenMatchMap = []; // normalized => ['id' => int, 'confidence' => float]
+
+        foreach ($uniqueNormalized as $norm) {
+            if (isset($exactMap[$norm])) {
+                $tokenMatchMap[$norm] = $exactMap[$norm];
             } else {
-                $unmatched[] = $token;
+                $unmatchedAfterStep1[] = $norm;
+            }
+        }
+
+        // Step 2: Batch Alias SQL Lookup for remaining tokens (WHERE IN on UPPER(alias))
+        $aliasMap = [];
+        if (!empty($unmatchedAfterStep1)) {
+            $aliases = IngredientAlias::select(['ingredient_id', 'alias'])
+                ->whereIn(DB::raw('UPPER(alias)'), $unmatchedAfterStep1)
+                ->get();
+
+            foreach ($aliases as $alias) {
+                $aliasUpper = strtoupper($alias->alias);
+                if (!isset($aliasMap[$aliasUpper])) {
+                    $aliasMap[$aliasUpper] = ['id' => $alias->ingredient_id, 'confidence' => 0.98];
+                }
+            }
+        }
+
+        $unmatchedAfterStep2 = [];
+        foreach ($unmatchedAfterStep1 as $norm) {
+            if (isset($aliasMap[$norm])) {
+                $tokenMatchMap[$norm] = $aliasMap[$norm];
+            } else {
+                $unmatchedAfterStep2[] = $norm;
+            }
+        }
+
+        // Step 3: Bounded candidate search (< 30 rows). Solo se acepta una variante de escritura idéntica
+        // (mayúsculas, acentos, signos); cualquier otro parecido es una sugerencia, nunca una coincidencia,
+        // porque moléculas distintas (RETINOL / RETINAL) difieren en una letra.
+        $suggestionMap = []; // normalized => ['id' => int, 'confidence' => float]
+        foreach ($unmatchedAfterStep2 as $norm) {
+            $candidate = $this->findBoundedCandidate($norm);
+            if ($candidate === null) {
+                continue;
+            }
+            if ($candidate['same_spelling']) {
+                $tokenMatchMap[$norm] = ['id' => $candidate['id'], 'confidence' => 0.95];
+            } else {
+                $suggestionMap[$norm] = ['id' => $candidate['id'], 'confidence' => $candidate['confidence']];
+            }
+        }
+
+        // Step 4: Deferred Relational Hydration ONLY for matched ingredient IDs
+        $matchedIngredientIds = array_values(array_unique(array_filter(array_map(fn($m) => $m['id'], $tokenMatchMap))));
+        $suggestionNames = empty($suggestionMap)
+            ? collect()
+            : Ingredient::whereIn('id', array_unique(array_column($suggestionMap, 'id')))->pluck('inci_name', 'id');
+
+        $hydratedIngredients = collect();
+        if (!empty($matchedIngredientIds)) {
+            $hydratedIngredients = Ingredient::with(['indications', 'pubmedStudies', 'conflictsAsA', 'conflictsAsB'])
+                ->whereIn('id', $matchedIngredientIds)
+                ->get()
+                ->keyBy('id');
+        }
+
+        // Assemble final matched and unmatched collections preserving token order
+        $matched = collect();
+        $unmatched = [];
+        $suggestions = [];
+
+        foreach ($tokenItems as $item) {
+            $norm = $item['normalized'];
+            if (isset($tokenMatchMap[$norm])) {
+                $ingredientId = $tokenMatchMap[$norm]['id'];
+                $ingredientModel = $hydratedIngredients->get($ingredientId);
+
+                if ($ingredientModel) {
+                    $matched->push([
+                        'ingredient' => $ingredientModel,
+                        'raw_token' => $item['raw_token'],
+                        'confidence' => $tokenMatchMap[$norm]['confidence'],
+                        'position' => $item['position'],
+                    ]);
+                    continue;
+                }
             }
 
-            $position++;
+            $unmatched[] = $item['raw_token'];
+
+            if (isset($suggestionMap[$norm]) && $suggestionNames->has($suggestionMap[$norm]['id'])) {
+                $suggestions[] = [
+                    'raw_token' => $item['raw_token'],
+                    'suggested_inci_name' => $suggestionNames->get($suggestionMap[$norm]['id']),
+                    'confidence' => $suggestionMap[$norm]['confidence'],
+                ];
+            }
         }
 
         return [
             'raw_tokens' => $tokens,
             'matched_ingredients' => $matched,
             'unmatched_tokens' => $unmatched,
+            'unmatched_suggestions' => $suggestions,
         ];
     }
 
@@ -105,8 +237,8 @@ class InciParserService
         // Extract content inside parenthesis if it contains known INCI names (e.g. "Aqua / Water / Eau" -> "AQUA")
         $cleaned = strtoupper($token);
 
-        // Remove percentages (e.g. "10%", "0.5 %")
-        $cleaned = preg_replace('/\b\d+(\.\d+)?\s*%\b/', '', $cleaned);
+        // Remove percentages (e.g. "10%", "0.5 %", "(10%)")
+        $cleaned = preg_replace('/\b\d+(\.\d+)?\s*%/i', '', $cleaned);
 
         // Remove asterisks, brackets, quotes
         $cleaned = preg_replace('/[*\[\]"\'\(\)]/', ' ', $cleaned);
@@ -116,70 +248,117 @@ class InciParserService
     }
 
     /**
-     * Finds the closest ingredient using exact and Levenshtein fuzzy matching.
+     * Bounded candidate search on a small slice of records (< 30 rows).
+     * `same_spelling` es true solo si el nombre coincide quitando mayúsculas, acentos y signos.
      *
-     * @param string $token
-     * @param Collection<int, Ingredient> $allIngredients
-     * @param Collection<int, Collection<int, IngredientAlias>> $allAliases
-     * @return array{ingredient: ?Ingredient, confidence: float}
+     * @param string $token Normalized uppercase token
+     * @return array{id: int, confidence: float, same_spelling: bool}|null
      */
-    private function findBestMatch(string $token, Collection $allIngredients, Collection $allAliases): array
+    private function findBoundedCandidate(string $token): ?array
     {
-        // 1. Exact INCI Match
-        $exact = $allIngredients->first(function (Ingredient $ing) use ($token) {
-            return strtoupper($ing->inci_name) === $token
-                || strtoupper($ing->common_name) === $token;
-        });
-
-        if ($exact) {
-            return ['ingredient' => $exact, 'confidence' => 1.0];
+        $len = mb_strlen($token);
+        if ($len < 2) {
+            return null;
         }
 
-        // 2. Alias Match
-        foreach ($allIngredients as $ingredient) {
-            $aliases = $allAliases->get($ingredient->id, collect());
-            foreach ($aliases as $alias) {
-                if (strtoupper($alias->alias) === $token) {
-                    return ['ingredient' => $ingredient, 'confidence' => 0.98];
-                }
-            }
+        $prefix = mb_substr($token, 0, min(3, $len));
+
+        // Query candidates bounded by length (+/- 3 chars) and prefix, capped at 30 rows
+        $candidates = Ingredient::select(['id', 'inci_name', 'common_name'])
+            ->where(function ($q) use ($len, $prefix) {
+                $q->where(function ($sub) use ($len, $prefix) {
+                    $sub->whereBetween(DB::raw('LENGTH(inci_name)'), [max(1, $len - 3), $len + 3])
+                        ->where('inci_name', 'ILIKE', "{$prefix}%");
+                })->orWhere(function ($sub) use ($len, $prefix) {
+                    $sub->whereBetween(DB::raw('LENGTH(common_name)'), [max(1, $len - 3), $len + 3])
+                        ->where('common_name', 'ILIKE', "{$prefix}%");
+                });
+            })
+            ->limit(30)
+            ->get();
+
+        // If prefix query yielded no candidates and length >= 4, broaden to length-bounded candidates
+        if ($candidates->isEmpty() && $len >= 4) {
+            $candidates = Ingredient::select(['id', 'inci_name', 'common_name'])
+                ->whereBetween(DB::raw('LENGTH(inci_name)'), [max(1, $len - 2), $len + 2])
+                ->limit(30)
+                ->get();
         }
 
-        // 3. Substring / Containment Match
-        foreach ($allIngredients as $ingredient) {
-            $inci = strtoupper($ingredient->inci_name);
-            if (str_contains($token, $inci) || str_contains($inci, $token)) {
-                $sim = 1.0 - (abs(strlen($token) - strlen($inci)) / (float) max(strlen($token), strlen($inci)));
-                if ($sim >= 0.70) {
-                    return ['ingredient' => $ingredient, 'confidence' => round($sim, 2)];
-                }
-            }
+        if ($candidates->isEmpty()) {
+            return null;
         }
 
-        // 4. Fuzzy Levenshtein Distance for OCR typo tolerance
-        $bestMatch = null;
+        $bestMatchId = null;
         $highestConfidence = 0.0;
+        $tokenCanon = $this->canonicalSpelling($token);
 
-        foreach ($allIngredients as $ingredient) {
-            $inci = strtoupper($ingredient->inci_name);
-            $lev = levenshtein($token, $inci);
-            $maxLen = max(strlen($token), strlen($inci));
+        foreach ($candidates as $cand) {
+            $inci = strtoupper($cand->inci_name);
+            $common = $cand->common_name ? strtoupper($cand->common_name) : null;
 
-            if ($maxLen === 0) {
-                continue;
+            if ($tokenCanon !== '' && ($tokenCanon === $this->canonicalSpelling($inci)
+                || ($common && $tokenCanon === $this->canonicalSpelling($common)))) {
+                return ['id' => $cand->id, 'confidence' => 1.0, 'same_spelling' => true];
             }
 
-            $similarity = 1.0 - ($lev / (float) $maxLen);
+            // 1. Substring containment check
+            if (str_contains($token, $inci) || str_contains($inci, $token)) {
+                $maxLen = max(strlen($token), strlen($inci));
+                $sim = 1.0 - (abs(strlen($token) - strlen($inci)) / (float) $maxLen);
+                if ($sim >= 0.70 && $sim > $highestConfidence) {
+                    $highestConfidence = $sim;
+                    $bestMatchId = $cand->id;
+                }
+            }
 
-            if ($similarity > $highestConfidence && $similarity >= 0.78) {
-                $highestConfidence = $similarity;
-                $bestMatch = $ingredient;
+            if ($common && (str_contains($token, $common) || str_contains($common, $token))) {
+                $maxLen = max(strlen($token), strlen($common));
+                $sim = 1.0 - (abs(strlen($token) - strlen($common)) / (float) $maxLen);
+                if ($sim >= 0.70 && $sim > $highestConfidence) {
+                    $highestConfidence = $sim;
+                    $bestMatchId = $cand->id;
+                }
+            }
+
+            // 2. Levenshtein fuzzy distance check
+            $maxLenInci = max(strlen($token), strlen($inci));
+            if ($maxLenInci > 0) {
+                $lev = levenshtein($token, $inci);
+                $sim = 1.0 - ($lev / (float) $maxLenInci);
+                if ($sim >= 0.78 && $sim > $highestConfidence) {
+                    $highestConfidence = $sim;
+                    $bestMatchId = $cand->id;
+                }
+            }
+
+            if ($common) {
+                $maxLenCommon = max(strlen($token), strlen($common));
+                if ($maxLenCommon > 0) {
+                    $lev = levenshtein($token, $common);
+                    $sim = 1.0 - ($lev / (float) $maxLenCommon);
+                    if ($sim >= 0.78 && $sim > $highestConfidence) {
+                        $highestConfidence = $sim;
+                        $bestMatchId = $cand->id;
+                    }
+                }
             }
         }
 
-        return [
-            'ingredient' => $bestMatch,
-            'confidence' => round($highestConfidence, 2),
-        ];
+        if ($bestMatchId !== null && $highestConfidence >= 0.70) {
+            return [
+                'id' => $bestMatchId,
+                'confidence' => round($highestConfidence, 2),
+                'same_spelling' => false,
+            ];
+        }
+
+        return null;
+    }
+
+    /** Solo letras y dígitos en mayúsculas, sin acentos: "Ácido  Salicílico." => "ACIDOSALICILICO". */
+    private function canonicalSpelling(string $value): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', strtoupper(Str::ascii($value)));
     }
 }

@@ -49,3 +49,6 @@ Thumbs.db
 *.dump
 backups/
 
+
+# Notas internas de agentes de IA
+.agents/

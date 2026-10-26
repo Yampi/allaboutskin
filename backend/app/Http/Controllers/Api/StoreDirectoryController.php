@@ -9,6 +9,7 @@ use App\Models\StoreBranch;
 use App\Models\StoreLeadInteraction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class StoreDirectoryController extends Controller
@@ -273,41 +274,44 @@ class StoreDirectoryController extends Controller
         $slugBase = Str::slug($validated['store_name'] . '-' . $validated['city']);
         $uniqueSlug = $slugBase . '-' . Str::random(5);
 
-        // Crear la entidad de la tienda independiente en estado PENDING_REVIEW
-        $store = AffiliateStore::create([
-            'name' => $validated['store_name'] . ' (' . $validated['city'] . ')',
-            'slug' => $uniqueSlug,
-            'website_url' => !empty($validated['instagram_handle'])
-                ? 'https://instagram.com/' . ltrim($validated['instagram_handle'], '@')
-                : 'https://allabout.skin',
-            'store_type' => 'PHYSICAL',
-            'country_code' => 'VE',
-            'affiliate_network' => 'Comercio Local',
-            'instagram_handle' => $validated['instagram_handle'] ?? null,
-            'whatsapp_contact' => $validated['whatsapp'] ?? null,
-            'is_independent' => true,
-            'verification_status' => 'PENDING_REVIEW',
-            'submitted_by_email' => $validated['submitted_by_email'] ?? null,
-            'community_notes' => $validated['notes'] ?? null,
-            'is_active' => false, // Se activa tras moderación
-        ]);
+        // Crear la entidad de la tienda independiente y sucursal en una transacción ACID atómica
+        [$store, $branch] = DB::transaction(function () use ($validated, $uniqueSlug) {
+            $store = AffiliateStore::create([
+                'name' => $validated['store_name'] . ' (' . $validated['city'] . ')',
+                'slug' => $uniqueSlug,
+                'website_url' => !empty($validated['instagram_handle'])
+                    ? 'https://instagram.com/' . ltrim($validated['instagram_handle'], '@')
+                    : 'https://allabout.skin',
+                'store_type' => 'PHYSICAL',
+                'country_code' => 'VE',
+                'affiliate_network' => 'Comercio Local',
+                'instagram_handle' => $validated['instagram_handle'] ?? null,
+                'whatsapp_contact' => $validated['whatsapp'] ?? null,
+                'is_independent' => true,
+                'verification_status' => 'PENDING_REVIEW',
+                'submitted_by_email' => $validated['submitted_by_email'] ?? null,
+                'community_notes' => $validated['notes'] ?? null,
+                'is_active' => false, // Se activa tras moderación
+            ]);
 
-        // Crear la sucursal
-        $branch = StoreBranch::create([
-            'store_id' => $store->id,
-            'name' => $validated['store_name'],
-            'slug' => 'branch-' . $uniqueSlug,
-            'state' => $validated['state'],
-            'city' => $validated['city'],
-            'address' => $validated['address'],
-            'reference_point' => $validated['reference_point'] ?? null,
-            'latitude' => $validated['latitude'] ?? 9.2150000, // Coordenadas aproximadas por defecto si no envía
-            'longitude' => $validated['longitude'] ?? -66.0100000,
-            'geofence_radius_meters' => 80,
-            'phone' => $validated['phone'] ?? null,
-            'whatsapp' => $validated['whatsapp'] ?? null,
-            'is_active' => false,
-        ]);
+            $branch = StoreBranch::create([
+                'store_id' => $store->id,
+                'name' => $validated['store_name'],
+                'slug' => 'branch-' . $uniqueSlug,
+                'state' => $validated['state'],
+                'city' => $validated['city'],
+                'address' => $validated['address'],
+                'reference_point' => $validated['reference_point'] ?? null,
+                'latitude' => $validated['latitude'] ?? 9.2150000, // Coordenadas aproximadas por defecto si no envía
+                'longitude' => $validated['longitude'] ?? -66.0100000,
+                'geofence_radius_meters' => 80,
+                'phone' => $validated['phone'] ?? null,
+                'whatsapp' => $validated['whatsapp'] ?? null,
+                'is_active' => false,
+            ]);
+
+            return [$store, $branch];
+        }, 5);
 
         return response()->json([
             'status' => 'success',

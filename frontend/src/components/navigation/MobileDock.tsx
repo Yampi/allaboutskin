@@ -39,15 +39,15 @@ export default function MobileDock() {
                 className="flex flex-col items-center justify-center -mt-5 group"
               >
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-diffuse transition-all duration-200 ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${
                     isActive
-                      ? 'bg-[#4A6B5B] text-white scale-105 border-2 border-white'
-                      : 'bg-[#8FA89B] text-white hover:bg-[#7D978A] border-2 border-white'
+                      ? 'bg-[#2E7D58] text-white scale-105 border-2 border-white'
+                      : 'bg-[#2E7D58]/90 text-white hover:bg-[#246448] border-2 border-white'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] font-semibold text-[#4A6B5B] mt-0.5">
+                <span className="text-[10px] font-bold text-[#2E7D58] mt-0.5">
                   {item.label}
                 </span>
               </Link>
@@ -60,14 +60,14 @@ export default function MobileDock() {
               href={item.href}
               className={`flex flex-col items-center justify-center min-w-[54px] min-h-[44px] py-1 px-2 rounded-xl transition-all duration-150 ${
                 isActive
-                  ? 'text-[#4A6B5B] font-semibold'
-                  : 'text-[#7E756F] hover:text-[#2D2825]'
+                  ? 'text-[#2E7D58] font-bold'
+                  : 'text-[#66615C] hover:text-[#2D2825]'
               }`}
             >
               <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.3]' : 'stroke-[1.7]'}`} />
               <span className="text-[10.5px] mt-0.5">{item.label}</span>
               {isActive && (
-                <span className="w-1 h-1 rounded-full bg-[#4A6B5B] mt-0.5" />
+                <span className="w-1 h-1 rounded-full bg-[#2E7D58] mt-0.5" />
               )}
             </Link>
           );

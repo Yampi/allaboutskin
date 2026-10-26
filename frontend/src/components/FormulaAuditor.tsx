@@ -838,7 +838,7 @@ export default function FormulaAuditor({ hideSearchUI = false }: { hideSearchUI?
                   1. Evidencia Científica & Respaldo
                 </span>
                 <span className="text-[10px] font-bold bg-[#EEF4F0] text-[#2D4A3E] px-3 py-1 rounded-full">
-                  Grado {report.scientific_evidence.overall_evidence_grade} · {report.scientific_evidence.overall_evidence_grade === 'A' ? 'Alta Certeza' : 'Moderada'}
+                  {report.scientific_evidence.overall_evidence_grade ? `Grado ${report.scientific_evidence.overall_evidence_grade}` : 'Sin estudios'}
                 </span>
               </div>
 

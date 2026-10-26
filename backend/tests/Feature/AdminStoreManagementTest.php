@@ -188,4 +188,48 @@ class AdminStoreManagementTest extends TestCase
 
         $this->assertFalse($store->fresh()->is_active);
     }
+
+    /** @test */
+    public function admin_can_quick_update_store_country_and_contact()
+    {
+        $admin = User::where('email', 'admin@allaboutskin.com')->first();
+        Sanctum::actingAs($admin);
+
+        $store = AffiliateStore::create([
+            'name' => 'Tienda Caracas Central',
+            'slug' => 'tienda-caracas-central',
+            'website_url' => 'https://caracascentral.com',
+            'store_type' => 'PHYSICAL',
+            'country_code' => 'VE',
+            'whatsapp_contact' => '+58412000000',
+            'is_active' => true,
+        ]);
+
+        $branch = StoreBranch::create([
+            'store_id' => $store->id,
+            'name' => 'Sucursal Principal',
+            'slug' => 'sucursal-principal',
+            'city' => 'Caracas',
+            'state' => 'Distrito Capital',
+            'address' => 'Av. Francisco de Miranda',
+            'latitude' => 10.4880,
+            'longitude' => -66.8600,
+            'is_active' => true,
+        ]);
+
+        $response = $this->patchJson("/api/v1/admin/stores/{$store->id}/quick-update", [
+            'country_code' => 'CL',
+            'city' => 'Santiago',
+            'whatsapp_contact' => '+56912345678',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('store.country_code', 'CL')
+            ->assertJsonPath('store.whatsapp_contact', '+56912345678');
+
+        $this->assertEquals('CL', $store->fresh()->country_code);
+        $this->assertEquals('+56912345678', $store->fresh()->whatsapp_contact);
+        $this->assertEquals('Santiago', $branch->fresh()->city);
+    }
 }

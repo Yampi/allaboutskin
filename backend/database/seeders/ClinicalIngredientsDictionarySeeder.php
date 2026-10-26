@@ -958,8 +958,8 @@ class ClinicalIngredientsDictionarySeeder extends Seeder
             $data['source_name'] = $data['source_name'] ?? 'CosIng UE (Comisión Europea)';
             $data['source_url'] = $data['source_url'] ?? 'https://ec.europa.eu/growth/tools-databases/cosing/';
             $data['source_license'] = $data['source_license'] ?? 'EU Open Data / Public Domain';
-            $data['evidence_level'] = $data['evidence_level'] ?? 'B';
-            $data['reviewed_at'] = $data['reviewed_at'] ?? now();
+            // El nivel de evidencia se deriva de los estudios vinculados (EvidenceGradeCalculator); aquí no se inventa.
+            unset($data['evidence_level'], $data['reviewed_at']);
 
             $ingredient = Ingredient::firstOrCreate(
                 ['inci_name' => $data['inci_name']],
@@ -971,8 +971,6 @@ class ClinicalIngredientsDictionarySeeder extends Seeder
                     'source_name' => $data['source_name'],
                     'source_url' => $data['source_url'],
                     'source_license' => $data['source_license'],
-                    'evidence_level' => $data['evidence_level'],
-                    'reviewed_at' => $data['reviewed_at'],
                 ]);
             }
 

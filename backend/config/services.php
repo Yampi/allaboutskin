@@ -66,5 +66,19 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/api/v1/auth/facebook/callback'),
     ],
 
+    // Secreto compartido con el servidor Next.js para las rutas /internal/*
+    'internal' => [
+        'secret' => env('INTERNAL_API_SECRET'),
+    ],
+
+    // Cuotas del análisis de imagen con IA (Gemini)
+    'scan_quota' => [
+        'device_free' => (int) env('SCAN_FREE_PER_DEVICE', 2),
+        'ip_per_day' => (int) env('SCAN_ANON_PER_IP_DAY', 3),
+        'user_per_day' => (int) env('SCAN_USER_PER_DAY', 20),
+        'global_per_day' => (int) env('SCAN_GLOBAL_PER_DAY', 500),
+        'ip_per_minute' => (int) env('SCAN_PER_IP_MINUTE', 10),
+    ],
+
 ];
 

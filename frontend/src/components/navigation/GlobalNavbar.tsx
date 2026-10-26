@@ -2,10 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Sparkles, Microscope, Scan, Calendar, BookOpen, GitCompare, User, Store, ShieldCheck, LogIn, HeartPulse } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Sparkles,
+  Scan,
+  Store,
+  ShieldCheck,
+  User,
+  Home,
+  HeartPulse,
+  LogOut,
+  ChevronDown,
+  Layers
+} from 'lucide-react';
 import { useSkincare } from '@/context/SkincareContext';
-import { getCurrentUser, isUserAdmin, isUserBusiness, StoredUser } from '@/lib/api';
+import { getCurrentUser, isUserAdmin, isUserBusiness, StoredUser, logoutUser } from '@/lib/api';
 
 interface GlobalNavbarProps {
   onOpenProfile?: () => void;
@@ -14,32 +25,60 @@ interface GlobalNavbarProps {
 
 export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalNavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { userProfile } = useSkincare();
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setCurrentUser(getCurrentUser());
   }, [pathname]);
 
-  const navItems = [
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    } finally {
+      setCurrentUser(null);
+      setIsDropdownOpen(false);
+      router.push('/');
+    }
+  };
+
+  // Enlaces públicos para visitantes sin cuenta
+  const publicNavItems = [
+    { href: '/', label: 'Inicio' },
+    { href: '/#como-funciona', label: 'Cómo funciona' },
+    { href: '/biblioteca', label: 'Ingredientes' },
+    { href: '/tiendas', label: 'Tiendas' },
+    { href: '/rutinas/skin-cycling', label: 'Skin Cycling' },
+  ];
+
+  // Enlaces para usuarios autenticados cuando navegan por páginas públicas
+  const authNavItems = [
     { href: '/', label: 'Inicio' },
     { href: '/#como-funciona', label: 'Cómo funciona' },
     { href: '/tiendas', label: 'Tiendas' },
-    { href: '/escaner', label: 'Escáner IA' },
-    { href: '/calendario', label: 'Skin Cycling' },
-    { href: '/mi-rutina', label: 'Mi Piel' },
+    { href: '/biblioteca', label: 'Ingredientes' },
   ];
 
+  const navItems = currentUser ? authNavItems : publicNavItems;
+  const userName = currentUser?.name || userProfile?.name || 'Usuario';
+  const userInitial = userName.charAt(0).toUpperCase();
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-[#E8E1D7] transition-all duration-200 shadow-2xs">
+    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E8E1D7] transition-all duration-200 shadow-2xs font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* DESKTOP HEADER (>= 1024px / 72px de altura) */}
-        <div className="hidden lg:flex items-center justify-between h-20 gap-3">
+        {/* ========================================================= */}
+        {/* DESKTOP HEADER (>= 1024px)                                */}
+        {/* ========================================================= */}
+        <div className="hidden lg:flex items-center justify-between h-20 gap-4">
           
-          {/* 1. Izquierda: Logo & Subtítulo Clínico */}
+          {/* 1. Logo & Identidad de Marca */}
           <Link href="/" className="flex items-center gap-2.5 group cursor-pointer shrink-0">
             <div className="w-9 h-9 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] group-hover:scale-105 transition shadow-2xs">
               <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
@@ -51,8 +90,8 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
             </div>
           </Link>
 
-          {/* 2. Centro: Navegación Principal en Píldora de Cristal (Sin saltos de línea) */}
-          <nav className="flex items-center gap-1 p-1 rounded-full glass-subcard shrink-0">
+          {/* 2. Navegación Principal en Píldora Centrada */}
+          <nav className="flex items-center gap-1 p-1 rounded-full bg-[#FAFAF7] border border-[#E8E1D7] shrink-0">
             {navItems.map((item) => {
               const isActive =
                 item.href === '/'
@@ -63,10 +102,10 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3.5 xl:px-4 py-2 rounded-full text-[12.5px] xl:text-[13px] font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  className={`px-4 py-2 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'glass-button text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                      ? 'bg-[#2E7D5B] text-white shadow-xs font-bold'
+                      : 'text-[#5D6B63] hover:text-[#2D2825] hover:bg-white'
                   }`}
                 >
                   <span>{item.label}</span>
@@ -75,177 +114,197 @@ export default function GlobalNavbar({ onOpenProfile, onOpenDiagnosis }: GlobalN
             })}
           </nav>
 
-          {/* 3. Derecha: CTA Escanear + Avatar (100% whitespace-nowrap) */}
-          <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+          {/* 3. Acciones Derecha (Separación Clara: Visitante vs Autenticado) */}
+          <div className="flex items-center gap-3 shrink-0">
 
-            {/* CTA Píldora: si ya estamos en /escaner, muestra Volver al Inicio */}
-            {pathname.startsWith('/escaner') ? (
-              <Link
-                href="/"
-                className="px-4 py-2 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-[12.5px] shadow-xs transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <span>← Volver al Inicio</span>
-              </Link>
-            ) : (
-              <Link
-                href="/escaner"
-                className="px-4 py-2 rounded-full glass-button text-white font-bold text-[12.5px] shadow-sm hover:shadow-md transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <Scan className="w-3.5 h-3.5 text-white shrink-0" />
-                <span>Escanear Cosmético</span>
-              </Link>
-            )}
+            {/* CTA Escanear Cosmético con Cámara */}
+            <Link
+              href="/escaner"
+              className="px-4 py-2 rounded-full bg-white hover:bg-[#F2F7F4] border border-[#D5E2DB] text-[#2E7D5B] font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <Scan className="w-3.5 h-3.5 text-[#2E7D5B]" />
+              <span>Escanear Cosmético</span>
+            </Link>
 
-            {/* Quick Portal Switcher / Login CTA */}
+            {/* Bloque de Usuario o Login */}
             {currentUser ? (
-              isUserAdmin(currentUser) ? (
-                <Link
-                  href="/admin"
-                  className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-teal-300 text-[11px] font-bold hover:bg-slate-800 transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
-                  title="Consola de Administración Central"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Admin</span>
-                </Link>
-              ) : isUserBusiness(currentUser) ? (
-                <Link
-                  href="/dashboard/empresa"
-                  className="px-3 py-1.5 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 text-[#2D5540] text-[11px] font-bold hover:bg-white transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
-                  title="Panel de mi Tienda & Vitrina"
-                >
-                  <Store className="w-3.5 h-3.5 text-[#2D5540]" />
-                  <span>Mi Tienda</span>
-                </Link>
-              ) : (
+              <div className="flex items-center gap-2">
+                {/* Botón Acceso Rápido a mi Tocador */}
                 <Link
                   href="/dashboard/usuario"
-                  className="px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold hover:bg-rose-100 transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
-                  title="Mi Tocador & Salud de Piel"
+                  className="px-4 py-2 rounded-full bg-[#E6F4EC] hover:bg-[#D5E2DB] border border-[#D5E2DB] text-[#2E7D5B] text-xs font-bold transition flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+                  title="Ir a mi tocador digital"
                 >
-                  <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Mi Piel</span>
+                  <Home className="w-3.5 h-3.5 text-[#2E7D5B]" />
+                  <span>Mi Tocador</span>
                 </Link>
-              )
+
+                {/* Avatar con Dropdown de Cuenta & Logout */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2 p-1 pl-2.5 rounded-full bg-[#FAFAF7] hover:bg-white border border-[#E8E1D7] transition cursor-pointer"
+                  >
+                    <div className="text-right leading-tight pr-0.5">
+                      <span className="text-[11px] font-bold text-[#2D2825] block truncate max-w-[100px]">
+                        {userName}
+                      </span>
+                      <span className="text-[9px] text-[#2E7D5B] font-semibold block">
+                        Cuenta activa
+                      </span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] text-[#2E7D5B] font-bold text-xs flex items-center justify-center">
+                      {userInitial}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#8C827A]" />
+                  </button>
+
+                  {/* Dropdown del Menú de Usuario */}
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-sm border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-2 border-b border-slate-100">
+                        <p className="text-xs font-bold text-[#2D2825] truncate">{userName}</p>
+                        {currentUser.email && <p className="text-[10px] text-[#7E756F] truncate">{currentUser.email}</p>}
+                      </div>
+
+                      <div className="py-1 space-y-0.5">
+                        {isUserAdmin(currentUser) && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                            <span>Panel SuperAdmin</span>
+                          </Link>
+                        )}
+                        {isUserBusiness(currentUser) && (
+                          <Link
+                            href="/dashboard/empresa"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                          >
+                            <Store className="w-3.5 h-3.5 text-[#4A6B5B]" />
+                            <span>Portal de Comercios</span>
+                          </Link>
+                        )}
+                        <Link
+                          href="/dashboard/usuario"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                        >
+                          <Home className="w-3.5 h-3.5" />
+                          <span>Mi Tocador / Dashboard</span>
+                        </Link>
+                        <Link
+                          href="/mi-piel"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                        >
+                          <HeartPulse className="w-3.5 h-3.5" />
+                          <span>Mi Piel (Datos Clínicos)</span>
+                        </Link>
+                        <Link
+                          href="/mi-rutina"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Mi Rutina Explicativa</span>
+                        </Link>
+                        <Link
+                          href="/perfil"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-[#2D2825] hover:bg-[#F2F7F4] hover:text-[#2E7D5B] transition"
+                        >
+                          <User className="w-3.5 h-3.5" />
+                          <span>Ajustes de Perfil</span>
+                        </Link>
+                      </div>
+
+                      <div className="pt-1 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-bold text-rose-600 hover:bg-rose-50 transition cursor-pointer text-left"
+                        >
+                          <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Cerrar sesión</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="px-3 py-1.5 text-xs font-semibold text-[#2D2825] hover:text-[#2E7D5B] transition whitespace-nowrap"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#2D2825] hover:text-[#2E7D5B] transition whitespace-nowrap cursor-pointer"
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/registro"
-                  className="px-4 py-1.5 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold transition shadow-xs whitespace-nowrap"
+                  className="px-4 py-2 rounded-full bg-[#2E7D5B] hover:bg-[#246448] text-white text-xs font-bold transition shadow-xs whitespace-nowrap cursor-pointer"
                 >
                   Crear cuenta
                 </Link>
               </div>
             )}
 
-            {/* User Profile Avatar */}
-            <button
-              onClick={onOpenProfile}
-              type="button"
-              className="flex items-center gap-2 p-1 pl-2.5 rounded-full glass-subcard hover:bg-white/80 transition cursor-pointer group shrink-0 whitespace-nowrap"
-              title="Configuración de Perfil Dermatológico"
-            >
-              <div className="text-right hidden xl:block leading-tight pr-0.5">
-                <span
-                  suppressHydrationWarning
-                  className="text-[11.5px] font-bold text-slate-900 block truncate max-w-[100px]"
-                >
-                  {mounted && userProfile?.name ? userProfile.name : 'Mi Perfil'}
-                </span>
-                <span
-                  suppressHydrationWarning
-                  className="text-[9.5px] text-emerald-800 font-semibold block uppercase"
-                >
-                  {mounted && userProfile?.skinType ? userProfile.skinType : 'Sin calibrar'}
-                </span>
-              </div>
-              {mounted && userProfile?.avatarUrl ? (
-                <img
-                  src={userProfile.avatarUrl}
-                  alt={userProfile?.name || 'Usuario'}
-                  className="w-8 h-8 rounded-full object-cover border border-white shadow-xs group-hover:scale-105 transition"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-white border border-white shadow-xs flex items-center justify-center text-[#1E3A2B] font-bold text-xs group-hover:scale-105 transition">
-                  {mounted && userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
-                </div>
-              )}
-            </button>
           </div>
+
         </div>
 
-        {/* MOBILE TOP BAR (< 1024px / 56px de altura) */}
+        {/* ========================================================= */}
+        {/* MOBILE TOP BAR (< 1024px)                                 */}
+        {/* ========================================================= */}
         <div className="flex lg:hidden items-center justify-between h-14">
-          {pathname.startsWith('/escaner') ? (
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E2D9CD] text-[#2D2825] text-[12px] font-semibold hover:bg-[#F2ECE4] transition shadow-2xs"
-            >
-              <span>← Volver al Inicio</span>
-            </Link>
-          ) : (
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-center text-[#4A6B5B]">
-                <Microscope className="w-4 h-4" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B]">
+              <Sparkles className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-extrabold text-base text-[#2D2825] tracking-tight">
+              allabout<span className="text-[#2E7D5B]">.skin</span>
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {currentUser ? (
+              <>
+                <Link
+                  href="/dashboard/usuario"
+                  className="px-3 py-1 rounded-full bg-[#E6F4EC] text-[#2E7D5B] text-xs font-bold border border-[#D5E2DB]"
+                >
+                  Mi Tocador
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-full text-rose-600 hover:bg-rose-50"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href="/login"
+                  className="px-3 py-1 text-xs font-semibold text-[#2D2825]"
+                >
+                  Entrar
+                </Link>
+                <Link
+                  href="/registro"
+                  className="px-3 py-1 rounded-full bg-[#2E7D5B] text-white text-xs font-bold"
+                >
+                  Registro
+                </Link>
               </div>
-              <span className="font-serif text-[20px] font-semibold text-[#2D2825] tracking-tight leading-none">
-                Allabout<span className="text-[#4A6B5B]">.skin</span>
-              </span>
-            </Link>
-          )}
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {currentUser && isUserAdmin(currentUser) ? (
-              <Link
-                href="/admin"
-                className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-teal-400"
-                title="Consola de Administración"
-              >
-                <ShieldCheck className="w-4 h-4" />
-              </Link>
-            ) : currentUser && isUserBusiness(currentUser) ? (
-              <Link
-                href="/dashboard/empresa"
-                className="w-8 h-8 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/40 flex items-center justify-center text-[#2D5540]"
-                title="Panel de mi Tienda"
-              >
-                <Store className="w-4 h-4" />
-              </Link>
-            ) : !currentUser ? (
-              <Link
-                href="/login"
-                className="w-8 h-8 rounded-full bg-white border border-[#E2D9CD] flex items-center justify-center text-slate-700"
-                title="Iniciar Sesión"
-              >
-                <LogIn className="w-4 h-4" />
-              </Link>
-            ) : null}
-
-            <button
-              onClick={onOpenDiagnosis}
-              type="button"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EBF1EE] border border-[#8FA89B]/30 text-[#4A6B5B] text-[10.5px] font-medium transition cursor-pointer"
-            >
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FA89B] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#4A6B5B]"></span>
-              </span>
-              <span>{userProfile?.skinType?.split('/')[0]?.trim() || 'Diagnóstico'}</span>
-            </button>
-
-            <button
-              onClick={onOpenProfile}
-              type="button"
-              className="w-8 h-8 rounded-full bg-[#F2ECE4] border border-[#E2D9CD] flex items-center justify-center text-[#4A6B5B] cursor-pointer"
-              aria-label="Perfil"
-            >
-              <User className="w-4 h-4" />
-            </button>
+            )}
           </div>
         </div>
 

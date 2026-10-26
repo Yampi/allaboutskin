@@ -27,6 +27,8 @@ export interface InciScanResult {
   cycleNightsRecommended: number[];
   ingredients: InciIngredientResult[];
   summary: string;
+  /** Ingredientes de la lista que no están en la base de datos */
+  unrecognizedIngredients?: string[];
 }
 
 export interface ActiveIngredient {
@@ -66,7 +68,7 @@ export interface ProductShelfItem {
   category: string;
   volume: string;
   paoMonths: number;
-  inciScore: number;
+  inciScore?: number;
   primaryActives: string[];
   assignedPhase: number;
   assignedPhaseName: string;

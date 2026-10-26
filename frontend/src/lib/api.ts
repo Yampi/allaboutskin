@@ -1,5 +1,56 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
+import {
+  apiCircuitBreaker,
+  ApiError,
+  CircuitBreakerError,
+} from './circuitBreaker';
+
+export { apiCircuitBreaker, ApiError, CircuitBreakerError };
+export type { CircuitState, ApiErrorState, ApiErrorCode } from './circuitBreaker';
+
+/**
+ * Robust fetch wrapper integrated with SRE Circuit Breaker.
+ * Enforces timeouts, tracks failures, and fails fast when circuit is OPEN.
+ */
+export async function apiFetch<T = any>(
+  url: string,
+  init?: RequestInit,
+  timeoutMs?: number
+): Promise<T> {
+  return apiCircuitBreaker.execute(async () => {
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      let errorData: any = {};
+      try {
+        errorData = await res.json();
+      } catch {
+        // Body is not JSON
+      }
+      const message =
+        errorData?.message ||
+        `HTTP ${res.status}: ${res.statusText || 'Error en petición al servidor'}`;
+      const code =
+        res.status === 401 || res.status === 403
+          ? 'UNAUTHORIZED'
+          : res.status === 404
+          ? 'NOT_FOUND'
+          : res.status === 422
+          ? 'VALIDATION_ERROR'
+          : res.status === 429
+          ? 'RATE_LIMITED'
+          : res.status >= 500
+          ? 'BACKEND_DOWN'
+          : 'UNKNOWN';
+      const retryAfter = res.headers.get('Retry-After');
+      const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : undefined;
+      throw new ApiError(message, code, res.status, retryAfterSeconds);
+    }
+    return await res.json();
+  }, timeoutMs);
+}
+
+
 export type UserRoleType = 'super_admin' | 'admin' | 'scientific_editor' | 'business_owner' | 'premium_user' | 'standard_user';
 
 export interface StoredUser {
@@ -73,6 +124,7 @@ export interface AuditReport {
     active_ingredients_count: number;
     unmatched_tokens_count: number;
     unmatched_tokens: string[];
+    unmatched_suggestions?: Array<{ raw_token: string; suggested_inci_name: string; confidence: number }>;
     audited_at: string;
   };
   ai_clinical_copilot: AiClinicalCopilot;
@@ -89,8 +141,14 @@ export interface AuditReport {
     }>;
   }>;
   scientific_evidence: {
-    overall_evidence_grade: 'A' | 'B' | 'C' | 'D';
+    overall_evidence_grade: 'A' | 'B' | 'C' | 'D' | null;
     evidence_grade_label: string;
+    by_ingredient?: Array<{
+      inci_name: string;
+      common_name: string | null;
+      studies_count: number;
+      evidence_grade: 'A' | 'B' | 'C' | 'D' | null;
+    }>;
     total_referenced_studies: number;
     studies: Array<{
       pmid: string;
@@ -155,7 +213,7 @@ export async function auditInci(
 ): Promise<AuditReport> {
   const endpoint = `${API_BASE_URL}/audit/inci`;
 
-  const res = await fetch(endpoint, {
+  const json = await apiFetch<{ data: AuditReport }>(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -166,28 +224,16 @@ export async function auditInci(
     }),
   });
 
-  if (!res.ok) {
-    throw new Error('Error al auditar la fórmula');
-  }
-
-  const json = await res.json();
   return json.data;
 }
 
 export async function getProductAudit(slug: string): Promise<AuditReport> {
-  const res = await fetch(`${API_BASE_URL}/audit/product/${slug}`);
-  if (res.ok) {
-    const json = await res.json();
-    return json.data;
-  }
-
-  return auditInci('Aqua, Niacinamide, Zinc PCA', slug);
+  const json = await apiFetch<{ data: AuditReport }>(`${API_BASE_URL}/audit/product/${slug}`);
+  return json.data;
 }
 
 export async function getCatalogProducts() {
-  const res = await fetch(`${API_BASE_URL}/catalog/products`);
-  if (res.ok) return res.json();
-  return { data: [] };
+  return apiFetch(`${API_BASE_URL}/catalog/products`);
 }
 
 // User & Routine Storage Helpers
@@ -410,6 +456,111 @@ export interface UserDailyRoutine {
     timing: 'AM' | 'PM' | 'BOTH';
   }>;
   updatedAt: string;
+}
+
+export interface SkinProfileData {
+  id?: number;
+  user_id?: number;
+  skin_type: 'OILY' | 'DRY' | 'COMBINATION' | 'NORMAL' | 'SENSITIVE';
+  fitzpatrick_type?: number | null;
+  barrier_status: 'HEALTHY' | 'COMPROMISED' | 'ACUTELY_DAMAGED';
+  active_conditions?: string[];
+  known_allergens?: string[];
+  sun_exposure_level?: 'LOW' | 'MODERATE' | 'HIGH';
+  pregnancy_or_nursing?: boolean;
+}
+
+export async function fetchUserProfile(): Promise<{ status: string; data: SkinProfileData } | null> {
+  const user = getCurrentUser();
+  if (!user?.token) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/profile`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('Error al obtener perfil dermatológico:', err);
+    return null;
+  }
+}
+
+export async function updateUserProfile(data: Partial<SkinProfileData>): Promise<{ status: string; data: SkinProfileData; message?: string }> {
+  const res = await fetch(`${API_BASE_URL}/profile`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al actualizar perfil de piel');
+  }
+  return await res.json();
+}
+
+export async function fetchUserTodayRoutine(date?: string) {
+  const user = getCurrentUser();
+  if (!user?.token) return null;
+  try {
+    const url = date ? `${API_BASE_URL}/routine/today?date=${date}` : `${API_BASE_URL}/routine/today`;
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('Error al obtener rutina del día:', err);
+    return null;
+  }
+}
+
+export async function addUserRoutineItem(data: {
+  product_id?: number;
+  custom_name?: string;
+  slot: 'AM' | 'PM';
+  cycle_type: 'EVERYDAY' | 'EXFOLIATION_NIGHT' | 'RETINOID_NIGHT' | 'RECOVERY_NIGHT' | 'SPECIFIC_DAYS';
+  step_order?: number;
+  notes?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/routine/items`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al agregar producto a la rutina');
+  }
+  return await res.json();
+}
+
+export async function deleteUserRoutineItem(id: number) {
+  const res = await fetch(`${API_BASE_URL}/routine/items/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al eliminar producto');
+  }
+  return await res.json();
+}
+
+export async function logUserRoutineAdherence(data: {
+  slot: 'AM' | 'PM';
+  skin_feeling_rating?: number;
+  photo_url?: string;
+  notes?: string;
+  date?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/routine/log`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al registrar cumplimiento de rutina');
+  }
+  return await res.json();
 }
 
 export function getSavedDailyRoutine(): UserDailyRoutine | null {
@@ -733,6 +884,55 @@ export async function deleteAdminStore(id: number) {
   return res.json();
 }
 
+export async function quickUpdateAdminStore(id: number, data: {
+  country_code?: string;
+  country_name?: string;
+  country_flag?: string;
+  city?: string;
+  whatsapp_contact?: string;
+  name?: string;
+  is_active?: boolean;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/stores/${id}/quick-update`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || 'Error al actualizar datos rápidos de la tienda');
+  }
+  return res.json();
+}
+
+export async function recordStoreInteraction(params: {
+  store_id: number;
+  interaction_type: 'WHATSAPP_CLICK' | 'PHONE_CLICK' | 'MAP_ROUTE' | 'IN_STORE_VIEW' | 'PRODUCT_CLICK';
+  branch_id?: number;
+  metadata?: Record<string, any>;
+}) {
+  try {
+    const user = getCurrentUser();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (user?.token) {
+      headers['Authorization'] = `Bearer ${user.token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/stores/interactions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err) {
+    console.debug('Aviso lead interaction anónimo:', err);
+    return null;
+  }
+}
+
 // AI Skincare Endpoints
 export async function fetchAiDiagnosis(params: {
   inci_text: string;
@@ -768,19 +968,38 @@ export async function sendCopilotMessage(params: {
 }
 
 import type { VisionClassificationResult } from './gemini';
+import type { ScanStreamEvent } from '@/app/api/ai/scan-image/route';
 
-export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg'): Promise<VisionClassificationResult> {
+/** El visitante agotó sus análisis gratis: hay que crear cuenta o iniciar sesión. */
+export class ScanAccountRequiredError extends Error {}
+
+export interface ScanImageOptions {
+  /** Cancela el análisis (el servidor deja de reintentar). */
+  signal?: AbortSignal;
+  /** Se llama cada vez que el servidor reintenta porque Gemini está saturado. */
+  onRetry?: (attempt: number, message: string) => void;
+}
+
+export async function scanImageWithGeminiVision(
+  base64Image: string,
+  mimeType: string = 'image/jpeg',
+  options: ScanImageOptions = {}
+): Promise<VisionClassificationResult> {
+  const token = getCurrentUser()?.token;
   const res = await fetch('/api/ai/scan-image', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ image: base64Image, mimeType }),
+    signal: options.signal,
   });
   if (!res.ok) {
     let errorMsg = 'Error al analizar imagen con IA';
     try {
       const errorJson = await res.json();
       if (errorJson?.error) errorMsg = errorJson.error;
-    } catch {
+      if (errorJson?.code === 'ACCOUNT_REQUIRED') throw new ScanAccountRequiredError(errorMsg);
+    } catch (parseErr) {
+      if (parseErr instanceof ScanAccountRequiredError) throw parseErr;
       if (res.status === 413) {
         errorMsg = 'La imagen es demasiado pesada. Se requiere comprimir la foto antes de enviarla.';
       } else if (res.status === 429) {
@@ -789,8 +1008,27 @@ export async function scanImageWithGeminiVision(base64Image: string, mimeType: s
     }
     throw new Error(errorMsg);
   }
-  const json = await res.json();
-  return json.data;
+
+  // Respuesta en vivo: una línea JSON por evento (reintentos y resultado final)
+  if (!res.body) throw new Error('Respuesta vacía del análisis con IA');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split('\n');
+    buffer = done ? '' : lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as ScanStreamEvent;
+      if (event.type === 'retry') options.onRetry?.(event.attempt, event.message);
+      else if (event.type === 'result') return event.data;
+      else throw new Error(event.error);
+    }
+    if (done) break;
+  }
+  throw new Error('El análisis terminó sin resultado. Inténtalo de nuevo.');
 }
 
 export async function auditFullRoutineAi(products: any[], skinType: string = 'COMBINATION') {
@@ -904,6 +1142,25 @@ export interface BusinessAnalyticsData {
     whatsapp_clicks: number;
     phone_clicks: number;
     in_store_views: number;
+    map_routes?: number;
+    product_clicks?: number;
+  };
+  routine_impact?: {
+    total_routine_items: number;
+    active_users_relying: number;
+  };
+  demand_gap_opportunities?: Array<{
+    inci_name: string;
+    common_name: string;
+    evidence_level: string;
+    benefit: string | null;
+  }>;
+  anonymous_demographics?: {
+    total_sample_size: number;
+    oily_skin_pct: number;
+    dry_skin_pct: number;
+    combination_skin_pct: number;
+    sensitive_skin_pct: number;
   };
   branches_performance: Array<{
     id: number;
@@ -1664,5 +1921,121 @@ export async function fetchAdminIngredientDetail(identifier: string | number): P
   return json.data;
 }
 
+// ==========================================
+// CALIFICACIONES Y OPINIONES DE PRODUCTOS
+// ==========================================
 
+export interface ProductReviewItem {
+  id: number;
+  product_id?: number | null;
+  product_slug: string;
+  user_id?: number | null;
+  user_name: string;
+  user_skin_type?: string | null;
+  rating: number; // 1-5
+  title: string;
+  comment: string;
+  usage_duration: string | null;
+  is_verified: boolean;
+  helpful_count: number;
+  created_at: string;
+  updated_at?: string;
+}
 
+export interface ProductReviewsResponse {
+  product_slug: string;
+  average_rating: number | null; // null si aún no hay reseñas
+  total_reviews: number;
+  stars_breakdown: { [stars: number]: number };
+  reviews: ProductReviewItem[];
+}
+
+// Ante un error lanza ApiError: nunca se inventan reseñas ni se guardan solo en local.
+export async function fetchProductReviews(slug: string): Promise<ProductReviewsResponse> {
+  return apiFetch<ProductReviewsResponse>(
+    `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+    { cache: 'no-store' }
+  );
+}
+
+// Requiere sesión. El nombre lo pone el backend a partir del usuario autenticado.
+export async function submitProductReview(
+  slug: string,
+  payload: {
+    rating: number;
+    title: string;
+    comment: string;
+    user_skin_type?: string;
+    usage_duration?: string;
+  }
+): Promise<{ message: string; review: ProductReviewItem }> {
+  return apiFetch<{ message: string; review: ProductReviewItem }>(
+    `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function voteReviewHelpful(reviewId: number): Promise<{ helpful_count: number }> {
+  return apiFetch<{ helpful_count: number }>(`${API_BASE_URL}/catalog/reviews/${reviewId}/helpful`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+}
+
+// ==========================================
+// CAPTURAS DE REVISIÓN Y PROGRESO DE LA PIEL
+// ==========================================
+
+export interface UserSkinScanItem {
+  id: number;
+  user_id?: number | null;
+  image_url?: string | null;
+  // Las métricas solo existen si el análisis las devolvió; nunca se rellenan por defecto.
+  overall_score: number | null;
+  hydration_score: number | null;
+  elasticity_score: number | null;
+  pores_score: number | null;
+  spots_score: number | null;
+  fine_lines_score: number | null;
+  barrier_status: string | null;
+  scan_mode: 'face' | 'product' | string;
+  clinical_summary?: string | null;
+  recommendations?: string | null;
+  created_at: string;
+}
+
+// Requiere sesión: el historial contiene datos de salud. Ante un error lanza ApiError,
+// sin recurrir a localStorage ni a datos de ejemplo.
+export async function saveUserSkinScan(
+  payload: Partial<Omit<UserSkinScanItem, 'id' | 'created_at' | 'user_id'>>
+): Promise<{ message: string; scan: UserSkinScanItem }> {
+  return apiFetch(`${API_BASE_URL}/user/skin-scans`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AdminNotificationSummary {
+  status: string;
+  pending_stores_count: number;
+  today_users_count: number;
+  total_users_count: number;
+  today_leads_count: number;
+  security_alerts_count: number;
+}
+
+export async function fetchAdminNotificationSummary(): Promise<AdminNotificationSummary> {
+  const res = await fetch(`${API_BASE_URL}/admin/notifications/summary`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener el resumen de notificaciones');
+  }
+  return res.json();
+}

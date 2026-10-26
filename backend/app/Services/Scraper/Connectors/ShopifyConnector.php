@@ -26,15 +26,21 @@ class ShopifyConnector implements StoreConnectorInterface
         $catalogCurrency = $isVe ? 'USD' : $this->exchangeRateService->getCurrencyForCountry($store->country_code);
         $isZeroDecimal = in_array($catalogCurrency, ['CLP', 'COP', 'PYG', 'JPY', 'KRW']);
 
+        $startTime = microtime(true);
+
         try {
-            // 1. Intentar el endpoint estándar predictivo de Shopify
+            // 1. Intentar el endpoint estándar predictivo de Shopify con timeout estricto de 8s
             $suggestUrl = "{$baseUrl}/search/suggest.json?q=" . urlencode($keyword) . "&resources[type]=product&resources[options][unavailable_products]=hide";
-            $response = Http::timeout(10)
+            $response = $this->configureHttpClient(8)
                 ->withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Accept' => 'application/json',
                 ])
                 ->get($suggestUrl);
+
+            if ($response->status() === 429) {
+                $response->throw();
+            }
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -84,14 +90,21 @@ class ShopifyConnector implements StoreConnectorInterface
                 }
             }
 
-            // 2. Fallback a /products.json si suggest no arrojó resultados
-            $catalogUrl = "{$baseUrl}/products.json?limit=50";
-            $catResponse = Http::timeout(10)->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept' => 'application/json',
-            ])->get($catalogUrl);
+            // 2. Fallback a /products.json respetando presupuesto de tiempo total de 8s
+            $elapsed = microtime(true) - $startTime;
+            if ($elapsed < 7.0) {
+                $remainingTimeout = max(1, (int) round(8.0 - $elapsed));
+                $catalogUrl = "{$baseUrl}/products.json?limit=50";
+                $catResponse = $this->configureHttpClient($remainingTimeout)->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept' => 'application/json',
+                ])->get($catalogUrl);
 
-            if ($catResponse->successful()) {
+                if ($catResponse->status() === 429) {
+                    $catResponse->throw();
+                }
+
+                if ($catResponse->successful()) {
                 $catalogData = $catResponse->json();
                 $allProducts = $catalogData['products'] ?? [];
                 $kwLower = mb_strtolower($keyword);
@@ -135,10 +148,38 @@ class ShopifyConnector implements StoreConnectorInterface
                     }
                 }
             }
+        }
         } catch (\Throwable $e) {
+            if ($e instanceof \Illuminate\Http\Client\RequestException && $e->response?->status() === 429) {
+                throw $e;
+            }
             Log::channel('single')->warning("[ShopifyConnector] Error en {$store->name}: " . $e->getMessage());
         }
 
         return $offers;
+    }
+
+    /**
+     * Configura el cliente HTTP con timeout estricto de 8s y reintentos exponenciales con jitter.
+     */
+    protected function configureHttpClient(int $timeout = 8): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::connectTimeout(3)
+            ->timeout($timeout)
+            ->retry(3, function (int $attempt, ?\Exception $exception) {
+                if ($exception instanceof \Illuminate\Http\Client\RequestException && $exception->response?->hasHeader('Retry-After')) {
+                    $retryAfter = (int) $exception->response->header('Retry-After');
+                    if ($retryAfter > 0) {
+                        return min($retryAfter * 1000, 10000);
+                    }
+                }
+                return ($attempt * 1000) + random_int(0, 250);
+            }, function (\Exception $exception, $request) {
+                if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                    $status = $exception->response?->status();
+                    return $status === 429 || ($status >= 500 && $status <= 504);
+                }
+                return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+            }, throw: false);
     }
 }

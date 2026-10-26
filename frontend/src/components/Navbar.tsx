@@ -140,7 +140,7 @@ export default function Navbar() {
           <span className="text-[10px] font-semibold">Biblioteca</span>
         </Link>
         <Link
-          href="#"
+          href="/perfil"
           className={`flex flex-col items-center justify-center min-w-[64px] py-1.5 px-3 rounded-full transition-all duration-200 ${
             pathname === '/perfil'
               ? 'text-[#4F6D60] bg-[#EFF5F1]'

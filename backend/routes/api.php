@@ -15,7 +15,10 @@ use App\Http\Controllers\Api\Business\BusinessOfferController;
 use App\Http\Controllers\Api\Business\BusinessStoreController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\LifecycleController;
+use App\Http\Controllers\Api\ProductReviewController;
+use App\Http\Controllers\Api\UserSkinScanController;
 use App\Http\Controllers\Api\RoutineController;
+use App\Http\Controllers\Api\ScanQuotaController;
 use App\Http\Controllers\Api\SkinProfileController;
 use App\Http\Controllers\Api\StoreDirectoryController;
 use Illuminate\Support\Facades\Route;
@@ -55,7 +58,7 @@ Route::prefix('v1')->group(function () {
 
     // 1. Authentication & Security
     Route::prefix('auth')->group(function () {
-        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
         Route::post('/login', [AuthController::class, 'login']);
 
         // Social Authentication (Laravel Socialite: Google, Facebook, etc.)
@@ -70,7 +73,8 @@ Route::prefix('v1')->group(function () {
 
 
     // 2. Scientific Formula Audit Engine (Public & Authenticated)
-    Route::prefix('audit')->group(function () {
+    // Cada auditoría puede consultar PubMed y escribir estudios: se limita por usuario o IP.
+    Route::prefix('audit')->middleware('throttle:audit')->group(function () {
         Route::post('/inci', [AuditController::class, 'auditInci']);
         Route::post('/ocr', [AuditController::class, 'auditOcr']);
         Route::get('/product/{identifier}', [AuditController::class, 'auditProduct']);
@@ -83,8 +87,22 @@ Route::prefix('v1')->group(function () {
         Route::get('/ingredients/{identifier}', [CatalogController::class, 'ingredientDetail']);
         Route::get('/products', [CatalogController::class, 'products']);
         Route::get('/products/{slug}', [CatalogController::class, 'productDetail']);
+        Route::get('/products/{slug}/reviews', [ProductReviewController::class, 'index']);
+        Route::post('/products/{slug}/reviews', [ProductReviewController::class, 'store'])
+            ->middleware(['auth:sanctum', 'throttle:reviews']);
+        Route::post('/reviews/{id}/helpful', [ProductReviewController::class, 'voteHelpful'])
+            ->middleware(['auth:sanctum', 'throttle:review-votes']);
         Route::get('/brands', [CatalogController::class, 'brands']);
     });
+
+    // 3.2. User Skin Scans & Biometric Evolution (solo autenticado: contienen datos de salud)
+    Route::prefix('user')->middleware('auth:sanctum')->group(function () {
+        Route::get('/skin-scans', [UserSkinScanController::class, 'index']);
+        Route::post('/skin-scans', [UserSkinScanController::class, 'store']);
+    });
+
+    // 3.3. Cuotas del análisis de imagen con IA (solo el servidor Next.js, con secreto compartido)
+    Route::post('/internal/scan-quota', [ScanQuotaController::class, 'consume'])->middleware('internal');
 
     // 3.5. Local Stores, Branches & In-Store Shopping (Public)
     Route::prefix('stores')->group(function () {
@@ -94,8 +112,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/cities', [StoreDirectoryController::class, 'cities']);
         Route::get('/optimize-routine', [StoreDirectoryController::class, 'optimizeRoutine']);
         Route::get('/branches/{identifier}/products', [StoreDirectoryController::class, 'branchProducts']);
-        Route::post('/suggest', [StoreDirectoryController::class, 'suggest']);
-        Route::post('/interactions', [StoreDirectoryController::class, 'recordInteraction']);
+        Route::post('/suggest', [StoreDirectoryController::class, 'suggest'])->middleware('throttle:store-suggestions');
+        Route::post('/interactions', [StoreDirectoryController::class, 'recordInteraction'])->middleware('throttle:store-interactions');
         Route::get('/{identifier}', [StoreDirectoryController::class, 'show']);
     });
 
@@ -108,6 +126,8 @@ Route::prefix('v1')->group(function () {
         // Daily Routine & Adherence Tracking
         Route::prefix('routine')->group(function () {
             Route::get('/today', [RoutineController::class, 'today']);
+            Route::get('/week', [RoutineController::class, 'week']);
+            Route::post('/cycle/restart', [RoutineController::class, 'restartCycle']);
             Route::post('/items', [RoutineController::class, 'addItem']);
             Route::delete('/items/{id}', [RoutineController::class, 'deleteItem']);
             Route::post('/log', [RoutineController::class, 'logAdherence']);
@@ -190,6 +210,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('/{id}/verification', [AdminStoreController::class, 'updateVerification']);
             Route::patch('/{id}/subscription', [AdminStoreController::class, 'updateSubscription']);
             Route::patch('/{id}/toggle-status', [AdminStoreController::class, 'toggleStatus']);
+            Route::patch('/{id}/quick-update', [AdminStoreController::class, 'quickUpdate']);
             Route::delete('/{id}', [AdminStoreController::class, 'destroy']);
         });
 

@@ -27,7 +27,7 @@ class SchemaOrgConnector implements StoreConnectorInterface
         $offers = [];
 
         try {
-            $response = Http::timeout(10)
+            $response = $this->configureHttpClient(8)
                 ->withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Accept' => 'text/html,application/xhtml+xml',
@@ -35,6 +35,9 @@ class SchemaOrgConnector implements StoreConnectorInterface
                 ->get($targetUrl);
 
             if (!$response->successful()) {
+                if ($response->status() === 429) {
+                    $response->throw();
+                }
                 return [];
             }
 
@@ -89,9 +92,36 @@ class SchemaOrgConnector implements StoreConnectorInterface
                 }
             }
         } catch (\Throwable $e) {
+            if ($e instanceof \Illuminate\Http\Client\RequestException && $e->response?->status() === 429) {
+                throw $e;
+            }
             Log::channel('single')->warning("[SchemaOrgConnector] Error en {$store->name}: " . $e->getMessage());
         }
 
         return $offers;
+    }
+
+    /**
+     * Configura el cliente HTTP con timeout estricto de 8s y reintentos exponenciales con jitter.
+     */
+    protected function configureHttpClient(int $timeout = 8): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::connectTimeout(3)
+            ->timeout($timeout)
+            ->retry(3, function (int $attempt, ?\Exception $exception) {
+                if ($exception instanceof \Illuminate\Http\Client\RequestException && $exception->response?->hasHeader('Retry-After')) {
+                    $retryAfter = (int) $exception->response->header('Retry-After');
+                    if ($retryAfter > 0) {
+                        return min($retryAfter * 1000, 10000);
+                    }
+                }
+                return ($attempt * 1000) + random_int(0, 250);
+            }, function (\Exception $exception, $request) {
+                if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                    $status = $exception->response?->status();
+                    return $status === 429 || ($status >= 500 && $status <= 504);
+                }
+                return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+            }, throw: false);
     }
 }

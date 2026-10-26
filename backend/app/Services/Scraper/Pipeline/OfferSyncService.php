@@ -10,6 +10,7 @@ use App\Models\StoreBranch;
 use App\Services\Scraper\Contracts\GeocodingServiceInterface;
 use App\Services\Scraper\DTOs\ScrapedProductOfferDTO;
 use App\Services\Scraper\DTOs\ScrapedStoreBranchDTO;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -71,80 +72,82 @@ class OfferSyncService
      */
     public function syncOffer(ScrapedProductOfferDTO $dto, ?\App\Models\Ingredient $matchingIngredient = null): ?ProductStoreOffer
     {
-        $store = $this->resolveStore($dto->storeSlug);
+        return DB::transaction(function () use ($dto, $matchingIngredient) {
+            $store = $this->resolveStore($dto->storeSlug);
 
-        // 1. Emparejar con un producto existente (por código de barra EAN o por nombre)
-        $product = null;
+            // 1. Emparejar con un producto existente (por código de barra EAN o por nombre)
+            $product = null;
 
-        if (!empty($dto->barcodeEan)) {
-            $product = Product::where('barcode_ean', $dto->barcodeEan)->first();
-        }
+            if (!empty($dto->barcodeEan)) {
+                $product = Product::where('barcode_ean', $dto->barcodeEan)->first();
+            }
 
-        if (!$product) {
-            $product = $this->findProductByName($dto->productName, $dto->brandName);
-        }
+            if (!$product) {
+                $product = $this->findProductByName($dto->productName, $dto->brandName);
+            }
 
-        // Si el producto aún no existe en el catálogo, lo creamos preliminarmente
-        if (!$product) {
-            $brandName = !empty($dto->brandName) ? $dto->brandName : 'Genérica / Desconocida';
-            $brand = Brand::firstOrCreate(
-                ['slug' => Str::slug($brandName)],
-                ['name' => $brandName, 'is_verified' => false]
-            );
-            $brandId = $brand->id;
+            // Si el producto aún no existe en el catálogo, lo creamos preliminarmente
+            if (!$product) {
+                $brandName = !empty($dto->brandName) ? $dto->brandName : 'Genérica / Desconocida';
+                $brand = Brand::firstOrCreate(
+                    ['slug' => Str::slug($brandName)],
+                    ['name' => $brandName, 'is_verified' => false]
+                );
+                $brandId = $brand->id;
 
-            $product = Product::create([
-                'brand_id' => $brandId,
-                'name' => $dto->productName,
-                'slug' => Str::slug($dto->productName . '-' . uniqid()),
-                'category' => $dto->category ?? 'MISCELLANEOUS',
-                'barcode_ean' => $dto->barcodeEan,
-                'is_verified' => false,
-            ]);
-        }
+                $product = Product::create([
+                    'brand_id' => $brandId,
+                    'name' => $dto->productName,
+                    'slug' => Str::slug($dto->productName . '-' . uniqid()),
+                    'category' => $dto->category ?? 'MISCELLANEOUS',
+                    'barcode_ean' => $dto->barcodeEan,
+                    'is_verified' => false,
+                ]);
+            }
 
-        // Si se vinculó un ingrediente activo específico (por búsqueda de componente), relacionarlo
-        if ($matchingIngredient) {
-            $product->ingredients()->syncWithoutDetaching([
-                $matchingIngredient->id => [
-                    'position' => 1,
-                    'is_declared_active' => true,
+            // Si se vinculó un ingrediente activo específico (por búsqueda de componente), relacionarlo
+            if ($matchingIngredient) {
+                $product->ingredients()->syncWithoutDetaching([
+                    $matchingIngredient->id => [
+                        'position' => 1,
+                        'is_declared_active' => true,
+                    ]
+                ]);
+            }
+
+            // 2. Asociar a sucursal si se especificó slug o nombre
+            $branchId = null;
+            if ($dto->branchSlug) {
+                $branch = StoreBranch::where('slug', $dto->branchSlug)
+                    ->orWhere('name', 'ILIKE', "%{$dto->branchSlug}%")
+                    ->first();
+                $branchId = $branch?->id;
+            }
+
+            // 3. Normalizar de forma estricta precios, divisas y equivalencias según el país de la tienda
+            $priceNormalizer = app(\App\Services\Currency\PriceNormalizerService::class);
+            $dto = $priceNormalizer->normalizeProductOffer($dto, $store);
+
+            // Crear o actualizar la oferta de precio y stock
+            return ProductStoreOffer::updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'store_id' => $store->id,
+                    'branch_id' => $branchId,
+                ],
+                [
+                    'product_url' => $dto->productUrl ?? $store->website_url,
+                    'affiliate_url' => $dto->productUrl ?? $store->website_url,
+                    'price' => $dto->price,
+                    'price_ves' => $dto->priceVes,
+                    'price_local' => $dto->priceLocal,
+                    'currency' => $dto->currency ?: 'USD',
+                    'currency_local' => $dto->currencyLocal,
+                    'in_stock' => $dto->inStock,
+                    'last_checked_at' => now(),
                 ]
-            ]);
-        }
-
-        // 2. Asociar a sucursal si se especificó slug o nombre
-        $branchId = null;
-        if ($dto->branchSlug) {
-            $branch = StoreBranch::where('slug', $dto->branchSlug)
-                ->orWhere('name', 'ILIKE', "%{$dto->branchSlug}%")
-                ->first();
-            $branchId = $branch?->id;
-        }
-
-        // 3. Normalizar de forma estricta precios, divisas y equivalencias según el país de la tienda
-        $priceNormalizer = app(\App\Services\Currency\PriceNormalizerService::class);
-        $dto = $priceNormalizer->normalizeProductOffer($dto, $store);
-
-        // Crear o actualizar la oferta de precio y stock
-        return ProductStoreOffer::updateOrCreate(
-            [
-                'product_id' => $product->id,
-                'store_id' => $store->id,
-                'branch_id' => $branchId,
-            ],
-            [
-                'product_url' => $dto->productUrl ?? $store->website_url,
-                'affiliate_url' => $dto->productUrl ?? $store->website_url,
-                'price' => $dto->price,
-                'price_ves' => $dto->priceVes,
-                'price_local' => $dto->priceLocal,
-                'currency' => $dto->currency ?: 'USD',
-                'currency_local' => $dto->currencyLocal,
-                'in_stock' => $dto->inStock,
-                'last_checked_at' => now(),
-            ]
-        );
+            );
+        }, 5);
     }
 
     /**

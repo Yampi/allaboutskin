@@ -33,7 +33,7 @@ $ingredient = Ingredient::where('is_active', true)->where('inci_name', 'RETINOL'
 $syncService = new OfferSyncService(new NominatimGeocodingService());
 $crawlerEngine = new MultiStoreCrawlerEngine($syncService);
 
-$crawlResult = $crawlerEngine->crawlForIngredient($ingredient, false); // Forzamos evaluación completa
+$crawlResult = $crawlerEngine->crawlForIngredient($ingredient, false, [2, 6]); // Evaluación de tiendas representativas
 
 $crawlerQueries = DB::getQueryLog();
 DB::disableQueryLog();

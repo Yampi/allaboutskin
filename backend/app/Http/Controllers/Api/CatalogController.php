@@ -23,9 +23,10 @@ class CatalogController extends Controller
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
-                $q->where('inci_name', 'like', "%{$search}%")
-                  ->orWhere('common_name', 'like', "%{$search}%")
-                  ->orWhere('cas_number', 'like', "%{$search}%");
+                // ILIKE en Postgres: "niacinamide" debe encontrar "NIACINAMIDE".
+                $q->whereLike('inci_name', "%{$search}%", caseSensitive: false)
+                  ->orWhereLike('common_name', "%{$search}%", caseSensitive: false)
+                  ->orWhereLike('cas_number', "%{$search}%", caseSensitive: false);
             });
         }
 

@@ -10,6 +10,7 @@ use App\Models\ProductStoreOffer;
 use App\Models\StoreBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BusinessOfferController extends Controller
@@ -167,41 +168,46 @@ class BusinessOfferController extends Controller
             'offers.*.in_stock' => 'nullable|boolean',
         ]);
 
-        $updatedCount = 0;
+        // Ejecutar recálculo y actualización de ofertas en una transacción ACID atómica
+        $updatedCount = DB::transaction(function () use ($validated, $store) {
+            $count = 0;
 
-        // 1. Si se envía una tasa de cambio general, recalcular todos los precios VES en base a USD
-        if (!empty($validated['exchange_rate'])) {
-            $rate = (float) $validated['exchange_rate'];
-            $storeOffers = ProductStoreOffer::where('store_id', $store->id)->get();
+            // 1. Si se envía una tasa de cambio general, recalcular todos los precios VES en base a USD
+            if (!empty($validated['exchange_rate'])) {
+                $rate = (float) $validated['exchange_rate'];
+                $storeOffers = ProductStoreOffer::where('store_id', $store->id)->get();
 
-            foreach ($storeOffers as $offer) {
-                $offer->update([
-                    'price_ves' => round($offer->price * $rate, 2),
-                    'last_checked_at' => now(),
-                ]);
-                $updatedCount++;
-            }
-        }
-
-        // 2. Si se envían ofertas individuales en lote
-        if (!empty($validated['offers'])) {
-            foreach ($validated['offers'] as $item) {
-                $offer = ProductStoreOffer::where('id', $item['id'])
-                    ->where('store_id', $store->id)
-                    ->first();
-
-                if ($offer) {
-                    $updateData = [];
-                    if (isset($item['price'])) $updateData['price'] = $item['price'];
-                    if (isset($item['price_ves'])) $updateData['price_ves'] = $item['price_ves'];
-                    if (isset($item['in_stock'])) $updateData['in_stock'] = $item['in_stock'];
-                    $updateData['last_checked_at'] = now();
-
-                    $offer->update($updateData);
-                    $updatedCount++;
+                foreach ($storeOffers as $offer) {
+                    $offer->update([
+                        'price_ves' => round($offer->price * $rate, 2),
+                        'last_checked_at' => now(),
+                    ]);
+                    $count++;
                 }
             }
-        }
+
+            // 2. Si se envían ofertas individuales en lote
+            if (!empty($validated['offers'])) {
+                foreach ($validated['offers'] as $item) {
+                    $offer = ProductStoreOffer::where('id', $item['id'])
+                        ->where('store_id', $store->id)
+                        ->first();
+
+                    if ($offer) {
+                        $updateData = [];
+                        if (isset($item['price'])) $updateData['price'] = $item['price'];
+                        if (isset($item['price_ves'])) $updateData['price_ves'] = $item['price_ves'];
+                        if (isset($item['in_stock'])) $updateData['in_stock'] = $item['in_stock'];
+                        $updateData['last_checked_at'] = now();
+
+                        $offer->update($updateData);
+                        $count++;
+                    }
+                }
+            }
+
+            return $count;
+        }, 5);
 
         return response()->json([
             'status' => 'success',
@@ -250,95 +256,106 @@ class BusinessOfferController extends Controller
 
         foreach ($validated['items'] as $index => $item) {
             try {
-                $productName = trim($item['name']);
-                $barcode = !empty($item['barcode_ean']) ? trim($item['barcode_ean']) : null;
-                $brandName = !empty($item['brand']) ? trim($item['brand']) : 'Genérico';
-                $priceUsd = (float) $item['price_usd'];
-                $priceVes = isset($item['price_ves']) && $item['price_ves'] !== null
-                    ? (float) $item['price_ves']
-                    : ($rate ? round($priceUsd * $rate, 2) : null);
-                $inStock = isset($item['in_stock']) ? (bool) $item['in_stock'] : true;
-                $productUrl = !empty($item['product_url']) ? $item['product_url'] : $store->website_url;
+                DB::transaction(function () use (
+                    $item,
+                    $store,
+                    $branchId,
+                    $rate,
+                    &$matchedProducts,
+                    &$createdProducts,
+                    &$updatedOffers,
+                    &$createdOffers
+                ) {
+                    $productName = trim($item['name']);
+                    $barcode = !empty($item['barcode_ean']) ? trim($item['barcode_ean']) : null;
+                    $brandName = !empty($item['brand']) ? trim($item['brand']) : 'Genérico';
+                    $priceUsd = (float) $item['price_usd'];
+                    $priceVes = isset($item['price_ves']) && $item['price_ves'] !== null
+                        ? (float) $item['price_ves']
+                        : ($rate ? round($priceUsd * $rate, 2) : null);
+                    $inStock = isset($item['in_stock']) ? (bool) $item['in_stock'] : true;
+                    $productUrl = !empty($item['product_url']) ? $item['product_url'] : $store->website_url;
 
-                // 1. Intentar encontrar producto por código de barras
-                $product = null;
-                if ($barcode) {
-                    $product = Product::where('barcode_ean', $barcode)->first();
-                }
+                    // 1. Intentar encontrar producto por código de barras
+                    $product = null;
+                    if ($barcode) {
+                        $product = Product::where('barcode_ean', $barcode)->first();
+                    }
 
-                // 2. Si no coincide por código de barras, buscar por nombre exacto o slug
-                if (!$product) {
-                    $productSlug = Str::slug($productName);
-                    $product = Product::where('slug', $productSlug)
-                        ->orWhere('name', 'ilike', $productName)
+                    // 2. Si no coincide por código de barras, buscar por nombre exacto o slug
+                    if (!$product) {
+                        $productSlug = Str::slug($productName);
+                        $product = Product::where('slug', $productSlug)
+                            ->orWhere('name', 'ilike', $productName)
+                            ->first();
+                    }
+
+                    // 3. Búsqueda por coincidencia parcial si aún no se encuentra
+                    if (!$product) {
+                        $product = Product::where('name', 'ilike', "%{$productName}%")->first();
+                    }
+
+                    if ($product) {
+                        $matchedProducts++;
+                    } else {
+                        // Crear marca si no existe
+                        $brandSlug = Str::slug($brandName);
+                        $brand = Brand::firstOrCreate(
+                            ['slug' => $brandSlug],
+                            ['name' => $brandName, 'is_verified' => false]
+                        );
+
+                        // Crear producto nuevo para el catálogo de la tienda
+                        $uniqueProductSlug = Str::slug($productName . '-' . Str::random(5));
+                        $product = Product::create([
+                            'brand_id' => $brand->id,
+                            'name' => $productName,
+                            'slug' => $uniqueProductSlug,
+                            'barcode_ean' => $barcode,
+                            'category' => 'SERUM',
+                            'is_verified' => false,
+                        ]);
+                        $createdProducts++;
+                    }
+
+                    // 4. Crear o actualizar la oferta en la tienda
+                    $offer = ProductStoreOffer::where('store_id', $store->id)
+                        ->where('product_id', $product->id)
+                        ->where(function ($q) use ($branchId) {
+                            if ($branchId) {
+                                $q->where('branch_id', $branchId);
+                            } else {
+                                $q->whereNull('branch_id');
+                            }
+                        })
                         ->first();
-                }
 
-                // 3. Búsqueda por coincidencia parcial si aún no se encuentra
-                if (!$product) {
-                    $product = Product::where('name', 'ilike', "%{$productName}%")->first();
-                }
-
-                if ($product) {
-                    $matchedProducts++;
-                } else {
-                    // Crear marca si no existe
-                    $brandSlug = Str::slug($brandName);
-                    $brand = Brand::firstOrCreate(
-                        ['slug' => $brandSlug],
-                        ['name' => $brandName, 'is_verified' => false]
-                    );
-
-                    // Crear producto nuevo para el catálogo de la tienda
-                    $uniqueProductSlug = Str::slug($productName . '-' . Str::random(5));
-                    $product = Product::create([
-                        'brand_id' => $brand->id,
-                        'name' => $productName,
-                        'slug' => $uniqueProductSlug,
-                        'barcode_ean' => $barcode,
-                        'category' => 'SERUM',
-                        'is_verified' => false,
-                    ]);
-                    $createdProducts++;
-                }
-
-                // 4. Crear o actualizar la oferta en la tienda
-                $offer = ProductStoreOffer::where('store_id', $store->id)
-                    ->where('product_id', $product->id)
-                    ->where(function ($q) use ($branchId) {
-                        if ($branchId) {
-                            $q->where('branch_id', $branchId);
-                        } else {
-                            $q->whereNull('branch_id');
-                        }
-                    })
-                    ->first();
-
-                if ($offer) {
-                    $offer->update([
-                        'price' => $priceUsd,
-                        'price_ves' => $priceVes,
-                        'in_stock' => $inStock,
-                        'product_url' => $productUrl,
-                        'affiliate_url' => $productUrl,
-                        'last_checked_at' => now(),
-                    ]);
-                    $updatedOffers++;
-                } else {
-                    ProductStoreOffer::create([
-                        'store_id' => $store->id,
-                        'product_id' => $product->id,
-                        'branch_id' => $branchId,
-                        'price' => $priceUsd,
-                        'price_ves' => $priceVes,
-                        'currency' => 'USD',
-                        'in_stock' => $inStock,
-                        'product_url' => $productUrl,
-                        'affiliate_url' => $productUrl,
-                        'last_checked_at' => now(),
-                    ]);
-                    $createdOffers++;
-                }
+                    if ($offer) {
+                        $offer->update([
+                            'price' => $priceUsd,
+                            'price_ves' => $priceVes,
+                            'in_stock' => $inStock,
+                            'product_url' => $productUrl,
+                            'affiliate_url' => $productUrl,
+                            'last_checked_at' => now(),
+                        ]);
+                        $updatedOffers++;
+                    } else {
+                        ProductStoreOffer::create([
+                            'store_id' => $store->id,
+                            'product_id' => $product->id,
+                            'branch_id' => $branchId,
+                            'price' => $priceUsd,
+                            'price_ves' => $priceVes,
+                            'currency' => 'USD',
+                            'in_stock' => $inStock,
+                            'product_url' => $productUrl,
+                            'affiliate_url' => $productUrl,
+                            'last_checked_at' => now(),
+                        ]);
+                        $createdOffers++;
+                    }
+                }, 3);
             } catch (\Throwable $e) {
                 $errors[] = [
                     'row' => $index + 1,
