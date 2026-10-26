@@ -1,72 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { classifyAndProcessImage } from '@/lib/gemini';
-import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { getClientIp } from '@/lib/rateLimit';
 import { validateBase64Image, sanitizeText } from '@/lib/security';
 import {
-  checkScanQuota,
-  resolveUserId,
+  consumeScanQuota,
   readDeviceCount,
   encodeDeviceCount,
   DEVICE_COOKIE,
   DEVICE_COOKIE_MAX_AGE,
+  type QuotaDecision,
 } from '@/lib/scanQuota';
+
+const QUOTA_STATUS: Record<Exclude<QuotaDecision, { allowed: true }>['reason'], number> = {
+  ACCOUNT_REQUIRED: 403,
+  USER_LIMIT: 403,
+  RATE_LIMITED: 429,
+  GLOBAL_LIMIT: 503,
+  UNAVAILABLE: 503,
+};
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Rate Limiting Protection (Stricter for image vision: Max 10 per minute per IP)
-    const ip = getClientIp(req);
-    const rateLimit = checkRateLimit(`scan_image_${ip}`, { limit: 10, windowMs: 60 * 1000 });
-
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Has alcanzado el límite de análisis de imágenes por minuto. Por favor, reintenta en ${rateLimit.resetInSeconds} segundos.`,
-        },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': rateLimit.resetInSeconds.toString(),
-            'X-RateLimit-Remaining': '0',
-          }
-        }
-      );
-    }
-
     const body = await req.json();
     const { image, mimeType } = body;
 
-    // 2. Validate payload format and size
+    // 1. Validar formato y tamaño antes de consumir cuota
     const imageValidation = validateBase64Image(image);
     if (!imageValidation.isValid) {
       return NextResponse.json({ error: imageValidation.error }, { status: 400 });
     }
 
-    // 3. Cuota: visitantes con pocos análisis gratis; usuarios con sesión, cuota diaria
-    const userId = await resolveUserId(req.headers.get('authorization'));
+    // 2. Cuota (en el backend): límite por minuto, análisis gratis por dispositivo e IP,
+    //    cuota diaria por usuario y tope global
     const deviceCount = readDeviceCount(req.cookies.get(DEVICE_COOKIE)?.value);
-    const quota = checkScanQuota({ userId, ip, deviceCount });
+    const quota = await consumeScanQuota({
+      authorization: req.headers.get('authorization'),
+      ip: getClientIp(req),
+      deviceCount,
+    });
     if (!quota.allowed) {
       return NextResponse.json(
         { success: false, code: quota.reason, error: quota.message },
-        { status: quota.reason === 'GLOBAL_LIMIT' ? 503 : 403 }
+        { status: QUOTA_STATUS[quota.reason] }
       );
     }
 
     const sanitizedMimeType = sanitizeText(mimeType || 'image/jpeg', 30);
     const scanResult = await classifyAndProcessImage(image, sanitizedMimeType);
 
-    const response = NextResponse.json(
-      {
-        success: true,
-        data: scanResult,
-      },
-      {
-        headers: {
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-        }
-      }
-    );
+    const response = NextResponse.json({ success: true, data: scanResult });
     if (quota.tier === 'anonymous') {
       response.cookies.set(DEVICE_COOKIE, encodeDeviceCount(deviceCount + 1), {
         httpOnly: true,

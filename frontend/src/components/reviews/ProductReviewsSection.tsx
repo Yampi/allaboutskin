@@ -42,19 +42,23 @@ export default function ProductReviewsSection({
   const [newRating, setNewRating] = useState(5);
   const [newTitle, setNewTitle] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [newSkinType, setNewSkinType] = useState('Piel Mixta');
-  const [newUsageDuration, setNewUsageDuration] = useState('3 a 4 semanas');
+  const [newSkinType, setNewSkinType] = useState('');
+  const [newUsageDuration, setNewUsageDuration] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
   const [votedReviews, setVotedReviews] = useState<{ [id: number]: boolean }>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState(false);
 
   const loadReviews = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await fetchProductReviews(productSlug);
       setReviewsData(data);
     } catch (err) {
       console.error('Error al cargar reseñas:', err);
+      setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar las opiniones.');
     } finally {
       setIsLoading(false);
     }
@@ -64,8 +68,15 @@ export default function ProductReviewsSection({
     loadReviews();
   }, [productSlug]);
 
+  // Opinar y votar requieren sesión (el backend responde 401 sin token)
+  const requireLogin = () => {
+    if (getCurrentUser()?.token) return true;
+    setLoginNotice(true);
+    return false;
+  };
+
   const handleHelpful = async (reviewId: number) => {
-    if (votedReviews[reviewId]) return;
+    if (votedReviews[reviewId] || !requireLogin()) return;
     try {
       await voteReviewHelpful(reviewId);
       setVotedReviews((prev) => ({ ...prev, [reviewId]: true }));
@@ -90,14 +101,12 @@ export default function ProductReviewsSection({
     setIsSubmitting(true);
     setSubmitFeedback(null);
     try {
-      const currentUser = getCurrentUser();
-      const res = await submitProductReview(productSlug, {
+      await submitProductReview(productSlug, {
         rating: newRating,
         title: newTitle,
         comment: newComment,
-        user_name: currentUser?.name || 'Tú (Usuario verificado)',
-        user_skin_type: newSkinType,
-        usage_duration: newUsageDuration,
+        user_skin_type: newSkinType || undefined,
+        usage_duration: newUsageDuration || undefined,
       });
 
       setSubmitFeedback('¡Gracias por tu opinión! Se ha publicado con éxito.');
@@ -108,8 +117,8 @@ export default function ProductReviewsSection({
         setNewComment('');
         loadReviews();
       }, 1500);
-    } catch (error: any) {
-      setSubmitFeedback(error.message || 'Error al enviar opinión.');
+    } catch (error: unknown) {
+      setSubmitFeedback(error instanceof Error ? error.message : 'Error al enviar opinión.');
     } finally {
       setIsSubmitting(false);
     }
@@ -139,13 +148,30 @@ export default function ProductReviewsSection({
 
         <button
           type="button"
-          onClick={() => setIsWriteModalOpen(true)}
+          onClick={() => requireLogin() && setIsWriteModalOpen(true)}
           className="px-5 py-2.5 rounded-full bg-[#2E7D5B] hover:bg-[#1B3D32] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 shrink-0 cursor-pointer"
         >
           <Sparkles className="w-4 h-4 text-emerald-200" />
           <span>Calificar Producto</span>
         </button>
       </div>
+
+      {loginNotice && (
+        <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E8E1D7] text-xs text-[#4A4540]">
+          Para opinar o votar necesitas una cuenta.{' '}
+          <a href="/login" className="font-bold text-[#2E7D5B] underline">Inicia sesión</a> o{' '}
+          <a href="/registro" className="font-bold text-[#2E7D5B] underline">regístrate gratis</a>.
+        </div>
+      )}
+
+      {loadError && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center justify-between gap-3">
+          <span>No se pudieron cargar las opiniones: {loadError}</span>
+          <button type="button" onClick={loadReviews} className="font-bold underline cursor-pointer">
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {/* Resumen de Calificación Doble (Estrellas + Métricas) */}
       {reviewsData && (
@@ -154,7 +180,7 @@ export default function ProductReviewsSection({
           <div className="md:col-span-4 text-center md:text-left space-y-1">
             <div className="flex items-baseline justify-center md:justify-start gap-2">
               <span className="text-4xl font-black text-[#2D2825]">
-                {reviewsData.average_rating}
+                {reviewsData.average_rating ?? '—'}
               </span>
               <span className="text-sm font-bold text-[#8C827A]">/ 5.0</span>
             </div>
@@ -164,7 +190,7 @@ export default function ProductReviewsSection({
                 <Star
                   key={star}
                   className={`w-4 h-4 ${
-                    star <= Math.round(reviewsData.average_rating)
+                    star <= Math.round(reviewsData.average_rating ?? 0)
                       ? 'fill-amber-400 text-amber-400'
                       : 'text-stone-300'
                   }`}
@@ -173,7 +199,9 @@ export default function ProductReviewsSection({
             </div>
 
             <p className="text-[11px] font-semibold text-[#66615C]">
-              Basado en {reviewsData.total_reviews} {reviewsData.total_reviews === 1 ? 'opinión verificada' : 'opiniones verificadas'}
+              {reviewsData.total_reviews === 0
+                ? 'Aún no hay opiniones'
+                : `Basado en ${reviewsData.total_reviews} ${reviewsData.total_reviews === 1 ? 'opinión' : 'opiniones'}`}
             </p>
           </div>
 
@@ -268,14 +296,17 @@ export default function ProductReviewsSection({
                         {rev.user_name}
                       </span>
                       {rev.is_verified && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-1.5 py-0.2 rounded-full">
-                          <CheckCircle2 className="w-3 h-3" /> Verificado
+                        <span
+                          title="Tiene este producto en su rutina"
+                          className="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#2E7D5B] bg-[#E6F4EC] px-1.5 py-0.2 rounded-full"
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> Lo usa en su rutina
                         </span>
                       )}
                     </div>
-                    {rev.user_skin_type && (
+                    {(rev.user_skin_type || rev.usage_duration) && (
                       <span className="text-[10px] text-[#8C827A] font-semibold block">
-                        {rev.user_skin_type} · Uso: {rev.usage_duration}
+                        {[rev.user_skin_type, rev.usage_duration && `Uso: ${rev.usage_duration}`].filter(Boolean).join(' · ')}
                       </span>
                     )}
                   </div>
@@ -440,6 +471,7 @@ export default function ProductReviewsSection({
                     onChange={(e) => setNewSkinType(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-[#E8E1D7] text-xs font-medium bg-white"
                   >
+                    <option value="">Prefiero no decirlo</option>
                     <option value="Piel Grasa">Piel Grasa</option>
                     <option value="Piel Mixta">Piel Mixta</option>
                     <option value="Piel Seca">Piel Seca</option>
@@ -457,6 +489,7 @@ export default function ProductReviewsSection({
                     onChange={(e) => setNewUsageDuration(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-[#E8E1D7] text-xs font-medium bg-white"
                   >
+                    <option value="">Prefiero no decirlo</option>
                     <option value="1 a 2 semanas">1 a 2 semanas</option>
                     <option value="3 a 4 semanas">3 a 4 semanas</option>
                     <option value="2 a 3 meses">2 a 3 meses</option>

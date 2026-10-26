@@ -1899,11 +1899,11 @@ export interface ProductReviewItem {
   product_slug: string;
   user_id?: number | null;
   user_name: string;
-  user_skin_type?: string;
+  user_skin_type?: string | null;
   rating: number; // 1-5
   title: string;
   comment: string;
-  usage_duration: string;
+  usage_duration: string | null;
   is_verified: boolean;
   helpful_count: number;
   created_at: string;
@@ -1912,88 +1912,39 @@ export interface ProductReviewItem {
 
 export interface ProductReviewsResponse {
   product_slug: string;
-  average_rating: number;
+  average_rating: number | null; // null si aún no hay reseñas
   total_reviews: number;
   stars_breakdown: { [stars: number]: number };
   reviews: ProductReviewItem[];
 }
 
+// Ante un error lanza ApiError: nunca se inventan reseñas ni se guardan solo en local.
 export async function fetchProductReviews(slug: string): Promise<ProductReviewsResponse> {
-  try {
-    return await apiFetch<ProductReviewsResponse>(
-      `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
-      { cache: 'no-store' }
-    );
-  } catch (error) {
-    // Modo sin conexión o almacenamiento local exclusivamente para reseñas del usuario local
-    const localKey = `allaboutskin_reviews_${slug}`;
-    const localSaved = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
-    const localList: ProductReviewItem[] = localSaved ? JSON.parse(localSaved) : [];
-
-    return {
-      product_slug: slug,
-      average_rating: localList.length
-        ? +(localList.reduce((acc, r) => acc + r.rating, 0) / localList.length).toFixed(1)
-        : 0,
-      total_reviews: localList.length,
-      stars_breakdown: {
-        5: localList.filter((r) => r.rating === 5).length,
-        4: localList.filter((r) => r.rating === 4).length,
-        3: localList.filter((r) => r.rating === 3).length,
-        2: localList.filter((r) => r.rating === 2).length,
-        1: localList.filter((r) => r.rating === 1).length,
-      },
-      reviews: localList,
-    };
-  }
+  return apiFetch<ProductReviewsResponse>(
+    `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+    { cache: 'no-store' }
+  );
 }
 
+// Requiere sesión. El nombre lo pone el backend a partir del usuario autenticado.
 export async function submitProductReview(
   slug: string,
   payload: {
     rating: number;
     title: string;
     comment: string;
-    user_name?: string;
     user_skin_type?: string;
     usage_duration?: string;
   }
 ): Promise<{ message: string; review: ProductReviewItem }> {
-  try {
-    const data = await apiFetch<{ message: string; review: ProductReviewItem }>(
-      `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
-      {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      }
-    );
-    return data;
-  } catch (e: any) {
-    // Persistencia local resiliente
-    const localKey = `allaboutskin_reviews_${slug}`;
-    const localSaved = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
-    const localList: ProductReviewItem[] = localSaved ? JSON.parse(localSaved) : [];
-
-    const newRev: ProductReviewItem = {
-      id: Date.now(),
-      product_slug: slug,
-      user_name: payload.user_name || 'Tú (Usuario verificado)',
-      user_skin_type: payload.user_skin_type || 'Piel Mixta',
-      rating: payload.rating,
-      title: payload.title,
-      comment: payload.comment,
-      usage_duration: payload.usage_duration || '2 semanas',
-      is_verified: true,
-      helpful_count: 0,
-      created_at: new Date().toISOString(),
-    };
-    localList.unshift(newRev);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(localKey, JSON.stringify(localList));
+  return apiFetch<{ message: string; review: ProductReviewItem }>(
+    `${API_BASE_URL}/catalog/products/${encodeURIComponent(slug)}/reviews`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
     }
-    return { message: '¡Opinión guardada localmente con éxito!', review: newRev };
-  }
+  );
 }
 
 export async function voteReviewHelpful(reviewId: number): Promise<{ helpful_count: number }> {
