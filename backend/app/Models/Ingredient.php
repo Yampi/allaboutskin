@@ -41,7 +41,7 @@ class Ingredient extends Model
             'B' => 'Nivel B: Evidencia clínica moderada (Estudios controlados / Ensayos in vivo)',
             'C' => 'Nivel C: Evidencia preliminar (Estudios ex vivo / Ensayos abiertos)',
             'D' => 'Nivel D: Evidencia mecanística básica (Ensayos in vitro / Farmacocinéticos)',
-            default => 'En evaluación clínica',
+            default => 'Sin estudios vinculados en nuestra base',
         };
     }
 

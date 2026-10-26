@@ -43,6 +43,12 @@ export default function ProductResults({ result, onRetry }: { result: ProductRes
           <Section title="Uso y evidencia">
             <p className="text-xs text-[#2D2825]"><b>Momento:</b> {TIMING[audit.layering_and_usage.recommended_timing]} · {audit.layering_and_usage.timing_rationale}</p>
             <p className="text-xs text-[#2D2825]"><b>Evidencia global:</b> {audit.scientific_evidence.evidence_grade_label}</p>
+            {audit.scientific_evidence.by_ingredient?.map((i) => (
+              <p key={i.inci_name} className="text-xs text-[#2D2825]">
+                <b>{i.common_name || i.inci_name}:</b>{' '}
+                {i.studies_count > 0 ? `${i.studies_count} estudio(s), evidencia ${i.evidence_grade}` : 'sin estudios en nuestra base'}
+              </p>
+            ))}
             {audit.layering_and_usage.requires_sunscreen && <p className="text-xs text-amber-800">{audit.layering_and_usage.sunscreen_rationale}</p>}
           </Section>
 

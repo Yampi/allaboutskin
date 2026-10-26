@@ -48,7 +48,7 @@ export default function AdminIngredientDossierModal({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 bg-slate-50 rounded-md border border-slate-200">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Nivel Evidencia</span>
-                <span className="text-sm font-bold text-slate-900">Grado {ingredient.evidence_level || 'C'}</span>
+                <span className="text-sm font-bold text-slate-900">{ingredient.evidence_level ? `Grado ${ingredient.evidence_level}` : 'Sin estudios'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Clasificación</span>

@@ -54,6 +54,10 @@ class PubMedApiService
                 }
             }
 
+            if (!empty($studies)) {
+                app(EvidenceGradeCalculator::class)->refresh($ingredient);
+            }
+
             return !empty($studies) ? $studies : $existing->all();
         });
     }

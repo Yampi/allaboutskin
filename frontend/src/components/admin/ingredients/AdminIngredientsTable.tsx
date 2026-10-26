@@ -76,7 +76,7 @@ export default function AdminIngredientsTable({
                           : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      Grado {ing.evidence_level || 'C'}
+                      {ing.evidence_level ? `Grado ${ing.evidence_level}` : 'Sin estudios'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-700">

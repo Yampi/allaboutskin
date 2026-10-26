@@ -140,8 +140,14 @@ export interface AuditReport {
     }>;
   }>;
   scientific_evidence: {
-    overall_evidence_grade: 'A' | 'B' | 'C' | 'D';
+    overall_evidence_grade: 'A' | 'B' | 'C' | 'D' | null;
     evidence_grade_label: string;
+    by_ingredient?: Array<{
+      inci_name: string;
+      common_name: string | null;
+      studies_count: number;
+      evidence_grade: 'A' | 'B' | 'C' | 'D' | null;
+    }>;
     total_referenced_studies: number;
     studies: Array<{
       pmid: string;
