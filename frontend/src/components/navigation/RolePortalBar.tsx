@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, Store, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
-import { getCurrentUser, setCurrentUser, loginUser, StoredUser } from '@/lib/api';
+import { Users, Store, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, AlertCircle } from 'lucide-react';
+import { getCurrentUser, loginUser, StoredUser } from '@/lib/api';
 
 const rolePortals = [
   { href: '/dashboard/usuario', label: '1. Usuario', icon: Users, color: 'text-sky-400', activeBg: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
@@ -12,41 +12,49 @@ const rolePortals = [
   { href: '/admin', label: '3. SuperAdmin', icon: ShieldCheck, color: 'text-rose-400', activeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40' },
 ];
 
-const mockAccounts = [
-  { label: '👤 Paciente', email: 'paciente@allaboutskin.com', path: '/dashboard/usuario', role: 'standard_user', name: 'Paciente de Prueba' },
-  { label: '🏪 Tienda', email: 'tienda@allaboutskin.com', path: '/dashboard/empresa', role: 'business_owner', name: 'Comercio Farmacia' },
-  { label: '🛡️ Admin', email: 'admin@allaboutskin.com', path: '/admin', role: 'super_admin', name: 'Super Administrador' },
+const devAccounts = [
+  { label: '👤 Paciente', email: 'paciente@allaboutskin.com', path: '/dashboard/usuario' },
+  { label: '🏪 Tienda', email: 'tienda@allaboutskin.com', path: '/dashboard/empresa' },
+  { label: '🛡️ Admin', email: 'admin@allaboutskin.com', path: '/admin' },
 ];
 
+// Herramienta solo de desarrollo: en producción no se renderiza ni se incluye la contraseña de prueba.
 export default function RolePortalBar() {
+  if (process.env.NODE_ENV !== 'development') return null;
+  return <RolePortalBarDev />;
+}
+
+function RolePortalBarDev() {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUserState] = useState<StoredUser | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     setCurrentUserState(getCurrentUser());
   }, [pathname]);
 
-  const handleQuickLogin = async (acc: typeof mockAccounts[0]) => {
+  const handleQuickLogin = async (acc: typeof devAccounts[0]) => {
+    const devPassword = process.env.NEXT_PUBLIC_DEV_LOGIN_PASSWORD;
+    if (!devPassword) {
+      setFeedbackMsg({ type: 'error', text: 'Falta NEXT_PUBLIC_DEV_LOGIN_PASSWORD en frontend/.env.local' });
+      return;
+    }
     setIsLoggingIn(true);
     setFeedbackMsg(null);
     try {
-      const user = await loginUser(acc.email, 'Password123!');
+      const user = await loginUser(acc.email, devPassword);
       setCurrentUserState(user);
-      setFeedbackMsg(`Sesión activa: ${user.name}`);
-    } catch {
-      const mock: StoredUser = { id: 999, name: acc.name, email: acc.email, role: acc.role as any, token: 'dev-token' };
-      setCurrentUser(mock);
-      setCurrentUserState(mock);
-      setFeedbackMsg(`Modo Simulado: ${acc.name}`);
-    } finally {
-      setTimeout(() => setFeedbackMsg(null), 3000);
-      setIsLoggingIn(false);
+      setFeedbackMsg({ type: 'ok', text: `Sesión activa: ${user.name}` });
       router.push(acc.path);
       router.refresh();
+    } catch (err) {
+      setFeedbackMsg({ type: 'error', text: err instanceof Error ? err.message : 'No se pudo iniciar sesión' });
+    } finally {
+      setTimeout(() => setFeedbackMsg(null), 6000);
+      setIsLoggingIn(false);
     }
   };
 
@@ -70,9 +78,12 @@ export default function RolePortalBar() {
         </div>
 
         {feedbackMsg && (
-          <div className="hidden lg:flex items-center gap-1.5 text-emerald-400 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{feedbackMsg}</span>
+          <div
+            role={feedbackMsg.type === 'error' ? 'alert' : 'status'}
+            className={`flex items-center gap-1.5 font-medium ${feedbackMsg.type === 'error' ? 'text-rose-400' : 'hidden lg:flex text-emerald-400'}`}
+          >
+            {feedbackMsg.type === 'error' ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>{feedbackMsg.text}</span>
           </div>
         )}
 
@@ -99,7 +110,7 @@ export default function RolePortalBar() {
 
             <div className="hidden sm:flex items-center gap-1">
               <span className="text-[10px] text-slate-400 mr-0.5">Simular:</span>
-              {mockAccounts.map((acc) => (
+              {devAccounts.map((acc) => (
                 <button
                   key={acc.email}
                   type="button"
