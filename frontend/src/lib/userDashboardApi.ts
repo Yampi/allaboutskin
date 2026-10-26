@@ -9,7 +9,15 @@ export interface RoutineItem {
   cycle_type: string;
   custom_name: string | null;
   opened_at: string | null;
-  product?: { name: string; pao_months: number | null; brand?: { name: string } | null } | null;
+  product?: {
+    name: string;
+    pao_months: number | null;
+    dosage_per_application_ml: number | null;
+    texture_type: string | null;
+    recommended_timing: string | null;
+    brand?: { name: string } | null;
+  } | null;
+  notes?: string | null;
 }
 
 export interface TodayRoutine {
