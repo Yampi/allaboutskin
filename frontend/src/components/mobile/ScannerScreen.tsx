@@ -36,7 +36,7 @@ import {
 import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfItem, UserProfile } from './types';
 import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/ocrService';
 import Link from 'next/link';
-import { scanImageWithGeminiVision, ScanAccountRequiredError } from '@/lib/api';
+import { scanImageWithGeminiVision, ScanAccountRequiredError, auditInci } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
@@ -641,7 +641,7 @@ export default function ScannerScreen({
     setScanTypeResult('INVALID');
   };
 
-  // Execute actual API Audit Call to /api/audit/inci
+  // Auditoría INCI con el backend (POST /api/v1/audit/inci)
   const runApiInciAudit = async (formulaText: string, prodName?: string, brandName?: string) => {
     if (!formulaText.trim()) {
       alert('Por favor ingresa o escanea una lista de ingredientes INCI.');
@@ -654,20 +654,10 @@ export default function ScannerScreen({
     setScanTypeResult('PRODUCT');
 
     try {
-      const response = await fetch('/api/audit/inci', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inci_text: formulaText,
-          formula: formulaText,
-          product_name: prodName || manualProductName || 'Cosmético Auditado',
-        }),
-      });
+      // Auditoría del backend: base de datos de ingredientes y evidencia de PubMed
+      const report = await auditInci(formulaText, prodName || manualProductName || undefined);
 
-      const json = await response.json();
-
-      if (json.status === 'success' && json.data) {
-        const report = json.data;
+      if (report) {
         const breakdown = report.ingredients_breakdown || [];
 
         const mappedIngredients: InciIngredientResult[] = breakdown.map((item: any, i: number) => {
@@ -725,6 +715,7 @@ export default function ScannerScreen({
             report.ai_clinical_copilot?.plain_language_summary ||
             `Fórmula de ${breakdown.length} ingredientes analizada con rigor clínico. Nivel de evidencia científica indexado en PubMed y CosIng.`,
           ingredients: mappedIngredients,
+          unrecognizedIngredients: report.meta?.unmatched_tokens ?? [],
         };
 
         if (mappedIngredients.length === 0) {
@@ -733,7 +724,7 @@ export default function ScannerScreen({
           setAuditResult(finalResult);
         }
       } else {
-        showAuditFailure(json?.message || json?.error || 'El servicio de auditoría no devolvió un informe.');
+        showAuditFailure('El servicio de auditoría no devolvió un informe.');
       }
     } catch (error) {
       console.error('Audit API error:', error);
@@ -1546,6 +1537,18 @@ export default function ScannerScreen({
                       Indexado con CosIng UE & PubMed
                     </span>
                   </div>
+
+                  {(auditResult.unrecognizedIngredients?.length ?? 0) > 0 && (
+                    <div className="p-3 rounded-[16px] bg-[#FAF3E6] border border-[#E9D3A8] text-[12px] text-[#6B4E16] leading-relaxed">
+                      <strong>
+                        {auditResult.unrecognizedIngredients!.length === 1
+                          ? '1 ingrediente no está en nuestra base de datos'
+                          : `${auditResult.unrecognizedIngredients!.length} ingredientes no están en nuestra base de datos`}
+                        :
+                      </strong>{' '}
+                      {auditResult.unrecognizedIngredients!.join(', ')}. No se incluyen en la evaluación.
+                    </div>
+                  )}
 
                   <div className="space-y-3.5 max-h-[500px] overflow-y-auto pr-1">
                     {/* Safe Ingredients */}

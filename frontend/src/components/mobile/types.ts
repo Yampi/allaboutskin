@@ -27,6 +27,8 @@ export interface InciScanResult {
   cycleNightsRecommended: number[];
   ingredients: InciIngredientResult[];
   summary: string;
+  /** Ingredientes de la lista que no están en la base de datos */
+  unrecognizedIngredients?: string[];
 }
 
 export interface ActiveIngredient {
