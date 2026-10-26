@@ -57,8 +57,10 @@ class RoutineService
                 'RETINOID' => 'Noche 2: Retinoide / Renovación Celular',
                 'RECOVERY_1' => 'Noche 3: Recuperación de Barrera Cutánea',
                 'RECOVERY_2' => 'Noche 4: Nutrición y Descanso',
+                'NOT_STARTED' => 'Antes de empezar tu ciclo',
                 default => 'Rutina Estándar',
             },
+            'skin_cycle_started_on' => $this->cycleStartDate($user)->toDateString(),
             'am_routine' => [
                 'is_completed' => $isAmCompleted,
                 'items' => $amItems->values()->all(),
@@ -71,19 +73,33 @@ class RoutineService
     }
 
     /**
-     * Determine current Skin Cycling phase (4-day cycle) based on user's calendar anchor.
+     * Día en que empezó el ciclo del usuario (noche 1): el que eligió o, si no, el de alta de su cuenta.
+     */
+    public function cycleStartDate(User $user): Carbon
+    {
+        $start = $user->skin_cycle_started_on ?? $user->created_at ?? Carbon::today();
+
+        return Carbon::parse($start->toDateString())->startOfDay();
+    }
+
+    /**
+     * Fase del Skin Cycling (ciclo de 4 noches) contada desde el inicio del ciclo del usuario.
+     * Los días anteriores al inicio no pertenecen a ningún ciclo: NOT_STARTED.
      */
     public function calculateSkinCyclingPhase(User $user, Carbon $date): string
     {
-        // 4-day modulus based on day of year
-        $dayIndex = $date->dayOfYear % 4;
+        $start = $this->cycleStartDate($user);
+        $day = Carbon::parse($date->toDateString())->startOfDay();
 
-        return match ($dayIndex) {
+        if ($day->lt($start)) {
+            return 'NOT_STARTED';
+        }
+
+        return match ((int) $start->diffInDays($day) % 4) {
             0 => 'EXFOLIATION',
             1 => 'RETINOID',
             2 => 'RECOVERY_1',
-            3 => 'RECOVERY_2',
-            default => 'RECOVERY_1',
+            default => 'RECOVERY_2',
         };
     }
 

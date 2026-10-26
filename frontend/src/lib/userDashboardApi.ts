@@ -22,8 +22,9 @@ export interface RoutineItem {
 
 export interface TodayRoutine {
   date: string;
-  skin_cycling_phase: 'EXFOLIATION' | 'RETINOID' | 'RECOVERY_1' | 'RECOVERY_2' | string;
+  skin_cycling_phase: 'EXFOLIATION' | 'RETINOID' | 'RECOVERY_1' | 'RECOVERY_2' | 'NOT_STARTED' | string;
   skin_cycling_label: string;
+  skin_cycle_started_on: string; // YYYY-MM-DD, noche 1 del ciclo del usuario
   am_routine: { is_completed: boolean; items: RoutineItem[] };
   pm_routine: { is_completed: boolean; items: RoutineItem[] };
 }
@@ -81,6 +82,16 @@ export async function fetchTodayRoutineStrict(): Promise<TodayRoutine> {
 export async function fetchRoutineWeekStrict(start: string): Promise<TodayRoutine[]> {
   const res = await apiFetch<{ data: TodayRoutine[] }>(`${API_BASE_URL}/routine/week?start=${start}`, authed());
   return res.data;
+}
+
+// `date` es la fecha local del usuario (YYYY-MM-DD) que pasa a ser la noche 1.
+export async function restartSkinCycle(date: string): Promise<string> {
+  const res = await apiFetch<{ skin_cycle_started_on: string }>(`${API_BASE_URL}/routine/cycle/restart`, {
+    ...authed(),
+    method: 'POST',
+    body: JSON.stringify({ date }),
+  });
+  return res.skin_cycle_started_on;
 }
 
 export async function fetchRoutineStatsStrict(): Promise<RoutineStats> {

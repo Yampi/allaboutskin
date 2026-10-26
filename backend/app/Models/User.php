@@ -57,6 +57,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
             'locked_until' => 'datetime',
+            'skin_cycle_started_on' => 'date',
         ];
     }
 

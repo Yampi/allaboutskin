@@ -127,6 +127,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('routine')->group(function () {
             Route::get('/today', [RoutineController::class, 'today']);
             Route::get('/week', [RoutineController::class, 'week']);
+            Route::post('/cycle/restart', [RoutineController::class, 'restartCycle']);
             Route::post('/items', [RoutineController::class, 'addItem']);
             Route::delete('/items/{id}', [RoutineController::class, 'deleteItem']);
             Route::post('/log', [RoutineController::class, 'logAdherence']);

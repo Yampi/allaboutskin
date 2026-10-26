@@ -8,12 +8,13 @@ import ErrorState from '@/components/system/ErrorState';
 import WeekStrip from '@/components/calendario/WeekStrip';
 import DayDetail from '@/components/calendario/DayDetail';
 import ProgressCards from '@/components/calendario/ProgressCards';
+import CycleStartBar from '@/components/calendario/CycleStartBar';
 import { toLocalDate, useCalendarWeek } from '@/hooks/useCalendarWeek';
 
 export default function CalendarioSkinCyclingPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
-  const { user, days, stats, error, reload, completeSlot } = useCalendarWeek(weekOffset);
+  const { user, days, stats, error, reload, completeSlot, restartCycle } = useCalendarWeek(weekOffset);
 
   const todayIso = toLocalDate(new Date());
   const todayIdx = days ? days.findIndex((d) => d.iso === todayIso) : -1;
@@ -55,6 +56,7 @@ export default function CalendarioSkinCyclingPage() {
 
         {days && stats && day && (
           <>
+            <CycleStartBar startedOn={day.routine.skin_cycle_started_on} onRestart={restartCycle} />
             <WeekStrip days={days} selected={selected} todayIso={todayIso} onSelect={setPicked} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7"><DayDetail key={day.iso} day={day} isFuture={day.iso > todayIso} onComplete={completeSlot} /></div>

@@ -30,6 +30,25 @@ class RoutineController extends Controller
     }
 
     /**
+     * Reinicia el Skin Cycling: `date` (la fecha local del usuario; por defecto hoy) pasa a ser la noche 1.
+     */
+    public function restartCycle(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['date' => 'nullable|date']);
+        $user = $request->user();
+
+        $user->skin_cycle_started_on = isset($validated['date'])
+            ? Carbon::parse($validated['date'])->toDateString()
+            : Carbon::today()->toDateString();
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'skin_cycle_started_on' => $this->routineService->cycleStartDate($user)->toDateString(),
+        ]);
+    }
+
+    /**
      * Rutina de 7 días consecutivos (desde `start`) en una sola petición.
      */
     public function week(Request $request): JsonResponse

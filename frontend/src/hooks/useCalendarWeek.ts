@@ -3,6 +3,7 @@ import { getCurrentUser, logUserRoutineAdherence, StoredUser } from '@/lib/api';
 import {
   fetchRoutineWeekStrict,
   fetchRoutineStatsStrict,
+  restartSkinCycle,
   RoutineStats,
   TodayRoutine,
 } from '@/lib/userDashboardApi';
@@ -57,5 +58,11 @@ export function useCalendarWeek(weekOffset: number) {
     await fetchWeek();
   }, [fetchWeek]);
 
-  return { user, days, stats, error, reload: fetchWeek, completeSlot };
+  // Hoy (fecha local) pasa a ser la noche 1 del ciclo.
+  const restartCycle = useCallback(async () => {
+    await restartSkinCycle(toLocalDate(new Date()));
+    await fetchWeek();
+  }, [fetchWeek]);
+
+  return { user, days, stats, error, reload: fetchWeek, completeSlot, restartCycle };
 }
