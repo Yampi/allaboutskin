@@ -64,13 +64,26 @@ class PubMedApiService
 
     /**
      * Formulate targeted PubMed search query for dermatology & cosmetic clinical efficacy.
+     *
+     * El nombre del ingrediente debe aparecer en el título del estudio (que el estudio trate de él,
+     * no que lo mencione de pasada), se excluyen los estudios solo en animales y los de síntesis de nanopartículas.
      */
     public function buildSearchTerm(Ingredient $ingredient): string
     {
-        $name = $ingredient->inci_name;
-        $common = $ingredient->common_name ? " OR \"{$ingredient->common_name}\"[Title/Abstract]" : "";
+        $name = $this->searchableName($ingredient->inci_name);
 
-        return "(\"{$name}\"[Title/Abstract]{$common}) AND (skin[Title/Abstract] OR dermatology[Title/Abstract] OR topical[Title/Abstract]) AND (\"clinical trial\"[pt] OR \"randomized controlled trial\"[pt] OR \"systematic review\"[pt] OR \"meta-analysis\"[pt] OR efficacy[Title/Abstract])";
+        return "(\"{$name}\"[Title]) AND (skin[Title/Abstract] OR dermatology[Title/Abstract] OR topical[Title/Abstract] OR cutaneous[Title/Abstract]) AND (\"clinical trial\"[pt] OR \"randomized controlled trial\"[pt] OR \"systematic review\"[pt] OR \"meta-analysis\"[pt] OR efficacy[Title/Abstract]) NOT (animals[MeSH Terms] NOT humans[MeSH Terms]) NOT (nanoparticle*[Title] OR \"green synthesis\"[Title])";
+    }
+
+    /**
+     * Nombre con el que se busca en el título: los extractos botánicos se buscan por género y especie
+     * (GLYCYRRHIZA GLABRA ROOT EXTRACT => Glycyrrhiza glabra).
+     */
+    public function searchableName(string $inciName): string
+    {
+        $name = trim(preg_replace('/(EXTRACT|LEAF|ROOT|FLOWER|FRUIT|SEED|BARK|JUICE|OIL|WATER)/i', '', $inciName));
+
+        return trim(preg_replace('/\s+/', ' ', $name)) ?: $inciName;
     }
 
     /**
@@ -86,7 +99,7 @@ class PubMedApiService
                 'term' => $term,
                 'retmode' => 'json',
                 'retmax' => $retmax,
-                'sort' => 'pub_date',
+                'sort' => 'relevance',
             ];
 
             if ($this->apiKey) {
