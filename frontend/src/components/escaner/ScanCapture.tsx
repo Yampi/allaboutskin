@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Camera, Upload, ScanLine } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Camera, Upload, ScanLine, RotateCcw } from 'lucide-react';
 import type { ScanMode } from '@/hooks/useScanAnalysis';
 
 interface ScanCaptureProps {
@@ -13,12 +13,15 @@ interface ScanCaptureProps {
   onStopCamera: () => void;
   onFile: (file: File) => void;
   onAnalyze: () => void;
+  onRetake: () => void;
 }
 
+const option = 'flex flex-col items-center justify-center gap-1 rounded-2xl p-5 text-sm font-bold cursor-pointer';
 const btn = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold cursor-pointer';
 
 export default function ScanCapture(props: ScanCaptureProps) {
-  const { mode, onModeChange, image, isCameraActive, videoRef, onStartCamera, onCapture, onStopCamera, onFile, onAnalyze } = props;
+  const { mode, onModeChange, image, isCameraActive, videoRef, onStartCamera, onCapture, onStopCamera, onFile, onAnalyze, onRetake } = props;
+  const [choosing, setChoosing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const isFace = mode === 'face';
 
@@ -26,7 +29,7 @@ export default function ScanCapture(props: ScanCaptureProps) {
     <div className="space-y-4">
       <div className="inline-flex bg-[#EFECE6] p-0.5 rounded-lg border border-[#E8E1D7]">
         {(['face', 'product'] as const).map((m) => (
-          <button key={m} type="button" onClick={() => onModeChange(m)} className={`px-4 py-1.5 text-xs font-bold rounded-md cursor-pointer ${mode === m ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}>
+          <button key={m} type="button" onClick={() => { setChoosing(false); onModeChange(m); }} className={`px-4 py-1.5 text-xs font-bold rounded-md cursor-pointer ${mode === m ? 'bg-white text-[#2E7D5B]' : 'text-[#66615C]'}`}>
             {m === 'face' ? 'Rostro' : 'Producto'}
           </button>
         ))}
@@ -44,27 +47,45 @@ export default function ScanCapture(props: ScanCaptureProps) {
         ) : image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt={isFace ? 'Foto del rostro' : 'Foto de la etiqueta'} className="w-full h-full object-contain" />
+        ) : choosing ? (
+          <div className="grid sm:grid-cols-2 gap-3 p-4 w-full">
+            <button type="button" onClick={() => { setChoosing(false); onStartCamera(); }} className={`${option} bg-[#2E7D5B] text-white`}>
+              <Camera className="w-7 h-7" /> Usar la cámara
+              <span className="text-[11px] font-medium opacity-90">Te haces la foto ahora</span>
+            </button>
+            <button type="button" onClick={() => { setChoosing(false); fileRef.current?.click(); }} className={`${option} bg-white border border-[#E8E1D7] text-[#2D2825]`}>
+              <Upload className="w-7 h-7" /> Subir una foto
+              <span className="text-[11px] font-medium text-[#66615C]">Elige una de tu dispositivo</span>
+            </button>
+          </div>
         ) : (
-          <span className="text-xs text-[#8C827A]">Aún no has añadido una imagen</span>
+          <span className="text-xs text-[#8C827A]">Pulsa «{isFace ? 'Escanear mi piel' : 'Escanear etiqueta'}» para empezar</span>
         )}
       </div>
 
       <div className="flex flex-wrap gap-2">
         {isCameraActive ? (
           <>
-            <button type="button" onClick={onCapture} className={`${btn} bg-[#2E7D5B] text-white`}><Camera className="w-4 h-4" /> Capturar</button>
+            <button type="button" onClick={onCapture} className={`${btn} bg-[#2E7D5B] text-white`}><Camera className="w-4 h-4" /> Tomar foto</button>
             <button type="button" onClick={onStopCamera} className={`${btn} bg-white border border-[#E8E1D7] text-[#2D2825]`}>Cancelar</button>
           </>
-        ) : (
+        ) : image ? (
           <>
-            <button type="button" onClick={onStartCamera} className={`${btn} bg-white border border-[#E8E1D7] text-[#2D2825]`}><Camera className="w-4 h-4" /> Usar cámara</button>
-            <button type="button" onClick={() => fileRef.current?.click()} className={`${btn} bg-white border border-[#E8E1D7] text-[#2D2825]`}><Upload className="w-4 h-4" /> Subir foto</button>
+            <button type="button" onClick={onAnalyze} className={`${btn} bg-[#2E7D5B] text-white`}>
+              <ScanLine className="w-4 h-4" /> {isFace ? 'Analizar mi piel' : 'Analizar fórmula'}
+            </button>
+            <button type="button" onClick={() => { onRetake(); setChoosing(true); }} className={`${btn} bg-white border border-[#E8E1D7] text-[#2D2825]`}>
+              <RotateCcw className="w-4 h-4" /> Repetir foto
+            </button>
           </>
+        ) : choosing ? (
+          <button type="button" onClick={() => setChoosing(false)} className={`${btn} bg-white border border-[#E8E1D7] text-[#2D2825]`}>Volver</button>
+        ) : (
+          <button type="button" onClick={() => setChoosing(true)} className={`${btn} bg-[#2E7D5B] text-white`}>
+            <ScanLine className="w-4 h-4" /> {isFace ? 'Escanear mi piel' : 'Escanear etiqueta'}
+          </button>
         )}
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
-        <button type="button" disabled={!image || isCameraActive} onClick={onAnalyze} className={`${btn} bg-[#2E7D5B] text-white disabled:opacity-50`}>
-          <ScanLine className="w-4 h-4" /> {isFace ? 'Analizar mi piel' : 'Analizar fórmula'}
-        </button>
       </div>
 
       <p className="text-[11px] text-[#8C827A] max-w-xl">

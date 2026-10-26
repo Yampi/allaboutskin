@@ -49,6 +49,7 @@ export default function EscanerPage() {
             onStopCamera={scan.stopCamera}
             onFile={scan.loadFile}
             onAnalyze={scan.analyze}
+            onRetake={scan.startOver}
           />
         )}
 
