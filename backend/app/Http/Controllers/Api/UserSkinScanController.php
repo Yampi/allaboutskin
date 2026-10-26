@@ -6,42 +6,35 @@ use App\Http\Controllers\Controller;
 use App\Models\UserSkinScan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class UserSkinScanController extends Controller
 {
     /**
-     * Listar capturas y trazabilidad del progreso dérmico.
+     * Listar las capturas de la persona autenticada y su evolución.
      */
     public function index(Request $request): JsonResponse
     {
-        $user = Auth::guard('sanctum')->user();
-        $sessionToken = $request->query('session_token', 'demo-session-user');
+        $scans = UserSkinScan::query()
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-        $query = UserSkinScan::query();
-        if ($user) {
-            $query->where('user_id', $user->id);
-        } else {
-            $query->where(function ($q) use ($sessionToken) {
-                $q->where('session_token', $sessionToken)
-                  ->orWhereNull('user_id');
-            });
-        }
-
-        $scans = $query->orderBy('created_at', 'asc')->get();
-
-        // Calcular delta de progreso respecto a la primera captura
         $firstScan = $scans->first();
         $latestScan = $scans->last();
 
+        // Solo se compara con métricas que existen en ambas capturas.
         $progressionDelta = null;
         if ($firstScan && $latestScan && $scans->count() > 1) {
+            $diff = fn (string $field, int $sign = 1) => isset($firstScan->$field, $latestScan->$field)
+                ? $sign * ($latestScan->$field - $firstScan->$field)
+                : null;
+
             $progressionDelta = [
-                'score_change' => $latestScan->overall_score - $firstScan->overall_score,
-                'hydration_change' => $latestScan->hydration_score - $firstScan->hydration_score,
-                'elasticity_change' => $latestScan->elasticity_score - $firstScan->elasticity_score,
-                'pores_reduction' => $firstScan->pores_score - $latestScan->pores_score, // positivo significa menos congestión
-                'spots_reduction' => $firstScan->spots_score - $latestScan->spots_score,
+                'score_change' => $diff('overall_score'),
+                'hydration_change' => $diff('hydration_score'),
+                'elasticity_change' => $diff('elasticity_score'),
+                'pores_reduction' => $diff('pores_score', -1), // positivo significa menos congestión
+                'spots_reduction' => $diff('spots_score', -1),
                 'days_tracked' => $firstScan->created_at->diffInDays($latestScan->created_at),
             ];
         }
@@ -50,50 +43,37 @@ class UserSkinScanController extends Controller
             'total_scans' => $scans->count(),
             'progression_delta' => $progressionDelta,
             'latest_scan' => $latestScan,
-            'scans' => $scans->reverse()->values(), // Enviamos de más reciente a más antiguo para la galería
+            'scans' => $scans->reverse()->values(), // de más reciente a más antiguo
         ]);
     }
 
     /**
-     * Registrar una nueva captura fotográfica de revisión dérmica.
+     * Registrar el resultado de un análisis. Los campos ausentes se guardan como null:
+     * nunca se rellenan con valores por defecto.
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'image_url' => 'required|string',
-            'overall_score' => 'required|integer|min:0|max:100',
+            'image_url' => 'nullable|string',
+            'overall_score' => 'nullable|integer|min:0|max:100',
             'hydration_score' => 'nullable|integer|min:0|max:100',
             'elasticity_score' => 'nullable|integer|min:0|max:100',
             'pores_score' => 'nullable|integer|min:0|max:100',
             'spots_score' => 'nullable|integer|min:0|max:100',
             'fine_lines_score' => 'nullable|integer|min:0|max:100',
-            'barrier_status' => 'nullable|string',
-            'scan_mode' => 'nullable|string',
+            'barrier_status' => 'nullable|string|max:50',
+            'scan_mode' => 'nullable|string|in:face,product',
             'clinical_summary' => 'nullable|string',
             'recommendations' => 'nullable|string',
-            'session_token' => 'nullable|string',
         ]);
-
-        $user = Auth::guard('sanctum')->user();
 
         $scan = UserSkinScan::create([
-            'user_id' => $user?->id,
-            'session_token' => $validated['session_token'] ?? ($request->header('X-Session-Token') ?? 'demo-session-user'),
-            'image_url' => $validated['image_url'],
-            'overall_score' => $validated['overall_score'],
-            'hydration_score' => $validated['hydration_score'] ?? 80,
-            'elasticity_score' => $validated['elasticity_score'] ?? 75,
-            'pores_score' => $validated['pores_score'] ?? 65,
-            'spots_score' => $validated['spots_score'] ?? 60,
-            'fine_lines_score' => $validated['fine_lines_score'] ?? 55,
-            'barrier_status' => $validated['barrier_status'] ?? 'NORMAL',
+            'user_id' => $request->user()->id,
             'scan_mode' => $validated['scan_mode'] ?? 'face',
-            'clinical_summary' => $validated['clinical_summary'] ?? 'Captura biométrica registrada con éxito.',
-            'recommendations' => $validated['recommendations'] ?? 'Mantener hidratación y protección solar.',
-        ]);
+        ] + $validated);
 
         return response()->json([
-            'message' => '¡Captura de revisión dérmica registrada en tu progreso histórico!',
+            'message' => 'Captura registrada en tu historial.',
             'scan' => $scan,
         ], 201);
     }

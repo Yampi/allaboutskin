@@ -91,8 +91,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/brands', [CatalogController::class, 'brands']);
     });
 
-    // 3.2. User Skin Scans & Biometric Evolution (Public / Authenticated)
-    Route::prefix('user')->group(function () {
+    // 3.2. User Skin Scans & Biometric Evolution (solo autenticado: contienen datos de salud)
+    Route::prefix('user')->middleware('auth:sanctum')->group(function () {
         Route::get('/skin-scans', [UserSkinScanController::class, 'index']);
         Route::post('/skin-scans', [UserSkinScanController::class, 'store']);
     });
