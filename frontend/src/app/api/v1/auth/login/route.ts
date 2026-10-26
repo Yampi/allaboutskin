@@ -49,62 +49,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Control de fallback: únicamente si está explícitamente activado en desarrollo
-    const isDemoAuthEnabled = process.env.ENABLE_DEMO_AUTH === 'true' || (process.env.NODE_ENV === 'development' && !backendUrl);
-
-    if (isDemoAuthEnabled) {
-      const demoAdminPass = process.env.DEMO_ADMIN_PASSWORD;
-
-      if (email.includes('admin') || email.includes('editor')) {
-        if (demoAdminPass && password === demoAdminPass) {
-          return NextResponse.json({
-            message: 'Inicio de sesión demo como Administrador.',
-            access_token: 'demo_token_admin_' + Date.now(),
-            token_type: 'Bearer',
-            user: {
-              id: 1,
-              name: 'Administrador Demo',
-              email,
-              role: 'admin',
-              is_active: true,
-            },
-          });
-        }
-      }
-
-      if (email.includes('tienda') || email.includes('comercio') || email.includes('farmacia')) {
-        return NextResponse.json({
-          message: 'Inicio de sesión comercial demo exitoso.',
-          access_token: 'demo_token_merchant_' + Date.now(),
-          token_type: 'Bearer',
-          user: {
-            id: 10,
-            name: email.split('@')[0],
-            email,
-            role: 'business_owner',
-            is_active: true,
-          },
-        });
-      }
-
-      if (password.length >= 6) {
-        return NextResponse.json({
-          message: 'Inicio de sesión demo exitoso.',
-          access_token: 'demo_token_user_' + Date.now(),
-          token_type: 'Bearer',
-          user: {
-            id: 99,
-            name: email.split('@')[0],
-            email,
-            role: 'standard_user',
-            is_active: true,
-          },
-        });
-      }
-    }
-
-    // Si el proxy falló y no hay demo auth permitido, responder con servicio no disponible
-    if (proxyFailed) {
+    // 2. Sin backend (no configurado o caído) no hay sesión posible: nunca se autentica en el proxy.
+    if (proxyFailed || !backendUrl) {
       return NextResponse.json(
         { message: 'El servicio central de autenticación está temporalmente inaccesible. Por favor, reintenta en unos instantes.' },
         { status: 503 }

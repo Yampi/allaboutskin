@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeadersMiddleware::class);
 
+        // API pura: sin ruta `login` a la que redirigir, un invitado recibe 401 JSON
+        // (antes RouteNotFoundException -> 500 aunque faltara el header Accept).
+        $middleware->redirectGuestsTo(fn () => null);
+
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
         ]);
