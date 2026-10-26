@@ -36,7 +36,8 @@ import {
 import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfItem, UserProfile } from './types';
 import { sampleScanPresets } from './skincareData';
 import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/ocrService';
-import { scanImageWithGeminiVision } from '@/lib/api';
+import Link from 'next/link';
+import { scanImageWithGeminiVision, ScanAccountRequiredError } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
@@ -293,6 +294,8 @@ export default function ScannerScreen({
   // Reintentos ante saturación de Gemini: número de intento actual y cancelación
   const [visionAttempt, setVisionAttempt] = useState(1);
   const visionAbortRef = useRef<AbortController | null>(null);
+  // Se agotaron los análisis gratis: hay que invitar a crear cuenta o iniciar sesión
+  const [accountRequired, setAccountRequired] = useState(false);
   const [manualInciText, setManualInciText] = useState('');
   const [manualProductName, setManualProductName] = useState('');
   const [manualBrandName, setManualBrandName] = useState('');
@@ -501,6 +504,7 @@ export default function ScannerScreen({
     setRejectionMessage(null);
     setScanTypeResult(null);
     setAdoptedProfileSuccess(false);
+    setAccountRequired(false);
 
     let base64 = dataUrlString || '';
     let optimizedBlob: Blob = imageSource;
@@ -605,6 +609,15 @@ export default function ScannerScreen({
         setOcrProgress(0);
         setOcrStatusText('');
         setCapturedImagePreview(null);
+        return;
+      }
+      // Sin análisis gratis disponibles: no tiene sentido intentar otra vía, se muestra el aviso tal cual
+      if (err instanceof ScanAccountRequiredError) {
+        setAccountRequired(true);
+        setRejectionMessage(err.message);
+        setScanTypeResult('INVALID');
+        setIsProcessing(false);
+        setOcrProgress(100);
         return;
       }
       console.warn('Vision API error, fallback to OCR/heuristic:', err);
@@ -1675,10 +1688,10 @@ export default function ScannerScreen({
                 </div>
                 <div>
                   <h3 className="font-serif text-[20px] font-semibold text-[#2D2825]">
-                    No pudimos clasificar la imagen
+                    {accountRequired ? 'Usaste tus análisis gratis' : 'No pudimos clasificar la imagen'}
                   </h3>
                   <span className="text-[12px] text-[#943C36] font-medium">
-                    Imagen no reconocida como cosmético ni rostro
+                    {accountRequired ? 'Crea una cuenta gratuita para seguir analizando' : 'Imagen no reconocida como cosmético ni rostro'}
                   </span>
                 </div>
               </div>
@@ -1697,7 +1710,17 @@ export default function ScannerScreen({
                 {rejectionMessage || 'No detectamos un producto de skincare ni el rostro de una persona en la foto.'}
               </div>
 
+              {accountRequired && (
+                <Link
+                  href="/login"
+                  className="w-full py-3.5 px-4 rounded-full bg-[#4A6B5B] hover:bg-[#3D5A4C] text-white font-semibold text-[13px] shadow-xs transition flex items-center justify-center gap-2"
+                >
+                  Crear cuenta gratis o iniciar sesión
+                </Link>
+              )}
+
               {/* Friendly Tips Box */}
+              {!accountRequired && (
               <div className="p-4 rounded-[18px] bg-[#F2ECE4] border border-[#E2D9CD] space-y-2.5 text-[12.5px] text-[#2D2825]">
                 <span className="font-bold text-[#4A6B5B] uppercase text-[10.5px] tracking-wider block">
                   💡 Consejos para una captura exitosa:
@@ -1717,6 +1740,7 @@ export default function ScannerScreen({
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Action Buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
