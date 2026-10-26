@@ -48,7 +48,7 @@ class PubMedApiService
                 $study = $this->fetchStudySummary($pmid);
                 if ($study) {
                     $ingredient->pubmedStudies()->syncWithoutDetaching([
-                        $study->id => ['primary_finding' => "Clinical evidence for {$ingredient->inci_name}"],
+                        $study->id => ['primary_finding' => null],
                     ]);
                     $studies[] = $study;
                 }
@@ -148,7 +148,6 @@ class PubMedApiService
                         'study_type' => $studyType,
                         'evidence_grade' => $grade,
                         'url' => "https://pubmed.ncbi.nlm.nih.gov/{$pmid}/",
-                        'conclusions' => "Evaluated clinical outcomes on topical epidermal and dermal parameters.",
                     ]);
                 }
             }
