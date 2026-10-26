@@ -29,6 +29,7 @@ export interface RoutineStats {
 export interface SkinScansSummary {
   total_scans: number;
   latest_scan: UserSkinScanItem | null;
+  scans: UserSkinScanItem[];
 }
 
 export interface PublicStore {
@@ -74,11 +75,11 @@ export async function fetchRoutineStatsStrict(): Promise<RoutineStats> {
 }
 
 export async function fetchSkinScansStrict(): Promise<SkinScansSummary> {
-  const res = await apiFetch<{ total_scans: number; latest_scan: UserSkinScanItem | null }>(
+  const res = await apiFetch<{ total_scans: number; latest_scan: UserSkinScanItem | null; scans: UserSkinScanItem[] }>(
     `${API_BASE_URL}/user/skin-scans`,
     authed()
   );
-  return { total_scans: res.total_scans, latest_scan: res.latest_scan };
+  return { total_scans: res.total_scans, latest_scan: res.latest_scan, scans: res.scans ?? [] };
 }
 
 export async function fetchStoresStrict(): Promise<PublicStore[]> {
