@@ -11,9 +11,11 @@ export function useAdminProducts() {
   const [catalogTotalPages, setCatalogTotalPages] = useState(1);
   const [inspectingCatalogProduct, setInspectingCatalogProduct] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadCatalogProducts = useCallback(async (page?: number) => {
     setIsLoading(true);
+    setLoadError(null);
     const targetPage = page ?? catalogPage;
     try {
       const params = new URLSearchParams();
@@ -27,15 +29,17 @@ export function useAdminProducts() {
       const res = await fetch(`${API_BASE_URL}/catalog/products?${params.toString()}`, {
         headers: getAuthHeaders(),
       });
-      if (res.ok) {
-        const json = await res.json();
-        setCatalogProducts(json.data || []);
-        setCatalogTotal(json.total || 0);
-        setCatalogTotalPages(json.last_page || 1);
-        if (page) setCatalogPage(page);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Error al cargar el catálogo (HTTP ${res.status})`);
       }
+      const json = await res.json();
+      setCatalogProducts(json.data || []);
+      setCatalogTotal(json.total || 0);
+      setCatalogTotalPages(json.last_page || 1);
+      if (page) setCatalogPage(page);
     } catch (err: any) {
-      console.error('Error al cargar catálogo de productos:', err);
+      setLoadError(err?.message || 'Error al cargar el catálogo de productos');
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +71,7 @@ export function useAdminProducts() {
     inspectingCatalogProduct,
     setInspectingCatalogProduct,
     isLoading,
+    loadError,
     loadCatalogProducts,
   };
 }

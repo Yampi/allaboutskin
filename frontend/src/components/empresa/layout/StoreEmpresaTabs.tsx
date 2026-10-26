@@ -74,6 +74,8 @@ export default function StoreEmpresaTabs({
           onOpenImportModal={onOpenImport}
           onOpenAddModal={onOpenAddOffer}
           offers={offers.offers}
+          loadError={offers.loadError}
+          onReload={() => offers.loadOffers()}
           onToggleStock={(o) => offers.handleToggleStock(o.id, o.in_stock)}
           onDeleteOffer={offers.handleDeleteOffer}
           currentPage={offers.offersPage}

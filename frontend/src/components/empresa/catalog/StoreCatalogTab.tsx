@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BusinessBranchItem, BusinessOfferItem } from '@/lib/api';
 import StoreExchangeRateBar from './StoreExchangeRateBar';
 import StoreCatalogControls from './StoreCatalogControls';
 import StoreOffersTable from './StoreOffersTable';
 import StoreCatalogPagination from './StoreCatalogPagination';
+import ErrorState from '@/components/system/ErrorState';
 
 interface StoreCatalogTabProps {
   exchangeRate: string;
@@ -23,6 +24,8 @@ interface StoreCatalogTabProps {
   onOpenImportModal: () => void;
   onOpenAddModal: () => void;
   offers: BusinessOfferItem[];
+  loadError: string | null;
+  onReload: () => void;
   onToggleStock: (offer: BusinessOfferItem) => void;
   onDeleteOffer: (offerId: number) => void;
   currentPage: number;
@@ -46,12 +49,20 @@ export default function StoreCatalogTab({
   onOpenImportModal,
   onOpenAddModal,
   offers,
+  loadError,
+  onReload,
   onToggleStock,
   onDeleteOffer,
   currentPage,
   totalPages,
   onPageChange,
 }: StoreCatalogTabProps) {
+  // Carga inicial al entrar en la pestaña; luego recarga por búsqueda, filtros o paginación.
+  useEffect(() => {
+    onReload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-4">
       <StoreExchangeRateBar
@@ -74,11 +85,15 @@ export default function StoreCatalogTab({
         onOpenAddModal={onOpenAddModal}
       />
 
-      <StoreOffersTable
-        offers={offers}
-        onToggleStock={onToggleStock}
-        onDeleteOffer={onDeleteOffer}
-      />
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={onReload} />
+      ) : (
+        <StoreOffersTable
+          offers={offers}
+          onToggleStock={onToggleStock}
+          onDeleteOffer={onDeleteOffer}
+        />
+      )}
 
       <StoreCatalogPagination
         currentPage={currentPage}

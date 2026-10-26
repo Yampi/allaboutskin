@@ -13,6 +13,7 @@ export function useStoreOffers(onToast?: (type: 'success' | 'error', message: st
   const [offersPage, setOffersPage] = useState(1);
   const [offersTotalPages, setOffersTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState('');
   const [selectedStockFilter, setSelectedStockFilter] = useState<'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK'>('ALL');
@@ -21,6 +22,7 @@ export function useStoreOffers(onToast?: (type: 'success' | 'error', message: st
 
   const loadOffers = useCallback(async (page?: number) => {
     setIsLoading(true);
+    setLoadError(null);
     const targetPage = page ?? offersPage;
     try {
       const res = await fetchBusinessOffers({
@@ -33,7 +35,7 @@ export function useStoreOffers(onToast?: (type: 'success' | 'error', message: st
       setOffersTotalPages(res.offers?.last_page || 1);
       if (page) setOffersPage(page);
     } catch (err: any) {
-      console.error('Error al cargar ofertas:', err);
+      setLoadError(err?.message || 'Error al cargar ofertas');
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +108,7 @@ export function useStoreOffers(onToast?: (type: 'success' | 'error', message: st
     setOffersPage,
     offersTotalPages,
     isLoading,
+    loadError,
     catalogSearch,
     setCatalogSearch,
     selectedBranchFilter,

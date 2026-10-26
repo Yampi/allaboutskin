@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import AdminProductsFilters from './AdminProductsFilters';
 import AdminProductsTable from './AdminProductsTable';
 import AdminProductsPagination from './AdminProductsPagination';
+import ErrorState from '@/components/system/ErrorState';
 import { useAdminProducts } from '@/hooks/admin/useAdminProducts';
 
 interface AdminProductsTabProps {
@@ -22,6 +23,7 @@ export default function AdminProductsTab({ onInspectOffer }: AdminProductsTabPro
     setCatalogPage,
     catalogTotalPages,
     isLoading,
+    loadError,
     loadCatalogProducts,
   } = useAdminProducts();
 
@@ -48,10 +50,14 @@ export default function AdminProductsTab({ onInspectOffer }: AdminProductsTabPro
         isLoading={isLoading}
       />
 
-      <AdminProductsTable
-        products={catalogProducts}
-        onInspectProduct={(prod) => onInspectOffer?.(prod)}
-      />
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={() => loadCatalogProducts()} />
+      ) : (
+        <AdminProductsTable
+          products={catalogProducts}
+          onInspectProduct={(prod) => onInspectOffer?.(prod)}
+        />
+      )}
 
       <AdminProductsPagination
         currentPage={catalogPage}
