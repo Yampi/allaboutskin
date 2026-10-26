@@ -30,6 +30,24 @@ class RoutineController extends Controller
     }
 
     /**
+     * Rutina de 7 días consecutivos (desde `start`) en una sola petición.
+     */
+    public function week(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['start' => 'required|date']);
+        $start = Carbon::parse($validated['start'])->startOfDay();
+
+        $days = collect(range(0, 6))->map(
+            fn (int $i) => $this->routineService->getUserDailyRoutine($request->user(), $start->copy()->addDays($i))
+        )->all();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $days,
+        ]);
+    }
+
+    /**
      * Add product or custom item to routine.
      */
     public function addItem(Request $request): JsonResponse

@@ -77,6 +77,12 @@ export async function fetchTodayRoutineStrict(): Promise<TodayRoutine> {
   return res.data;
 }
 
+// 7 días consecutivos desde `start` (YYYY-MM-DD) en una sola petición; la fase la calcula el backend.
+export async function fetchRoutineWeekStrict(start: string): Promise<TodayRoutine[]> {
+  const res = await apiFetch<{ data: TodayRoutine[] }>(`${API_BASE_URL}/routine/week?start=${start}`, authed());
+  return res.data;
+}
+
 export async function fetchRoutineStatsStrict(): Promise<RoutineStats> {
   const res = await apiFetch<{ data: RoutineStats }>(`${API_BASE_URL}/routine/stats`, authed());
   return res.data;
