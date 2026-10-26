@@ -2024,3 +2024,23 @@ export async function saveUserSkinScan(
     body: JSON.stringify(payload),
   });
 }
+
+export interface AdminNotificationSummary {
+  status: string;
+  pending_stores_count: number;
+  today_users_count: number;
+  total_users_count: number;
+  today_leads_count: number;
+  security_alerts_count: number;
+}
+
+export async function fetchAdminNotificationSummary(): Promise<AdminNotificationSummary> {
+  const res = await fetch(`${API_BASE_URL}/admin/notifications/summary`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al obtener el resumen de notificaciones');
+  }
+  return res.json();
+}
