@@ -46,6 +46,7 @@ class FormulaAuditEngine
             productName: $productName,
             brandName: $brandName,
             unmatchedTokens: $parseResult['unmatched_tokens'],
+            unmatchedSuggestions: $parseResult['unmatched_suggestions'],
             rawInciText: $rawInciText,
             price: $price,
             currency: $currency
@@ -103,7 +104,8 @@ class FormulaAuditEngine
         ?Product $product = null,
         ?string $rawInciText = null,
         ?float $price = null,
-        string $currency = 'USD'
+        string $currency = 'USD',
+        array $unmatchedSuggestions = []
     ): array {
         $activeIngredients = $ingredients->filter(fn (Ingredient $ing) => $ing->is_active);
 
@@ -145,6 +147,7 @@ class FormulaAuditEngine
                 'active_ingredients_count' => $activeIngredients->count(),
                 'unmatched_tokens_count' => count($unmatchedTokens),
                 'unmatched_tokens' => $unmatchedTokens,
+                'unmatched_suggestions' => $unmatchedSuggestions,
                 'audited_at' => now()->toIso8601String(),
             ],
             'ai_clinical_copilot' => $aiInsight,

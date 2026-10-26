@@ -38,6 +38,12 @@ export default function ProductResults({ result, onRetry }: { result: ProductRes
               {audit.meta.total_ingredients_count} ingredientes reconocidos, {audit.meta.active_ingredients_count} activos
               {audit.meta.unmatched_tokens_count > 0 ? `, ${audit.meta.unmatched_tokens_count} sin reconocer` : ''}. Fuente: {audit.ai_clinical_copilot.transparency_meta.source_label}.
             </p>
+            {audit.meta.unmatched_tokens.length > 0 && (
+              <p className="text-[11px] text-[#8C827A]">
+                No están en nuestra base: {audit.meta.unmatched_tokens.join(', ')}.
+                {audit.meta.unmatched_suggestions?.map((s) => ` ¿"${s.raw_token}" es ${s.suggested_inci_name}? Verifícalo en la etiqueta.`).join('')}
+              </p>
+            )}
           </Section>
 
           <Section title="Uso y evidencia">

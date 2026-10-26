@@ -124,6 +124,7 @@ export interface AuditReport {
     active_ingredients_count: number;
     unmatched_tokens_count: number;
     unmatched_tokens: string[];
+    unmatched_suggestions?: Array<{ raw_token: string; suggested_inci_name: string; confidence: number }>;
     audited_at: string;
   };
   ai_clinical_copilot: AiClinicalCopilot;

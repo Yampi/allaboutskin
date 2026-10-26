@@ -7,6 +7,7 @@ use App\Models\IngredientAlias;
 use Illuminate\Support\Collection;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class InciParserService
 {
@@ -17,7 +18,8 @@ class InciParserService
      * @return array{
      *     raw_tokens: array<string>,
      *     matched_ingredients: Collection<int, array{ingredient: Ingredient, raw_token: string, confidence: float, position: int}>,
-     *     unmatched_tokens: array<string>
+     *     unmatched_tokens: array<string>,
+     *     unmatched_suggestions: array<int, array{raw_token: string, suggested_inci_name: string, confidence: float}>
      * }
      */
     public function parseAndMatch(string $rawInci): array
@@ -28,6 +30,7 @@ class InciParserService
                 'raw_tokens' => [],
                 'matched_ingredients' => collect(),
                 'unmatched_tokens' => [],
+                'unmatched_suggestions' => [],
             ];
         }
 
@@ -53,6 +56,7 @@ class InciParserService
                 'raw_tokens' => $tokens,
                 'matched_ingredients' => collect(),
                 'unmatched_tokens' => [],
+                'unmatched_suggestions' => [],
             ];
         }
 
@@ -116,16 +120,27 @@ class InciParserService
             }
         }
 
-        // Step 3: Bounded Candidate Fuzzy Match for remaining unmatched tokens (< 30 rows candidate pool)
+        // Step 3: Bounded candidate search (< 30 rows). Solo se acepta una variante de escritura idéntica
+        // (mayúsculas, acentos, signos); cualquier otro parecido es una sugerencia, nunca una coincidencia,
+        // porque moléculas distintas (RETINOL / RETINAL) difieren en una letra.
+        $suggestionMap = []; // normalized => ['id' => int, 'confidence' => float]
         foreach ($unmatchedAfterStep2 as $norm) {
-            $match = $this->findBoundedFuzzyMatch($norm);
-            if ($match) {
-                $tokenMatchMap[$norm] = $match;
+            $candidate = $this->findBoundedCandidate($norm);
+            if ($candidate === null) {
+                continue;
+            }
+            if ($candidate['same_spelling']) {
+                $tokenMatchMap[$norm] = ['id' => $candidate['id'], 'confidence' => 0.95];
+            } else {
+                $suggestionMap[$norm] = ['id' => $candidate['id'], 'confidence' => $candidate['confidence']];
             }
         }
 
         // Step 4: Deferred Relational Hydration ONLY for matched ingredient IDs
         $matchedIngredientIds = array_values(array_unique(array_filter(array_map(fn($m) => $m['id'], $tokenMatchMap))));
+        $suggestionNames = empty($suggestionMap)
+            ? collect()
+            : Ingredient::whereIn('id', array_unique(array_column($suggestionMap, 'id')))->pluck('inci_name', 'id');
 
         $hydratedIngredients = collect();
         if (!empty($matchedIngredientIds)) {
@@ -138,6 +153,7 @@ class InciParserService
         // Assemble final matched and unmatched collections preserving token order
         $matched = collect();
         $unmatched = [];
+        $suggestions = [];
 
         foreach ($tokenItems as $item) {
             $norm = $item['normalized'];
@@ -157,12 +173,21 @@ class InciParserService
             }
 
             $unmatched[] = $item['raw_token'];
+
+            if (isset($suggestionMap[$norm]) && $suggestionNames->has($suggestionMap[$norm]['id'])) {
+                $suggestions[] = [
+                    'raw_token' => $item['raw_token'],
+                    'suggested_inci_name' => $suggestionNames->get($suggestionMap[$norm]['id']),
+                    'confidence' => $suggestionMap[$norm]['confidence'],
+                ];
+            }
         }
 
         return [
             'raw_tokens' => $tokens,
             'matched_ingredients' => $matched,
             'unmatched_tokens' => $unmatched,
+            'unmatched_suggestions' => $suggestions,
         ];
     }
 
@@ -223,12 +248,13 @@ class InciParserService
     }
 
     /**
-     * Bounded candidate fuzzy search on a small slice of records (< 30 rows).
+     * Bounded candidate search on a small slice of records (< 30 rows).
+     * `same_spelling` es true solo si el nombre coincide quitando mayúsculas, acentos y signos.
      *
      * @param string $token Normalized uppercase token
-     * @return array{id: int, confidence: float}|null
+     * @return array{id: int, confidence: float, same_spelling: bool}|null
      */
-    private function findBoundedFuzzyMatch(string $token): ?array
+    private function findBoundedCandidate(string $token): ?array
     {
         $len = mb_strlen($token);
         if ($len < 2) {
@@ -265,10 +291,16 @@ class InciParserService
 
         $bestMatchId = null;
         $highestConfidence = 0.0;
+        $tokenCanon = $this->canonicalSpelling($token);
 
         foreach ($candidates as $cand) {
             $inci = strtoupper($cand->inci_name);
             $common = $cand->common_name ? strtoupper($cand->common_name) : null;
+
+            if ($tokenCanon !== '' && ($tokenCanon === $this->canonicalSpelling($inci)
+                || ($common && $tokenCanon === $this->canonicalSpelling($common)))) {
+                return ['id' => $cand->id, 'confidence' => 1.0, 'same_spelling' => true];
+            }
 
             // 1. Substring containment check
             if (str_contains($token, $inci) || str_contains($inci, $token)) {
@@ -317,9 +349,16 @@ class InciParserService
             return [
                 'id' => $bestMatchId,
                 'confidence' => round($highestConfidence, 2),
+                'same_spelling' => false,
             ];
         }
 
         return null;
+    }
+
+    /** Solo letras y dígitos en mayúsculas, sin acentos: "Ácido  Salicílico." => "ACIDOSALICILICO". */
+    private function canonicalSpelling(string $value): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', strtoupper(Str::ascii($value)));
     }
 }

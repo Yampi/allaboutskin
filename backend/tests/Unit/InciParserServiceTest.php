@@ -168,16 +168,39 @@ class InciParserServiceTest extends TestCase
         }
     }
 
-    public function test_fuzzy_resolution_bounded_candidate_pool(): void
+    public function test_near_miss_is_suggested_but_never_matched(): void
     {
-        // OCR typo with minor misspelling: "NIACINAMID" instead of "NIACINAMIDE"
-        $rawInci = "Niacinamid";
-        $result = $this->parser->parseAndMatch($rawInci);
+        // Letra faltante: podría ser un error de OCR o una molécula distinta, así que no se acepta sola.
+        $result = $this->parser->parseAndMatch('Niacinamid');
+
+        $this->assertCount(0, $result['matched_ingredients']);
+        $this->assertSame(['Niacinamid'], $result['unmatched_tokens']);
+        $this->assertSame('NIACINAMIDE', $result['unmatched_suggestions'][0]['suggested_inci_name']);
+        $this->assertGreaterThanOrEqual(0.78, $result['unmatched_suggestions'][0]['confidence']);
+    }
+
+    public function test_retinol_is_not_matched_to_retinal(): void
+    {
+        Ingredient::create(['inci_name' => 'RETINAL', 'common_name' => 'Retinaldehído', 'is_active' => true]);
+
+        $result = $this->parser->parseAndMatch('Retinol');
+
+        $this->assertCount(0, $result['matched_ingredients']);
+        $this->assertSame(['Retinol'], $result['unmatched_tokens']);
+        $this->assertSame('RETINAL', $result['unmatched_suggestions'][0]['suggested_inci_name']);
+    }
+
+    public function test_spelling_variants_with_accents_and_punctuation_still_match(): void
+    {
+        Ingredient::create(['inci_name' => 'SODIUM HYALURONATE', 'common_name' => 'Ácido Hialurónico', 'is_active' => true]);
+
+        $result = $this->parser->parseAndMatch('Sodium-Hyaluronate., acido hialuronico');
 
         $matched = $result['matched_ingredients'];
-        $this->assertCount(1, $matched);
-        $this->assertEquals('NIACINAMIDE', $matched[0]['ingredient']->inci_name);
-        $this->assertGreaterThanOrEqual(0.78, $matched[0]['confidence']);
+        $this->assertCount(2, $matched);
+        $this->assertSame('SODIUM HYALURONATE', $matched[0]['ingredient']->inci_name);
+        $this->assertSame(0.95, $matched[0]['confidence']);
+        $this->assertSame([], $result['unmatched_tokens']);
     }
 
     public function test_deferred_relational_hydration_only_loads_relations_for_matched(): void
