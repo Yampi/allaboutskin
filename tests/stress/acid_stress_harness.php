@@ -10,6 +10,7 @@ $app = require_once __DIR__ . '/../../backend/bootstrap/app.php';
 
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
+require __DIR__ . '/_require_test_db.php';
 
 use App\Domain\Auth\Enums\UserRole;
 use App\Http\Controllers\Api\Admin\AdminStoreController;

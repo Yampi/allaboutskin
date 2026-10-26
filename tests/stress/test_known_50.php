@@ -2,6 +2,7 @@
 require 'backend/vendor/autoload.php';
 $app = require 'backend/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+require __DIR__ . '/_require_test_db.php';
 
 use App\Domain\Cosmetics\Services\InciParserService;
 use App\Models\Ingredient;
