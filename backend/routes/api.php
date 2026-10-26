@@ -86,6 +86,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/ingredients', [CatalogController::class, 'ingredients']);
         Route::get('/ingredients/{identifier}', [CatalogController::class, 'ingredientDetail']);
         Route::get('/products', [CatalogController::class, 'products']);
+        Route::get('/products/match', [CatalogController::class, 'matchProducts'])->middleware('throttle:audit');
         Route::get('/products/{slug}', [CatalogController::class, 'productDetail']);
         Route::get('/products/{slug}/reviews', [ProductReviewController::class, 'index']);
         Route::post('/products/{slug}/reviews', [ProductReviewController::class, 'store'])

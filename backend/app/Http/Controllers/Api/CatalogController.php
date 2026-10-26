@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Cosmetics\Services\ProductMatchService;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Ingredient;
@@ -179,6 +180,22 @@ class CatalogController extends Controller
         $products = $query->paginate($request->integer('per_page', 15));
 
         return response()->json($products);
+    }
+
+    /**
+     * Busca el producto leído en el frente de un envase (marca y nombre) y devuelve los candidatos.
+     */
+    public function matchProducts(Request $request, ProductMatchService $matcher): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:200',
+            'brand' => 'nullable|string|max:100',
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $matcher->match($validated['brand'] ?? null, $validated['name']),
+        ]);
     }
 
     /**

@@ -29,6 +29,19 @@ export interface InciScanResult {
   summary: string;
   /** Ingredientes de la lista que no están en la base de datos */
   unrecognizedIngredients?: string[];
+  /** De dónde sale la fórmula: leída en la etiqueta o registrada en el catálogo */
+  source?: 'label' | 'catalog';
+  /** Producto identificado en el catálogo: su ingrediente principal y la evidencia científica */
+  mainIngredients?: MainIngredientEvidence[];
+}
+
+export interface MainIngredientEvidence {
+  inci: string;
+  name: string;
+  description: string;
+  evidenceGrade: string | null;
+  studiesCount: number;
+  studies: Array<{ title: string; journal: string; year: number; url: string }>;
 }
 
 export interface ActiveIngredient {
