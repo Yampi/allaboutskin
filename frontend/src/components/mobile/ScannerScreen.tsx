@@ -36,19 +36,21 @@ import {
 import { InciScanResult, InciIngredientResult, ActiveIngredient, ProductShelfItem, UserProfile } from './types';
 import { performOpticalCharacterRecognition, analyzeCosmeticLabel } from '@/lib/ocrService';
 import Link from 'next/link';
-import { scanImageWithGeminiVision, ScanAccountRequiredError, auditInci } from '@/lib/api';
+import { scanImageWithGeminiVision, ScanAccountRequiredError, auditInci, getProductAudit, matchCatalogProducts, type CatalogMatch } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { FaceSkinAnalysis } from '@/lib/gemini';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
 import ClinicalFaceMaskVisor from '@/components/ar/ClinicalFaceMaskVisor';
+import MainIngredientCard from './MainIngredientCard';
 
-type RejectionKind = 'unclassified' | 'account' | 'no-inci' | 'audit-failed';
+type RejectionKind = 'unclassified' | 'account' | 'no-inci' | 'audit-failed' | 'catalog-choice';
 
 const REJECTION_COPY: Record<RejectionKind, { title: string; subtitle: string }> = {
   unclassified: { title: 'No pudimos clasificar la imagen', subtitle: 'Imagen no reconocida como cosmético ni rostro' },
   account: { title: 'Usaste tus análisis gratis', subtitle: 'Crea una cuenta gratuita para seguir analizando' },
   'no-inci': { title: 'No pudimos leer los ingredientes', subtitle: 'Detectamos un producto, pero su lista INCI no es legible' },
   'audit-failed': { title: 'No se pudo auditar la fórmula', subtitle: 'No hay informe que mostrar para este producto' },
+  'catalog-choice': { title: 'Elige tu producto', subtitle: 'Encontramos varios parecidos en nuestro catálogo' },
 };
 
 export const CURATED_BIOTYPE_PRODUCTS: Record<string, Array<{
@@ -256,6 +258,8 @@ export default function ScannerScreen({
   const visionAbortRef = useRef<AbortController | null>(null);
   // Motivo del aviso cuando no hay resultado: cada uno tiene su título y su salida
   const [rejectionKind, setRejectionKind] = useState<RejectionKind>('unclassified');
+  // Productos del catálogo parecidos al leído en el frente del envase, para que el usuario elija
+  const [catalogCandidates, setCatalogCandidates] = useState<CatalogMatch[]>([]);
   const [manualInciText, setManualInciText] = useState('');
   const [manualProductName, setManualProductName] = useState('');
   const [manualBrandName, setManualBrandName] = useState('');
@@ -522,7 +526,8 @@ export default function ScannerScreen({
         setScanTypeResult('PRODUCT');
         const detectedName = scanData.productName ? `${scanData.brand ? `${scanData.brand} ` : ''}${scanData.productName}` : manualProductName || fallbackName;
         const detectedBrand = scanData.brand || manualBrandName || 'Marca Cosmética';
-        let detectedInci = scanData.inciText || scanData.rawDetectedText || '';
+        // Solo la lista INCI: el resto del texto del envase (marketing) no sirve para auditar
+        let detectedInci = scanData.inciText || '';
 
         setManualProductName(detectedName);
         setManualBrandName(detectedBrand);
@@ -531,14 +536,41 @@ export default function ScannerScreen({
         setOcrProgress(85);
         setOcrStatusText('Auditando fórmula con taxonomía CosIng UE y PubMed...');
 
-        if (!detectedInci || detectedInci.length < 10) {
+        // Frente del envase sin ingredientes visibles: buscar el producto en el catálogo
+        if (detectedInci.length < 10 && scanData.productName) {
+          setOcrStatusText('Buscando el producto en nuestro catálogo...');
+          try {
+            const matches = (await matchCatalogProducts(scanData.productName, scanData.brand)).filter((m) => m.has_formula);
+            const [best, second] = matches;
+            if (best && best.score === 1 && (!second || second.score < 1)) {
+              await runApiInciAudit('', best.name, best.brand ?? undefined, best.slug);
+              setOcrProgress(100);
+              setIsProcessing(false);
+              return;
+            }
+            if (matches.length > 0) {
+              setCatalogCandidates(matches);
+              setRejectionKind('catalog-choice');
+              setRejectionMessage(`Detectamos ${detectedName}. ¿Es alguno de estos productos de nuestro catálogo?`);
+              setScanTypeResult('INVALID');
+              setOcrProgress(100);
+              setIsProcessing(false);
+              return;
+            }
+          } catch (matchErr) {
+            console.warn('No se pudo buscar el producto en el catálogo:', matchErr);
+          }
+        }
+
+        if (detectedInci.length < 10) {
           try {
             setOcrStatusText('Extrayendo texto INCI detallado...');
             const rawText = await performOpticalCharacterRecognition(optimizedBlob, (p, s) => {
               setOcrProgress(70 + Math.round(p * 15));
             });
             const analysis = analyzeCosmeticLabel(rawText);
-            detectedInci = analysis.suggestedOfficialInci || analysis.cleanedText || rawText;
+            // Solo se usa si el texto leído es la lista de ingredientes de la etiqueta trasera
+            detectedInci = analysis.labelType === 'BACK_INCI' ? analysis.cleanedText : '';
             setManualInciText(detectedInci);
           } catch (ocrErr) {
             console.warn('Fallback OCR warning:', ocrErr);
@@ -641,9 +673,9 @@ export default function ScannerScreen({
     setScanTypeResult('INVALID');
   };
 
-  // Auditoría INCI con el backend (POST /api/v1/audit/inci)
-  const runApiInciAudit = async (formulaText: string, prodName?: string, brandName?: string) => {
-    if (!formulaText.trim()) {
+  // Auditoría con el backend: de una lista INCI o, con catalogSlug, de la fórmula registrada en el catálogo
+  const runApiInciAudit = async (formulaText: string, prodName?: string, brandName?: string, catalogSlug?: string) => {
+    if (!catalogSlug && !formulaText.trim()) {
       alert('Por favor ingresa o escanea una lista de ingredientes INCI.');
       return;
     }
@@ -655,7 +687,9 @@ export default function ScannerScreen({
 
     try {
       // Auditoría del backend: base de datos de ingredientes y evidencia de PubMed
-      const report = await auditInci(formulaText, prodName || manualProductName || undefined);
+      const report = catalogSlug
+        ? await getProductAudit(catalogSlug)
+        : await auditInci(formulaText, prodName || manualProductName || undefined);
 
       if (report) {
         const breakdown = report.ingredients_breakdown || [];
@@ -716,6 +750,25 @@ export default function ScannerScreen({
             `Fórmula de ${breakdown.length} ingredientes analizada con rigor clínico. Nivel de evidencia científica indexado en PubMed y CosIng.`,
           ingredients: mappedIngredients,
           unrecognizedIngredients: report.meta?.unmatched_tokens ?? [],
+          source: catalogSlug ? 'catalog' : 'label',
+          mainIngredients: catalogSlug
+            ? mappedIngredients.map((ing) => {
+                const evidence = report.scientific_evidence?.by_ingredient?.find((e) => e.inci_name === ing.inci);
+                const source = breakdown.find((b) => b.inci_name === ing.inci) as { clinical_rationale?: string } | undefined;
+                return {
+                  inci: ing.inci,
+                  name: ing.name,
+                  // Solo la explicación real del backend; sin texto de relleno
+                  description: source?.clinical_rationale ?? '',
+                  evidenceGrade: evidence?.evidence_grade ?? null,
+                  studiesCount: evidence?.studies_count ?? 0,
+                  studies: (report.scientific_evidence?.studies ?? [])
+                    .filter((st) => st.associated_active === ing.inci)
+                    .slice(0, 3)
+                    .map((st) => ({ title: st.title, journal: st.journal, year: st.pub_year, url: st.pubmed_url })),
+                };
+              })
+            : undefined,
         };
 
         if (mappedIngredients.length === 0) {
@@ -918,7 +971,7 @@ export default function ScannerScreen({
               {scanTypeResult === 'PRODUCT' && (
                 <span className="px-3.5 py-1 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[11px] font-bold uppercase tracking-wider border border-[#8FA89B]/30 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5" />
-                  <span>Cosmético Detectado • Auditoría INCI</span>
+                  <span>{auditResult?.source === 'catalog' ? 'Producto identificado • Ingrediente principal' : 'Cosmético Detectado • Auditoría INCI'}</span>
                 </span>
               )}
               {scanTypeResult === 'INVALID' && (
@@ -1449,16 +1502,19 @@ export default function ScannerScreen({
 
                   <div>
                     <span className="px-2.5 py-0.5 rounded-full bg-[#EBF1EE] text-[#4A6B5B] text-[10.5px] font-bold uppercase tracking-wider">
-                      Auditoría Científica de Producto
+                      {auditResult.source === 'catalog' ? 'Producto identificado' : 'Auditoría Científica de Producto'}
                     </span>
                     <h2 className="font-serif text-[22px] sm:text-[24px] font-bold text-[#2D2825] mt-1.5">
                       {auditResult.productName}
                     </h2>
                     <p className="text-[13px] font-sans text-[#7E756F]">
-                      {auditResult.brand} • {auditResult.category}
+                      {auditResult.source === 'catalog' ? auditResult.brand : `${auditResult.brand} • ${auditResult.category}`}
                     </p>
                   </div>
 
+                  {/* Nota, resumen y noches: solo con la lista completa de la etiqueta (no con el ingrediente principal) */}
+                  {auditResult.source !== 'catalog' && (
+                  <>
                   {/* Compatibility Score */}
                   <div className="flex items-center justify-between p-4 rounded-[18px] bg-[#FAF8F5] border border-[#E8E1D7]">
                     <div>
@@ -1500,6 +1556,8 @@ export default function ScannerScreen({
                       ))}
                     </div>
                   </div>
+                  </>
+                  )}
 
                   {/* Add to Shelf Button */}
                   <button
@@ -1528,6 +1586,12 @@ export default function ScannerScreen({
 
               {/* INCI Traffic Light List (col-span-7) */}
               <div className="lg:col-span-7 space-y-4">
+                {auditResult.source === 'catalog' && auditResult.mainIngredients ? (
+                  <MainIngredientCard
+                    ingredients={auditResult.mainIngredients}
+                    onScanBackLabel={handleResetScan}
+                  />
+                ) : (
                 <div className="card-white p-5 sm:p-6 border border-[#8FA89B]/50 rounded-[24px] shadow-diffuse-elevated space-y-4">
                   <div className="flex items-center justify-between border-b border-[#E8E1D7] pb-3">
                     <h3 className="font-serif text-[18px] font-semibold text-[#2D2825]">
@@ -1645,6 +1709,7 @@ export default function ScannerScreen({
                     )}
                   </div>
                 </div>
+                )}
               </div>
             </div>
           )}
@@ -1712,6 +1777,41 @@ export default function ScannerScreen({
                   </div>
                 </div>
               </div>
+              )}
+
+              {rejectionKind === 'catalog-choice' && (
+                <div className="space-y-2">
+                  {catalogCandidates.map((candidate) => (
+                    <button
+                      key={candidate.slug}
+                      type="button"
+                      onClick={() => runApiInciAudit('', candidate.name, candidate.brand ?? undefined, candidate.slug)}
+                      className="w-full p-3 rounded-[18px] bg-white border border-[#E8E1D7] hover:border-[#8FA89B] text-left flex items-center gap-3 transition cursor-pointer"
+                    >
+                      {candidate.image_url ? (
+                        <img src={candidate.image_url} alt="" className="w-12 h-12 rounded-xl object-cover border border-[#E8E1D7] shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-[#F2ECE4] shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        {candidate.brand && (
+                          <span className="text-[10.5px] font-bold uppercase text-[#7E756F] block truncate">{candidate.brand}</span>
+                        )}
+                        <span className="text-[13px] font-semibold text-[#2D2825] block">{candidate.name}</span>
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectionKind('no-inci');
+                      setRejectionMessage('No pudimos identificar tu producto en el catálogo. Fotografía la etiqueta trasera, donde dice «Ingredients / INCI», o pega los ingredientes a mano.');
+                    }}
+                    className="w-full py-2 text-[12.5px] font-semibold text-[#7E756F] hover:text-[#2D2825] cursor-pointer"
+                  >
+                    Ninguno es el mío
+                  </button>
+                </div>
               )}
 
               {(rejectionKind === 'no-inci' || rejectionKind === 'audit-failed') && (

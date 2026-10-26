@@ -227,6 +227,24 @@ export async function auditInci(
   return json.data;
 }
 
+/** Producto del catálogo que coincide con la marca y el nombre leídos en un envase. */
+export interface CatalogMatch {
+  slug: string;
+  name: string;
+  brand: string | null;
+  image_url: string | null;
+  has_formula: boolean;
+  brand_matched: boolean;
+  score: number;
+}
+
+export async function matchCatalogProducts(name: string, brand?: string | null): Promise<CatalogMatch[]> {
+  const params = new URLSearchParams({ name });
+  if (brand) params.set('brand', brand);
+  const json = await apiFetch<{ data: CatalogMatch[] }>(`${API_BASE_URL}/catalog/products/match?${params}`);
+  return json.data;
+}
+
 export async function getProductAudit(slug: string): Promise<AuditReport> {
   const json = await apiFetch<{ data: AuditReport }>(`${API_BASE_URL}/audit/product/${slug}`);
   return json.data;
