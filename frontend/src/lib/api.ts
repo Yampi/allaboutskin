@@ -968,16 +968,29 @@ export async function sendCopilotMessage(params: {
 }
 
 import type { VisionClassificationResult } from './gemini';
+import type { ScanStreamEvent } from '@/app/api/ai/scan-image/route';
 
 /** El visitante agotó sus análisis gratis: hay que crear cuenta o iniciar sesión. */
 export class ScanAccountRequiredError extends Error {}
 
-export async function scanImageWithGeminiVision(base64Image: string, mimeType: string = 'image/jpeg'): Promise<VisionClassificationResult> {
+export interface ScanImageOptions {
+  /** Cancela el análisis (el servidor deja de reintentar). */
+  signal?: AbortSignal;
+  /** Se llama cada vez que el servidor reintenta porque Gemini está saturado. */
+  onRetry?: (attempt: number, message: string) => void;
+}
+
+export async function scanImageWithGeminiVision(
+  base64Image: string,
+  mimeType: string = 'image/jpeg',
+  options: ScanImageOptions = {}
+): Promise<VisionClassificationResult> {
   const token = getCurrentUser()?.token;
   const res = await fetch('/api/ai/scan-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ image: base64Image, mimeType }),
+    signal: options.signal,
   });
   if (!res.ok) {
     let errorMsg = 'Error al analizar imagen con IA';
@@ -995,8 +1008,27 @@ export async function scanImageWithGeminiVision(base64Image: string, mimeType: s
     }
     throw new Error(errorMsg);
   }
-  const json = await res.json();
-  return json.data;
+
+  // Respuesta en vivo: una línea JSON por evento (reintentos y resultado final)
+  if (!res.body) throw new Error('Respuesta vacía del análisis con IA');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split('\n');
+    buffer = done ? '' : lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as ScanStreamEvent;
+      if (event.type === 'retry') options.onRetry?.(event.attempt, event.message);
+      else if (event.type === 'result') return event.data;
+      else throw new Error(event.error);
+    }
+    if (done) break;
+  }
+  throw new Error('El análisis terminó sin resultado. Inténtalo de nuevo.');
 }
 
 export async function auditFullRoutineAi(products: any[], skinType: string = 'COMBINATION') {

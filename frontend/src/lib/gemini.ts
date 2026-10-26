@@ -91,12 +91,26 @@ export interface RoutineAuditResult {
   dermatologistSummary: string;
 }
 
+// Ordenados por rapidez y estabilidad medidas (oct 2026). gemini-3.8-flash se quitó: se quedaba colgado.
 const GEMINI_MODELS = [
-  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
   'gemini-3.5-flash',
-  'gemini-3.8-flash',
   'gemini-3.6-flash',
+  'gemini-3.1-flash-lite',
 ];
+
+// Espera máxima por modelo antes de pasar al siguiente
+const MODEL_TIMEOUT_MS = 15000;
+
+/** Todos los modelos fallaron por saturación (503/429) o tiempo de espera: conviene reintentar más tarde. */
+export class GeminiBusyError extends Error {}
+
+export interface GeminiCallOptions {
+  /** Permite cancelar la llamada (por ejemplo, si el usuario pulsa Cancelar). */
+  signal?: AbortSignal;
+  /** Momento límite (Date.now()) a partir del cual no se prueba ningún modelo más. */
+  deadline?: number;
+}
 
 /**
  * Checks if the provided Gemini API key is valid and not a placeholder or empty string.
@@ -116,7 +130,8 @@ export async function callGeminiApi(
   prompt: string,
   systemInstruction?: string,
   imagePart?: { mimeType: string; data: string },
-  responseJson: boolean = false
+  responseJson: boolean = false,
+  options: GeminiCallOptions = {}
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || '';
 
@@ -173,10 +188,18 @@ export async function callGeminiApi(
   // Attempt models with automatic fallback
   let lastError: any = null;
   const errorDetails: string[] = [];
+  // Sigue en true mientras todos los fallos sean pasajeros (saturación o tiempo de espera)
+  let onlyTransientFailures = true;
 
   for (const model of candidateModels) {
+    if (options.signal?.aborted) throw options.signal.reason ?? new DOMException('Cancelado', 'AbortError');
+    const remaining = options.deadline ? options.deadline - Date.now() : MODEL_TIMEOUT_MS;
+    if (remaining < 1000) break;
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 35000);
+    const timeoutId = setTimeout(() => controller.abort(), Math.min(MODEL_TIMEOUT_MS, remaining));
+    const onCancel = () => controller.abort();
+    options.signal?.addEventListener('abort', onCancel, { once: true });
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(endpoint, {
@@ -190,6 +213,7 @@ export async function callGeminiApi(
       if (!res.ok) {
         const errorText = await res.text();
         errorDetails.push(`${model}: ${res.status}`);
+        if (res.status !== 503 && res.status !== 429) onlyTransientFailures = false;
         lastError = new Error(`Gemini API error (${model}): ${res.status} - ${errorText}`);
         continue;
       }
@@ -199,13 +223,22 @@ export async function callGeminiApi(
       if (textOutput) {
         return textOutput;
       }
+      onlyTransientFailures = false;
     } catch (err: any) {
       clearTimeout(timeoutId);
-      errorDetails.push(`${model}: ${err?.message || 'Error'}`);
+      if (options.signal?.aborted) throw options.signal.reason ?? err;
+      // Un aborto aquí es nuestro tiempo de espera por modelo: cuenta como saturación
+      if (err?.name !== 'AbortError') onlyTransientFailures = false;
+      errorDetails.push(`${model}: ${err?.name === 'AbortError' ? 'sin respuesta a tiempo' : err?.message || 'Error'}`);
       lastError = err;
+    } finally {
+      options.signal?.removeEventListener('abort', onCancel);
     }
   }
 
+  if (onlyTransientFailures) {
+    throw new GeminiBusyError(`Google Gemini está saturado (${errorDetails.join(', ') || 'sin tiempo para probar modelos'}).`);
+  }
   throw lastError || new Error(`No se pudo obtener respuesta de Google Gemini. Modelos intentados: ${candidateModels.join(', ')}`);
 }
 
@@ -334,7 +367,8 @@ function extractJsonFromText(raw: string): string {
  */
 export async function classifyAndProcessImage(
   base64Data: string,
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
+  options: GeminiCallOptions = {}
 ): Promise<VisionClassificationResult> {
   const apiKey = process.env.GEMINI_API_KEY || '';
 
@@ -455,13 +489,15 @@ ESTRUCTURA DE RESPUESTA OBLIGATORIA (JSON ESTRICTO):
   }
 
   try {
-    const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true);
+    const rawJson = await callGeminiApi(prompt, systemInstruction, { mimeType, data: cleanBase64 }, true, options);
     const cleanedJson = extractJsonFromText(rawJson);
     const parsed: ExtractedClinicalBiomarkers = JSON.parse(cleanedJson);
 
     // Run Allabout.skin Application Governance & Gating Engine
     return governAndClassifyBiomarkers(parsed);
   } catch (err: any) {
+    // La saturación y la cancelación se propagan tal cual: quien llama decide si reintentar
+    if (err instanceof GeminiBusyError || options.signal?.aborted) throw err;
     console.error('Error en extracción de visión por IA:', err);
     throw new Error(
       `Error al procesar la imagen con Gemini Vision (${err?.message || 'Error de servicio'}).`

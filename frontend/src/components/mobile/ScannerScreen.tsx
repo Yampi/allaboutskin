@@ -290,6 +290,9 @@ export default function ScannerScreen({
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrStatusText, setOcrStatusText] = useState('');
+  // Reintentos ante saturación de Gemini: número de intento actual y cancelación
+  const [visionAttempt, setVisionAttempt] = useState(1);
+  const visionAbortRef = useRef<AbortController | null>(null);
   const [manualInciText, setManualInciText] = useState('');
   const [manualProductName, setManualProductName] = useState('');
   const [manualBrandName, setManualBrandName] = useState('');
@@ -528,7 +531,16 @@ export default function ScannerScreen({
       setOcrProgress(35);
       setOcrStatusText('Identificando si es Selfie o Producto Cosmético...');
 
-      const scanData = await scanImageWithGeminiVision(base64, mimeType);
+      const abortController = new AbortController();
+      visionAbortRef.current = abortController;
+      setVisionAttempt(1);
+      const scanData = await scanImageWithGeminiVision(base64, mimeType, {
+        signal: abortController.signal,
+        onRetry: (attempt, message) => {
+          setVisionAttempt(attempt);
+          setOcrStatusText(`${message} (intento ${attempt})`);
+        },
+      });
 
       setOcrProgress(70);
 
@@ -587,6 +599,14 @@ export default function ScannerScreen({
         return;
       }
     } catch (err: any) {
+      // El usuario canceló durante los reintentos: volver a la captura sin más análisis
+      if (visionAbortRef.current?.signal.aborted) {
+        setIsProcessing(false);
+        setOcrProgress(0);
+        setOcrStatusText('');
+        setCapturedImagePreview(null);
+        return;
+      }
       console.warn('Vision API error, fallback to OCR/heuristic:', err);
       try {
         setOcrStatusText('Analizando imagen...');
@@ -609,7 +629,7 @@ export default function ScannerScreen({
           setScanTypeResult('INVALID');
           let userMessage = 'No detectamos un cosmético con ingredientes INCI reconocibles ni se pudo procesar la selfie. Si deseas evaluar tu piel, tómate una foto frontal con buena iluminación.';
           if (err?.message) {
-            if (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('demanda')) {
+            if (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('demanda') || err.message.includes('saturad')) {
               userMessage = 'Los servidores de visión por IA están experimentando alta demanda momentánea. Por favor, espera unos segundos y pulsa "Reintentar con Cámara".';
             } else if (err.message.includes('429') || err.message.includes('límite')) {
               userMessage = 'Has alcanzado el límite de escaneos por minuto. Por favor espera unos segundos antes de intentar de nuevo.';
@@ -850,6 +870,15 @@ export default function ScannerScreen({
               <p className="text-[13px] text-[#7E756F] mt-1 font-sans">
                 {ocrStatusText || 'Extrayendo biomarcadores y morfología dérmica...'}
               </p>
+              {visionAttempt >= 3 && (
+                <button
+                  type="button"
+                  onClick={() => visionAbortRef.current?.abort()}
+                  className="mt-3 px-4 py-1.5 rounded-full border border-[#E8E1D7] bg-white text-[12px] font-bold text-[#2D2825] hover:bg-[#FAF8F5] cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              )}
             </div>
 
             {/* Smooth Progress Bar */}
