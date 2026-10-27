@@ -2,6 +2,7 @@ export interface StoreBranchInfo {
   id: number;
   name: string;
   slug: string;
+  store_id?: number;
   store_name: string;
   store_type: 'ONLINE' | 'PHYSICAL' | 'HYBRID';
   is_independent: boolean;

@@ -59,6 +59,7 @@ class StoreDirectoryController extends Controller
                     'id' => $branch->id,
                     'name' => $branch->name,
                     'slug' => $branch->slug,
+                    'store_id' => $branch->store_id,
                     'store_name' => $branch->store->name ?? 'Tienda',
                     'store_type' => $branch->store->store_type ?? 'PHYSICAL',
                     'is_independent' => (bool) ($branch->store->is_independent ?? false),

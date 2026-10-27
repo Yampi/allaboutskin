@@ -8,7 +8,8 @@ import {
   HeartPulse,
   Sparkles,
   Calendar,
-  Package,
+  BookOpen,
+  Globe,
   Scan,
   Store,
   User,
@@ -58,11 +59,11 @@ export default function UserAppShell({
   };
 
   const navItems = [
-    { id: 'inicio', label: 'Inicio', icon: Home, href: '/dashboard/usuario' },
+    { id: 'inicio', label: 'Mi Tocador', icon: Home, href: '/dashboard/usuario' },
     { id: 'mi-piel', label: 'Mi piel', icon: HeartPulse, href: '/mi-piel' },
     { id: 'mi-rutina', label: 'Mi rutina', icon: Sparkles, href: '/mi-rutina' },
     { id: 'calendario', label: 'Skin Cycling', icon: Calendar, href: '/calendario' },
-    { id: 'productos', label: 'Productos', icon: Package, href: '/biblioteca' },
+    { id: 'productos', label: 'Ingredientes', icon: BookOpen, href: '/biblioteca' },
     { id: 'analisis', label: 'Análisis y escaneos', icon: Scan, href: '/escaner' },
     { id: 'tiendas', label: 'Tiendas cercanas', icon: Store, href: '/tiendas' },
     { id: 'perfil', label: 'Perfil', icon: User, href: '/perfil' },
@@ -92,7 +93,7 @@ export default function UserAppShell({
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-[#E8E1D7] sticky top-0 h-screen justify-between p-5 shrink-0 z-30">
         <div className="space-y-6">
           {/* Brand Header */}
-          <Link href="/dashboard/usuario" className="flex items-center gap-2.5 px-2 group cursor-pointer">
+          <Link href="/" title="Ir a la página principal" className="flex items-center gap-2.5 px-2 group cursor-pointer">
             <div className="w-8 h-8 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs group-hover:scale-105 transition">
               <Sparkles className="w-4 h-4 text-[#2E7D5B]" />
             </div>
@@ -126,6 +127,14 @@ export default function UserAppShell({
 
         {/* Sidebar Bottom: Logout & Philosophy Badge */}
         <div className="space-y-3 pt-4 border-t border-[#E8E1D7]">
+          <Link
+            href="/"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold text-[#66615C] hover:text-[#2E7D5B] hover:bg-[#F2F7F4] transition"
+          >
+            <Globe className="w-4 h-4 text-[#8C827A] shrink-0" />
+            <span>Página principal</span>
+          </Link>
+
           {/* Botón Destacado de Cerrar Sesión */}
           <button
             type="button"
@@ -166,7 +175,7 @@ export default function UserAppShell({
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           
-          <Link href="/dashboard/usuario" className="flex items-center gap-2">
+          <Link href="/" title="Ir a la página principal" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#E6F4EC] border border-[#D5E2DB] flex items-center justify-center text-[#2E7D5B] shadow-2xs">
               <Sparkles className="w-3.5 h-3.5" />
             </div>
@@ -205,7 +214,7 @@ export default function UserAppShell({
           <div className="relative w-72 max-w-[85%] bg-white h-full p-5 flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-200">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <Link href="/dashboard/usuario" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
+                <Link href="/" onClick={() => setIsMobileMenuOpen(false)} title="Ir a la página principal" className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-[#E6F4EC] flex items-center justify-center text-[#2E7D5B]">
                     <Sparkles className="w-4 h-4" />
                   </div>
@@ -245,6 +254,14 @@ export default function UserAppShell({
             </div>
 
             <div className="space-y-3 pt-4 border-t border-[#E8E1D7]">
+              <Link
+                href="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold text-[#66615C] hover:bg-slate-50"
+              >
+                <Globe className="w-4 h-4 text-[#8C827A]" />
+                <span>Página principal</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
