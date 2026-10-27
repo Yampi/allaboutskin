@@ -42,6 +42,7 @@ import { FaceSkinAnalysis } from '@/lib/gemini';
 import VirtualFaceMaskTutorial from '@/components/ar/VirtualFaceMaskTutorial';
 import ClinicalFaceMaskVisor from '@/components/ar/ClinicalFaceMaskVisor';
 import MainIngredientCard from './MainIngredientCard';
+import RecommendedIngredients from '@/components/escaner/recommendations/RecommendedIngredients';
 
 type RejectionKind = 'unclassified' | 'account' | 'no-inci' | 'audit-failed' | 'catalog-choice';
 
@@ -1302,55 +1303,8 @@ export default function ScannerScreen({
                     </div>
                   </div>
 
-                  {/* 3 ACTIVOS CLAVE RECOMENDADOS (EN LUGAR DE LISTA DE PÁRRAFOS) */}
-                  <div className="space-y-2.5 pt-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                      Ingredientes Clave Recomendados para tu Piel:
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0">
-                          🧪
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Ceramidas NP + AP' : 'Niacinamida 2-5%'}
-                          </h4>
-                          <span className="text-[11px] text-slate-500 font-medium block truncate">
-                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Reparación de barrera' : 'Control de sebo en zona T'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
-                        <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
-                          🧬
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                            {faceSkinResult.skinTypeEstimate === 'SENSITIVE' ? 'Centella Asiática (Cica)' : 'Ceramidas NP'}
-                          </h4>
-                          <span className="text-[11px] text-slate-500 font-medium block truncate">
-                            {faceSkinResult.skinTypeEstimate === 'SENSITIVE' ? 'Calmante vascular' : 'Sellado de barrera'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-2xl glass-subcard flex items-center gap-3 border border-white">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center font-bold text-lg shrink-0">
-                          💧
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Ácido Hialurónico' : 'Ácido Salicílico 2%'}
-                          </h4>
-                          <span className="text-[11px] text-slate-500 font-medium block truncate">
-                            {faceSkinResult.skinTypeEstimate === 'DRY' ? 'Retención de agua' : 'Limpieza de poros'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* INGREDIENTES CLAVE RECOMENDADOS (EXPANDIBLES CON EXPLICACIÓN) */}
+                  <RecommendedIngredients skinType={faceSkinResult.skinTypeEstimate} />
 
                   {/* PRESCRIPCIÓN CURADA EN 3 PASOS SIMPLES (SKIN CYCLING) */}
                   {(() => {
