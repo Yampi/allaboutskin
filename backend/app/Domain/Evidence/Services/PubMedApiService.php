@@ -44,9 +44,10 @@ class PubMedApiService
             }
 
             $studies = [];
+            $name = $this->searchableName($ingredient->inci_name);
             foreach ($pmids as $pmid) {
                 $study = $this->fetchStudySummary($pmid);
-                if ($study) {
+                if ($study && $this->isRelevantTitle($study->title, $name, $this->searchesByGenus($ingredient))) {
                     $ingredient->pubmedStudies()->syncWithoutDetaching([
                         $study->id => ['primary_finding' => null],
                     ]);
@@ -71,8 +72,40 @@ class PubMedApiService
     public function buildSearchTerm(Ingredient $ingredient): string
     {
         $name = $this->searchableName($ingredient->inci_name);
+        $titleTerm = "\"{$name}\"[Title]";
+        // Extractos botánicos: los estudios suelen nombrar solo el género (Glycyrrhiza, Aloe).
+        if ($this->searchesByGenus($ingredient)) {
+            $titleTerm .= ' OR ' . strtok($name, ' ') . '[Title]';
+        }
 
-        return "(\"{$name}\"[Title]) AND (skin[Title/Abstract] OR dermatology[Title/Abstract] OR topical[Title/Abstract] OR cutaneous[Title/Abstract]) AND (\"clinical trial\"[pt] OR \"randomized controlled trial\"[pt] OR \"systematic review\"[pt] OR \"meta-analysis\"[pt] OR efficacy[Title/Abstract]) NOT (animals[MeSH Terms] NOT humans[MeSH Terms]) NOT (nanoparticle*[Title] OR \"green synthesis\"[Title])";
+        return "({$titleTerm}) AND (skin[Title/Abstract] OR dermatology[Title/Abstract] OR topical[Title/Abstract] OR cutaneous[Title/Abstract]) AND (\"clinical trial\"[pt] OR \"randomized controlled trial\"[pt] OR \"systematic review\"[pt] OR \"meta-analysis\"[pt]) NOT (animals[MeSH Terms] NOT humans[MeSH Terms]) NOT (nanoparticle*[Title] OR \"green synthesis\"[Title])";
+    }
+
+    /**
+     * Extractos botánicos (nombre con especie y parte de la planta): se busca también por género.
+     */
+    protected function searchesByGenus(Ingredient $ingredient): bool
+    {
+        $name = $this->searchableName($ingredient->inci_name);
+
+        return $name !== trim($ingredient->inci_name) && str_contains($name, ' ');
+    }
+
+    /**
+     * Descarta títulos donde el nombre es solo parte de otro compuesto
+     * (imidazolidinyl urea, papain-urea, aryl urea…), que PubMed también devuelve.
+     */
+    public function isRelevantTitle(string $title, string $name, bool $byGenus = false): bool
+    {
+        $quoted = preg_quote($name, '/');
+
+        // Extractos botánicos: el título debe hablar de piel (descarta alergias, inyecciones, etc.).
+        if ($byGenus
+            && !preg_match('/skin|dermat|cutaneous|topical|cream|gel\b|ointment|lotion|wound|burn|erythema|acne|eczema|psoria|ulcer|cosmetic|sunscreen|ultraviolet/i', $title)) {
+            return false;
+        }
+
+        return !preg_match('/(?<![\w])(?:\w+yl|papain)[\s-]+' . $quoted . '(?![\w])/i', $title);
     }
 
     /**
@@ -81,7 +114,7 @@ class PubMedApiService
      */
     public function searchableName(string $inciName): string
     {
-        $name = trim(preg_replace('/(EXTRACT|LEAF|ROOT|FLOWER|FRUIT|SEED|BARK|JUICE|OIL|WATER)/i', '', $inciName));
+        $name = trim(preg_replace('/(?<![A-Z])(?:EXTRACT|LEAF|ROOT|FLOWER|FRUIT|SEED|BARK|JUICE|OIL|WATER)(?![A-Z])/i', '', $inciName));
 
         return trim(preg_replace('/\s+/', ' ', $name)) ?: $inciName;
     }
