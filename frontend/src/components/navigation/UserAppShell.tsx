@@ -24,6 +24,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { getCurrentUser, logoutUser, StoredUser } from '@/lib/api';
+import MobileDock, { USER_DOCK_ITEMS } from './MobileDock';
 
 interface UserAppShellProps {
   children: React.ReactNode;
@@ -395,11 +396,13 @@ export default function UserAppShell({
         )}
 
         {/* Content Body */}
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full pb-24 lg:pb-0">
           {children}
         </main>
       </div>
 
+      {/* Barra inferior en móvil: el escáner siempre a un toque */}
+      <MobileDock items={USER_DOCK_ITEMS} />
     </div>
   );
 }

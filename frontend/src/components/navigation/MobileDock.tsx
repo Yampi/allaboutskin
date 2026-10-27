@@ -3,9 +3,34 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Scan, Calendar, BookOpen, GitCompare } from 'lucide-react';
+import { Home, Scan, Calendar, BookOpen, GitCompare, Sparkles, Store, User, type LucideIcon } from 'lucide-react';
 
-export default function MobileDock() {
+interface DockItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  isCenterCta?: boolean;
+}
+
+// Páginas públicas
+const PUBLIC_DOCK_ITEMS: DockItem[] = [
+  { href: '/', label: 'Inicio', icon: Home },
+  { href: '/calendario', label: 'Mi Ciclo', icon: Calendar },
+  { href: '/escaner', label: 'Escáner', icon: Scan, isCenterCta: true },
+  { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
+  { href: '/comparador', label: 'Comparar', icon: GitCompare },
+];
+
+// Dentro de la app del usuario: el escáner siempre a un toque
+export const USER_DOCK_ITEMS: DockItem[] = [
+  { href: '/dashboard/usuario', label: 'Tocador', icon: Home },
+  { href: '/mi-rutina', label: 'Rutina', icon: Sparkles },
+  { href: '/escaner', label: 'Escáner', icon: Scan, isCenterCta: true },
+  { href: '/tiendas', label: 'Tiendas', icon: Store },
+  { href: '/perfil', label: 'Perfil', icon: User },
+];
+
+export default function MobileDock({ items = PUBLIC_DOCK_ITEMS }: { items?: DockItem[] }) {
   const pathname = usePathname();
 
   // En la pantalla del escáner ocultamos el dock inferior para dar foco total a la cámara y al disparador
@@ -13,18 +38,10 @@ export default function MobileDock() {
     return null;
   }
 
-  const dockItems = [
-    { href: '/', label: 'Inicio', icon: Home },
-    { href: '/calendario', label: 'Mi Ciclo', icon: Calendar },
-    { href: '/escaner', label: 'Escáner', icon: Scan, isCenterCta: true },
-    { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
-    { href: '/comparador', label: 'Comparar', icon: GitCompare },
-  ];
-
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF8F5]/95 backdrop-blur-md border-t border-[#E8E1D7] px-2 py-1.5 safe-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
       <div className="flex items-center justify-around max-w-md mx-auto">
-        {dockItems.map((item) => {
+        {items.map((item) => {
           const isActive =
             item.href === '/'
               ? pathname === '/'
